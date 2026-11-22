@@ -526,6 +526,10 @@ export function checkIdentityConsistency(
   profile: Pick<CreateProfileInput, 'platform' | 'userAgent' | 'proxy' | 'geo' | 'fingerprint'> & {
     browser?: BrowserType;
     browserVersion?: string;
+    deviceLabel?: string;
+    mediaDevices?: CreateProfileInput['mediaDevices'];
+    window?: CreateProfileInput['window'];
+    bandwidth?: CreateProfileInput['bandwidth'];
   },
   proxyCheck?: ProxyCheckResult | null,
   options?: ConsistencyCheckOptions,
@@ -697,6 +701,80 @@ export function checkIdentityConsistency(
       severity: 'error',
       message: 'WebRTC đang ở chế độ Real trong khi có sử dụng Proxy — dễ lộ IP thật.',
       suggestion: 'Chuyển WebRTC sang chế độ Replace hoặc Disable.',
+    });
+  }
+
+  // 4b. Signals 'off' on devices expected to have them
+  const signals = profile.fingerprint.signals;
+  if (signals) {
+    if (signals.webgl === 'off' && profile.fingerprint.webgl.renderer.trim().length > 0) {
+      warnings.push({
+        code: 'WEBGL_OFF_ON_GPU_DEVICE',
+        severity: 'warning',
+        message: 'Đã tắt WebGL (off) trong khi thiết bị giả lập có GPU — dễ bị nhận diện bất thường.',
+        suggestion: 'Chuyển tín hiệu WebGL sang chế độ Nhiễu (noise) hoặc Thật (real).',
+      });
+    }
+    if (signals.canvas === 'off') {
+      warnings.push({
+        code: 'CANVAS_OFF_ANOMALY',
+        severity: 'warning',
+        message: 'Tắt Canvas (off) trả về ảnh trống, khác với hành vi trình duyệt thông thường.',
+        suggestion: 'Dùng chế độ Nhiễu (noise) để vừa chống theo dõi vừa giữ tương thích trang web.',
+      });
+    }
+    if (signals.audio === 'off') {
+      warnings.push({
+        code: 'AUDIO_OFF_ANOMALY',
+        severity: 'warning',
+        message: 'Tắt AudioContext (off) trả về tín hiệu 0 tuyệt đối, có thể gây chú ý.',
+        suggestion: 'Chuyển tín hiệu Audio sang chế độ Nhiễu (noise) hoặc Thật (real).',
+      });
+    }
+  }
+
+  // 4c. Window size exceeds emulated screen resolution
+  if (profile.window && !profile.window.maximized) {
+    if (
+      profile.window.width > profile.fingerprint.screen.width ||
+      profile.window.height > profile.fingerprint.screen.height
+    ) {
+      warnings.push({
+        code: 'WINDOW_EXCEEDS_SCREEN',
+        severity: 'warning',
+        message: `Kích thước cửa sổ (${profile.window.width}x${profile.window.height}) lớn hơn độ phân giải màn hình giả lập (${profile.fingerprint.screen.width}x${profile.fingerprint.screen.height}).`,
+        suggestion: 'Giảm kích thước cửa sổ nhỏ hơn hoặc bằng độ phân giải màn hình giả lập.',
+      });
+    }
+  }
+
+  // 4d. Media devices = 0 cameras on devices expected to have a camera
+  if (profile.mediaDevices && profile.mediaDevices.mode === 'fake') {
+    const isCameraExpectedDevice =
+      profile.platform === 'android' ||
+      profile.platform === 'ios' ||
+      profile.platform === 'macos' ||
+      /(macbook|laptop|thinkpad|xps|zenbook|yoga|surface|notebook)/i.test(
+        profile.deviceLabel ?? '',
+      );
+    if (isCameraExpectedDevice && profile.mediaDevices.cameras === 0) {
+      warnings.push({
+        code: 'MEDIA_ZERO_CAMERAS',
+        severity: 'warning',
+        message: 'Thiết bị giả lập (điện thoại/laptop) thường có camera nhưng số camera đang đặt bằng 0.',
+        suggestion: 'Đặt số camera >= 1 để khớp với thiết bị giả lập.',
+      });
+    }
+  }
+
+  // 4e. Bandwidth blocking images or external fonts impacts visual rendering
+  if (profile.bandwidth && (profile.bandwidth.blockImages || profile.bandwidth.blockExternalFonts)) {
+    warnings.push({
+      code: 'BANDWIDTH_DISPLAY_IMPACT',
+      severity: 'warning',
+      message:
+        'Đang bật chặn ảnh hoặc font ngoài cùng cấu hình giả lập người dùng — có thể làm vỡ giao diện hoặc lộ dấu hiệu tự động hóa.',
+      suggestion: 'Chỉ bật khi cần tiết kiệm băng thông cho tác vụ không phụ thuộc hiển thị.',
     });
   }
 
