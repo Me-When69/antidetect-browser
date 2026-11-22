@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Copy, Download, FileText, KeyRound, RefreshCw, Save, Server, Upload } from 'lucide-react';
+import {
+  Copy,
+  Download,
+  FileText,
+  Globe,
+  KeyRound,
+  Loader2,
+  RefreshCw,
+  Save,
+  Server,
+  Upload,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -7,7 +18,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
-import type { BackupPayload, LocaleCode } from '@shared/types';
+import type { BackupPayload, BrowserInventoryItem, LocaleCode } from '@shared/types';
 
 function downloadTextFile(filename: string, content: string, mime = 'application/json'): void {
   const blob = new Blob([content], { type: mime });
@@ -38,13 +49,49 @@ export function SettingsPage(): React.JSX.Element {
   const [apiEnabled, setApiEnabled] = useState(settings.localApiEnabled);
   const [apiPort, setApiPort] = useState(settings.localApiPort);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [browsers, setBrowsers] = useState<BrowserInventoryItem[]>([]);
+  const [installingTarget, setInstallingTarget] = useState<'chromium' | 'firefox' | null>(null);
+  const [installPercent, setInstallPercent] = useState<number>(0);
+
+  const loadBrowsers = async (): Promise<void> => {
+    if (!window.electronAPI) return;
+    const list = await window.electronAPI.listInstalledBrowsers();
+    setBrowsers(list);
+  };
 
   useEffect(() => {
     setChromePath(settings.chromePath);
     setCamoufoxPath(settings.camoufoxPath);
     setApiEnabled(settings.localApiEnabled);
     setApiPort(settings.localApiPort);
+    void loadBrowsers();
   }, [settings]);
+
+  const handleInstallBrowser = async (target: 'chromium' | 'firefox'): Promise<void> => {
+    if (!window.electronAPI) return;
+    setInstallingTarget(target);
+    setInstallPercent(0);
+    const unsubscribe = window.electronAPI.onBrowserInstallProgress((ev) => {
+      if (ev.browser === target && typeof ev.percent === 'number') {
+        setInstallPercent(ev.percent);
+      }
+    });
+    try {
+      const res = await window.electronAPI.installPlaywrightChromium(target);
+      if (res.ok) {
+        showToast(
+          `Đã cài đặt ${target === 'firefox' ? 'Firefox' : 'Chromium'} thành công`,
+          'success',
+        );
+        await loadBrowsers();
+      } else {
+        showToast(res.error ?? 'Tải trình duyệt thất bại', 'error');
+      }
+    } finally {
+      unsubscribe();
+      setInstallingTarget(null);
+    }
+  };
 
   const handleSave = async (): Promise<void> => {
     if (!window.electronAPI) return;
@@ -128,6 +175,74 @@ export function SettingsPage(): React.JSX.Element {
           <option value="vi">Tiếng Việt (VI)</option>
           <option value="en">English (EN)</option>
         </Select>
+      </Card>
+
+      {/* Installed Browsers Inventory */}
+      <Card className="space-y-4 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Trình duyệt</h3>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => void loadBrowsers()}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Làm mới
+          </Button>
+        </div>
+
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {browsers.map((b) => {
+            const isInstalling =
+              b.installableTarget !== undefined && installingTarget === b.installableTarget;
+            return (
+              <div
+                key={b.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs"
+              >
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">{b.name}</span>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {b.version}
+                    </Badge>
+                    <Badge
+                      className={
+                        b.installed
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-amber-500/15 text-amber-400'
+                      }
+                    >
+                      {b.installed ? 'Đã cài' : 'Chưa cài'}
+                    </Badge>
+                  </div>
+                  <p className="truncate font-mono text-[11px] text-muted-foreground">
+                    {b.executablePath || 'Chưa có đường dẫn'}
+                  </p>
+                </div>
+
+                {b.installableTarget && (
+                  <Button
+                    size="sm"
+                    variant={b.installed ? 'outline' : 'default'}
+                    disabled={installingTarget !== null}
+                    onClick={() => void handleInstallBrowser(b.installableTarget!)}
+                  >
+                    {isInstalling ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Download className="h-3.5 w-3.5" />
+                    )}
+                    {isInstalling
+                      ? `Đang tải (${installPercent}%)...`
+                      : b.installed
+                        ? 'Cài lại'
+                        : 'Tải về'}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </Card>
 
       {/* Browser binaries */}

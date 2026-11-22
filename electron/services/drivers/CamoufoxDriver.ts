@@ -1,46 +1,11 @@
 import fs from 'node:fs';
 import net from 'node:net';
-import path from 'node:path';
-import os from 'node:os';
 import { firefox } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
+import { resolveFirefoxExecutable } from '../browserPath';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
 import { runContextWarmup } from './warmupHelper';
 import type { BrowserDriver, DriverInstance, DriverLaunchOptions } from './BrowserDriver';
-
-function findCamoufoxBinary(customPath?: string): string | undefined {
-  const candidates: string[] = [];
-  if (customPath) candidates.push(customPath);
-  if (process.env['CAMOUFOX_BINARY']) candidates.push(process.env['CAMOUFOX_BINARY']);
-
-  const home = os.homedir();
-  if (process.platform === 'win32') {
-    const localAppData = process.env['LOCALAPPDATA'] ?? path.join(home, 'AppData', 'Local');
-    candidates.push(path.join(localAppData, 'camoufox', 'camoufox', 'Cache', 'camoufox.exe'));
-  } else if (process.platform === 'darwin') {
-    candidates.push(
-      path.join(
-        home,
-        'Library',
-        'Caches',
-        'camoufox',
-        'Camoufox.app',
-        'Contents',
-        'MacOS',
-        'camoufox',
-      ),
-    );
-  } else {
-    candidates.push(path.join(home, '.cache', 'camoufox', 'camoufox'));
-  }
-
-  for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
 
 export class CamoufoxDriver implements BrowserDriver {
   readonly name = 'camoufox';
@@ -65,7 +30,9 @@ export class CamoufoxDriver implements BrowserDriver {
       fs.mkdirSync(userDataDir, { recursive: true });
     }
 
-    const executablePath = findCamoufoxBinary(customExecutablePath);
+    const resolvedFirefox = resolveFirefoxExecutable({ customPath: customExecutablePath });
+    const executablePath = resolvedFirefox.executablePath;
+    console.info(`[CamoufoxDriver] Selected browser: ${resolvedFirefox.label} (${executablePath})`);
 
     // Build Camoufox native C++ config payload (consumed automatically when Camoufox binary is used)
     const camoufoxConfig: Record<string, unknown> = {

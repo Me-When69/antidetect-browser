@@ -1,7 +1,12 @@
-import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
+
+// Set PLAYWRIGHT_BROWSERS_PATH once at startup (outside app.asar) before Playwright initializes
+if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
+  process.env['PLAYWRIGHT_BROWSERS_PATH'] = path.join(app.getPath('userData'), 'browsers');
+}
+
 import { IPC_CHANNELS, type AppInfo } from '@shared/ipc';
 import type {
   AppSettings,
@@ -29,7 +34,8 @@ import { ProxyService } from './services/proxyService';
 import { SettingsService } from './services/settingsService';
 import { ProfileLauncher } from './services/launcher';
 import { LocalApiServer } from './services/localApi';
-import { resolveBrowserExecutable } from './services/browserPath';
+import { listInstalledBrowsers, resolveBrowserExecutable } from './services/browserPath';
+import { BrowserInstaller } from './services/browserInstaller';
 import { generateConsistentIdentity, listDevicePresets } from './services/fingerprint/generator';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,7 +69,7 @@ function initServices(): {
 } {
   // Ensure Playwright never looks inside app.asar when packaged by electron-builder
   if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
-    process.env['PLAYWRIGHT_BROWSERS_PATH'] = path.join(app.getPath('userData'), 'ms-playwright');
+    process.env['PLAYWRIGHT_BROWSERS_PATH'] = path.join(app.getPath('userData'), 'browsers');
   }
 
   const dataDir = resolveDataDir();
@@ -281,58 +287,24 @@ function registerIpcHandlers(): void {
     }
   });
 
+  const browserInstaller = new BrowserInstaller(
+    process.env.APP_ROOT!,
+    process.env['PLAYWRIGHT_BROWSERS_PATH'] ?? path.join(app.getPath('userData'), 'browsers'),
+    logger,
+  );
+
+  ipcMain.handle(IPC_CHANNELS.BROWSER_LIST_INSTALLED, () => {
+    const settings = settingsService.getSettings();
+    return listInstalledBrowsers(settings.chromePath, settings.camoufoxPath);
+  });
+
   ipcMain.handle(
     IPC_CHANNELS.BROWSER_INSTALL_CHROMIUM,
-    (): Promise<{ ok: boolean; error?: string }> => {
-      const emit = (payload: BrowserInstallProgressEvent): void => {
+    (_e, targetBrowser: 'chromium' | 'firefox' = 'chromium') => {
+      return browserInstaller.install(targetBrowser, (payload: BrowserInstallProgressEvent) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send(IPC_CHANNELS.BROWSER_INSTALL_PROGRESS, payload);
         }
-      };
-
-      return new Promise((resolve) => {
-        const browsersPath =
-          process.env['PLAYWRIGHT_BROWSERS_PATH'] ??
-          path.join(app.getPath('userData'), 'ms-playwright');
-        const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-        logger.info('browser', `Installing Playwright Chromium into ${browsersPath}`);
-        emit({ line: `Đang tải Chromium vào ${browsersPath}...` });
-
-        const child = spawn(cmd, ['playwright-core', 'install', 'chromium'], {
-          env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browsersPath },
-          shell: process.platform === 'win32',
-        });
-
-        child.stdout.on('data', (chunk: Buffer) => {
-          for (const line of chunk.toString('utf8').split(/\r?\n/).filter(Boolean)) {
-            emit({ line });
-          }
-        });
-
-        child.stderr.on('data', (chunk: Buffer) => {
-          for (const line of chunk.toString('utf8').split(/\r?\n/).filter(Boolean)) {
-            emit({ line });
-          }
-        });
-
-        child.on('error', (err) => {
-          logger.error('browser', `Install Chromium error: ${err.message}`);
-          emit({ line: `Lỗi: ${err.message}`, done: true, success: false });
-          resolve({ ok: false, error: err.message });
-        });
-
-        child.on('close', (code) => {
-          if (code === 0) {
-            logger.info('browser', 'Playwright Chromium installed successfully');
-            emit({ line: 'Tải Chromium thành công!', done: true, success: true });
-            resolve({ ok: true });
-          } else {
-            const error = `Tiến trình tải Chromium kết thúc với mã lỗi ${code ?? -1}`;
-            logger.error('browser', error);
-            emit({ line: error, done: true, success: false });
-            resolve({ ok: false, error });
-          }
-        });
       });
     },
   );

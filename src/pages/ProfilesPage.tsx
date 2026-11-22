@@ -96,8 +96,14 @@ export function ProfilesPage(): React.JSX.Element {
   } | null>(null);
 
   // Missing browser modal state
-  const [browserMissingError, setBrowserMissingError] = useState<string | null>(null);
+  const [browserMissing, setBrowserMissing] = useState<{
+    profileId: string;
+    message: string;
+    browser: 'chromium' | 'firefox';
+  } | null>(null);
   const [installingChromium, setInstallingChromium] = useState(false);
+  const [installPercent, setInstallPercent] = useState<number>(0);
+  const [installFailed, setInstallFailed] = useState(false);
   const [installLogs, setInstallLogs] = useState<string[]>([]);
 
   // Bulk assign folder state
@@ -118,11 +124,17 @@ export function ProfilesPage(): React.JSX.Element {
     if (!window.electronAPI) return;
     try {
       const result = await window.electronAPI.startProfile(id, { useFallbackGeo });
-      if (result.browserNotFound) {
-        setBrowserMissingError(
-          result.error ?? "Không tìm thấy Chrome. Hãy cài Google Chrome hoặc bấm 'Tải Chromium'",
-        );
+      if (result.browserNotFound || result.errorCode === 'BROWSER_NOT_INSTALLED') {
+        setBrowserMissing({
+          profileId: id,
+          message:
+            result.error ??
+            'Cần tải Firefox cho Playwright (khoảng 80 MB). Bạn có muốn tải bây giờ không?',
+          browser: result.missingBrowser ?? 'chromium',
+        });
         setInstallLogs([]);
+        setInstallPercent(0);
+        setInstallFailed(false);
         return;
       }
       if (result.proxyCheckFailed) {
@@ -139,18 +151,29 @@ export function ProfilesPage(): React.JSX.Element {
   };
 
   const handleInstallChromium = async (): Promise<void> => {
-    if (!window.electronAPI) return;
+    if (!window.electronAPI || !browserMissing) return;
+    const { profileId, browser: target } = browserMissing;
+    const label = target === 'firefox' ? 'Firefox' : 'Chromium';
     setInstallingChromium(true);
+    setInstallFailed(false);
+    setInstallPercent(0);
     setInstallLogs([]);
     const unsubscribe = window.electronAPI.onBrowserInstallProgress((ev) => {
+      if (ev.browser !== target) return;
+      if (typeof ev.percent === 'number') {
+        setInstallPercent(ev.percent);
+      }
       setInstallLogs((prev) => [...prev.slice(-40), ev.line]);
     });
     try {
-      const res = await window.electronAPI.installPlaywrightChromium();
+      const res = await window.electronAPI.installPlaywrightChromium(target);
       if (res.ok) {
-        showToast('Đã tải Chromium thành công! Bạn có thể mở hồ sơ ngay.', 'success');
+        showToast(`Đã tải ${label} thành công! Đang tự động mở lại hồ sơ...`, 'success');
+        setBrowserMissing(null);
+        await handleStart(profileId);
       } else {
-        showToast(res.error ?? 'Tải Chromium thất bại', 'error');
+        setInstallFailed(true);
+        showToast(res.error ?? `Tải ${label} thất bại`, 'error');
       }
     } finally {
       unsubscribe();
@@ -828,14 +851,32 @@ export function ProfilesPage(): React.JSX.Element {
         </div>
       )}
 
-      {/* Missing browser friendly modal with "Tải Chromium" button */}
-      {browserMissingError && (
+      {/* Missing browser friendly modal with progress bar, retry & auto-relaunch */}
+      {browserMissing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
           <Card className="w-full max-w-lg space-y-4 p-6 shadow-2xl">
-            <h3 className="text-base font-semibold text-destructive">Không tìm thấy trình duyệt</h3>
-            <p className="text-sm text-foreground">{browserMissingError}</p>
+            <h3 className="text-base font-semibold text-foreground">
+              Cần tải {browserMissing.browser === 'firefox' ? 'Firefox' : 'Chromium'}
+            </h3>
+            <p className="text-sm text-muted-foreground">{browserMissing.message}</p>
+
+            {(installingChromium || installPercent > 0) && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Tiến trình tải</span>
+                  <span className="font-mono">{installPercent}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full bg-primary transition-all duration-200"
+                    style={{ width: `${installPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {installLogs.length > 0 && (
-              <pre className="max-h-44 overflow-y-auto rounded-lg border border-border bg-background p-3 font-mono text-[11px] text-muted-foreground">
+              <pre className="max-h-36 overflow-y-auto rounded-lg border border-border bg-background p-3 font-mono text-[11px] text-muted-foreground">
                 {installLogs.join('\n')}
               </pre>
             )}
@@ -843,9 +884,9 @@ export function ProfilesPage(): React.JSX.Element {
               <Button
                 variant="outline"
                 disabled={installingChromium}
-                onClick={() => setBrowserMissingError(null)}
+                onClick={() => setBrowserMissing(null)}
               >
-                {dict.common.close}
+                Hủy
               </Button>
               <Button disabled={installingChromium} onClick={() => void handleInstallChromium()}>
                 {installingChromium ? (
@@ -853,7 +894,11 @@ export function ProfilesPage(): React.JSX.Element {
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                {installingChromium ? 'Đang tải Chromium...' : 'Tải Chromium'}
+                {installingChromium
+                  ? `Đang tải (${installPercent}%)...`
+                  : installFailed
+                    ? 'Thử lại'
+                    : 'Tải về'}
               </Button>
             </div>
           </Card>

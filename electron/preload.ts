@@ -72,7 +72,9 @@ const electronApi: ElectronApi = {
   exportLogs: () => ipcRenderer.invoke(IPC_CHANNELS.LOGS_EXPORT),
 
   checkBrowserExecutable: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSER_CHECK),
-  installPlaywrightChromium: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSER_INSTALL_CHROMIUM),
+  listInstalledBrowsers: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSER_LIST_INSTALLED),
+  installPlaywrightChromium: (browser) =>
+    ipcRenderer.invoke(IPC_CHANNELS.BROWSER_INSTALL_CHROMIUM, browser ?? 'chromium'),
   onBrowserInstallProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, payload: BrowserInstallProgressEvent): void => {
       listener(payload);

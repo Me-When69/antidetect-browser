@@ -3,6 +3,7 @@ import type {
   BackupPayload,
   BrowserCheckResult,
   BrowserInstallProgressEvent,
+  BrowserInventoryItem,
   BrowserType,
   BulkCreateInput,
   BulkUpdateInput,
@@ -85,6 +86,7 @@ export const IPC_CHANNELS = {
   LOGS_EXPORT: 'logs:export',
 
   BROWSER_CHECK: 'browser:check',
+  BROWSER_LIST_INSTALLED: 'browser:listInstalled',
   BROWSER_INSTALL_CHROMIUM: 'browser:installChromium',
   BROWSER_INSTALL_PROGRESS: 'browser:installProgress',
 } as const;
@@ -177,7 +179,10 @@ export interface ElectronApi {
 
   // Browser Binary
   checkBrowserExecutable: () => Promise<BrowserCheckResult>;
-  installPlaywrightChromium: () => Promise<{ ok: boolean; error?: string }>;
+  listInstalledBrowsers: () => Promise<BrowserInventoryItem[]>;
+  installPlaywrightChromium: (
+    browser?: 'chromium' | 'firefox',
+  ) => Promise<{ ok: boolean; error?: string }>;
   onBrowserInstallProgress: (listener: (event: BrowserInstallProgressEvent) => void) => () => void;
 }
 

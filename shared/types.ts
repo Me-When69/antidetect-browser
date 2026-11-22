@@ -199,6 +199,8 @@ export interface LaunchResult {
   wsEndpoint: string;
   proxyCheckFailed?: boolean;
   browserNotFound?: boolean;
+  errorCode?: 'BROWSER_NOT_INSTALLED' | 'PROXY_CHECK_FAILED';
+  missingBrowser?: 'chromium' | 'firefox';
   error?: string;
 }
 
@@ -209,10 +211,22 @@ export interface BrowserCheckResult {
   error?: string;
 }
 
+export interface BrowserInventoryItem {
+  id: 'system-chrome' | 'playwright-chromium' | 'playwright-firefox';
+  name: string;
+  installed: boolean;
+  executablePath: string;
+  version: string;
+  installableTarget?: 'chromium' | 'firefox';
+}
+
 export interface BrowserInstallProgressEvent {
+  browser: 'chromium' | 'firefox';
+  percent: number | null;
   line: string;
   done?: boolean;
   success?: boolean;
+  error?: string;
 }
 
 export interface CookieItem {
