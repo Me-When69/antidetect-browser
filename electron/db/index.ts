@@ -68,6 +68,8 @@ export function createDatabase(dbPath: string): DbContext {
       geo_json TEXT NOT NULL,
       fingerprint_json TEXT NOT NULL,
       startup_json TEXT NOT NULL,
+      advanced_json TEXT NOT NULL DEFAULT '{}',
+      preset_id TEXT NOT NULL DEFAULT 'balanced',
       created_at TEXT NOT NULL,
       last_run_at TEXT,
       deleted_at TEXT
@@ -95,6 +97,12 @@ export function createDatabase(dbPath: string): DbContext {
   }
   if (!columns.some((c) => c.name === 'last_browser_version')) {
     sqlite.exec('ALTER TABLE profiles ADD COLUMN last_browser_version TEXT');
+  }
+  if (!columns.some((c) => c.name === 'advanced_json')) {
+    sqlite.exec("ALTER TABLE profiles ADD COLUMN advanced_json TEXT NOT NULL DEFAULT '{}'");
+  }
+  if (!columns.some((c) => c.name === 'preset_id')) {
+    sqlite.exec("ALTER TABLE profiles ADD COLUMN preset_id TEXT NOT NULL DEFAULT 'balanced'");
   }
 
   const db = drizzle(sqlite, { schema });

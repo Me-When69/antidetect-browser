@@ -45,6 +45,8 @@ export const profilesTable = sqliteTable('profiles', {
   geoJson: text('geo_json').notNull(),
   fingerprintJson: text('fingerprint_json').notNull(),
   startupJson: text('startup_json').notNull(),
+  advancedJson: text('advanced_json').notNull().default('{}'),
+  presetId: text('preset_id').notNull().default('balanced'),
   createdAt: text('created_at').notNull(),
   lastRunAt: text('last_run_at'),
   deletedAt: text('deleted_at'),

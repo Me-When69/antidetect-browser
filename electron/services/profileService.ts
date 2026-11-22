@@ -25,6 +25,15 @@ import type {
   UpdateProfileInput,
 } from '@shared/types';
 import { parseProfilesCsv, parseQuickProxy } from '@shared/validation';
+import {
+  normalizeBandwidth,
+  normalizeBehavior,
+  normalizeDataOnClose,
+  normalizeMediaDevices,
+  normalizeMeta,
+  normalizeSignals,
+  normalizeWindow,
+} from '@shared/advancedDefaults';
 import { generateConsistentIdentity } from './fingerprint/generator';
 import { applyDevice, getDeviceById, normalizeBrowserVersion } from './deviceCatalog';
 import type { SecretService } from './secretService';
@@ -70,15 +79,46 @@ export class ProfileService {
     };
   }
 
+  private serializeAdvanced(
+    p: Pick<
+      CreateProfileInput,
+      'mediaDevices' | 'dataOnClose' | 'window' | 'bandwidth' | 'behavior' | 'meta' | 'notes' | 'fingerprint'
+    >,
+  ): string {
+    return JSON.stringify({
+      mediaDevices: normalizeMediaDevices(p.mediaDevices),
+      dataOnClose: normalizeDataOnClose(p.dataOnClose),
+      window: normalizeWindow(p.window, p.fingerprint.screen),
+      bandwidth: normalizeBandwidth(p.bandwidth),
+      behavior: normalizeBehavior(p.behavior),
+      meta: normalizeMeta(p.meta, p.notes),
+    });
+  }
+
   private rowToProfile(row: ProfileRow): Profile {
     const rawProxy = JSON.parse(row.proxyJson) as ProfileProxy;
+    const rawFingerprint = JSON.parse(row.fingerprintJson) as ProfileFingerprint;
+    const fingerprint: ProfileFingerprint = {
+      ...rawFingerprint,
+      signals: normalizeSignals(rawFingerprint.signals),
+    };
+    let rawAdv: Partial<
+      Pick<Profile, 'mediaDevices' | 'dataOnClose' | 'window' | 'bandwidth' | 'behavior' | 'meta'>
+    > = {};
+    try {
+      rawAdv = JSON.parse(row.advancedJson || '{}') as typeof rawAdv;
+    } catch {
+      rawAdv = {};
+    }
+    const meta = normalizeMeta(rawAdv.meta, row.notes);
+
     return {
       id: row.id,
       name: row.name,
       folderId: row.folderId,
       status: row.status as ProfileStatus,
       tags: JSON.parse(row.tagsJson) as string[],
-      notes: row.notes,
+      notes: meta.notes || row.notes,
       platform: row.platform as Platform,
       osVersion: row.osVersion,
       deviceId: row.deviceId ?? null,
@@ -90,8 +130,15 @@ export class ProfileService {
       proxy: this.decryptProxy(rawProxy),
       ipv6Policy: (row.ipv6Policy === 'proxy-only' ? 'proxy-only' : 'block') as Ipv6Policy,
       geo: JSON.parse(row.geoJson) as ProfileGeo,
-      fingerprint: JSON.parse(row.fingerprintJson) as ProfileFingerprint,
+      fingerprint,
       startup: JSON.parse(row.startupJson) as ProfileStartup,
+      mediaDevices: normalizeMediaDevices(rawAdv.mediaDevices),
+      dataOnClose: normalizeDataOnClose(rawAdv.dataOnClose),
+      window: normalizeWindow(rawAdv.window, fingerprint.screen),
+      bandwidth: normalizeBandwidth(rawAdv.bandwidth),
+      behavior: normalizeBehavior(rawAdv.behavior),
+      meta,
+      presetId: row.presetId || 'balanced',
       createdAt: row.createdAt,
       lastRunAt: row.lastRunAt,
       deletedAt: row.deletedAt ?? null,
@@ -155,6 +202,17 @@ export class ProfileService {
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const storedProxy = this.encryptProxy(input.proxy);
+    const normalizedFp: ProfileFingerprint = {
+      ...input.fingerprint,
+      signals: normalizeSignals(input.fingerprint.signals),
+    };
+    const mediaDevices = normalizeMediaDevices(input.mediaDevices);
+    const dataOnClose = normalizeDataOnClose(input.dataOnClose);
+    const win = normalizeWindow(input.window, normalizedFp.screen);
+    const bandwidth = normalizeBandwidth(input.bandwidth);
+    const behavior = normalizeBehavior(input.behavior);
+    const meta = normalizeMeta(input.meta, input.notes);
+    const presetId = input.presetId || 'balanced';
 
     this.db
       .insert(profilesTable)
@@ -164,7 +222,7 @@ export class ProfileService {
         folderId: input.folderId,
         status: input.status,
         tagsJson: JSON.stringify(input.tags),
-        notes: input.notes,
+        notes: meta.notes || input.notes,
         platform: input.platform,
         osVersion: input.osVersion,
         deviceId: input.deviceId ?? null,
@@ -176,8 +234,19 @@ export class ProfileService {
         proxyJson: JSON.stringify(storedProxy),
         ipv6Policy: input.ipv6Policy ?? 'block',
         geoJson: JSON.stringify(input.geo),
-        fingerprintJson: JSON.stringify(input.fingerprint),
+        fingerprintJson: JSON.stringify(normalizedFp),
         startupJson: JSON.stringify(input.startup),
+        advancedJson: this.serializeAdvanced({
+          mediaDevices,
+          dataOnClose,
+          window: win,
+          bandwidth,
+          behavior,
+          meta,
+          notes: meta.notes,
+          fingerprint: normalizedFp,
+        }),
+        presetId,
         createdAt,
         lastRunAt: null,
       })
@@ -191,6 +260,15 @@ export class ProfileService {
     return {
       ...input,
       name: input.name.trim(),
+      notes: meta.notes || input.notes,
+      fingerprint: normalizedFp,
+      mediaDevices,
+      dataOnClose,
+      window: win,
+      bandwidth,
+      behavior,
+      meta,
+      presetId,
       id,
       createdAt,
       lastRunAt: null,
@@ -204,15 +282,34 @@ export class ProfileService {
       throw new Error(`Profile not found: ${input.id}`);
     }
 
+    const nextFingerprint: ProfileFingerprint = {
+      ...(input.fingerprint ?? existing.fingerprint),
+      signals: normalizeSignals(
+        input.fingerprint?.signals ?? existing.fingerprint.signals,
+      ),
+    };
+    const nextMeta = normalizeMeta(
+      input.meta ?? existing.meta,
+      input.notes !== undefined ? input.notes : existing.notes,
+    );
+
     const merged: Profile = {
       ...existing,
       ...input,
       name: (input.name ?? existing.name).trim(),
+      notes: nextMeta.notes,
       proxy: input.proxy ?? existing.proxy,
       geo: input.geo ?? existing.geo,
-      fingerprint: input.fingerprint ?? existing.fingerprint,
+      fingerprint: nextFingerprint,
       startup: input.startup ?? existing.startup,
       tags: input.tags ?? existing.tags,
+      mediaDevices: normalizeMediaDevices(input.mediaDevices ?? existing.mediaDevices),
+      dataOnClose: normalizeDataOnClose(input.dataOnClose ?? existing.dataOnClose),
+      window: normalizeWindow(input.window ?? existing.window, nextFingerprint.screen),
+      bandwidth: normalizeBandwidth(input.bandwidth ?? existing.bandwidth),
+      behavior: normalizeBehavior(input.behavior ?? existing.behavior),
+      meta: nextMeta,
+      presetId: input.presetId ?? existing.presetId ?? 'balanced',
     };
 
     this.db
@@ -236,6 +333,8 @@ export class ProfileService {
         geoJson: JSON.stringify(merged.geo),
         fingerprintJson: JSON.stringify(merged.fingerprint),
         startupJson: JSON.stringify(merged.startup),
+        advancedJson: this.serializeAdvanced(merged),
+        presetId: merged.presetId ?? 'balanced',
       })
       .where(eq(profilesTable.id, merged.id))
       .run();

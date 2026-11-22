@@ -49,6 +49,65 @@ export const profileGeoSchema = z.object({
   lon: z.number().nullable(),
 });
 
+export const profileSignalsSchema = z.object({
+  canvas: z.enum(['real', 'noise', 'off']),
+  webgl: z.enum(['real', 'noise', 'off']),
+  webglMetadata: z.enum(['custom', 'real']),
+  audio: z.enum(['real', 'noise', 'off']),
+  clientRects: z.enum(['real', 'noise']),
+  fonts: z.enum(['real', 'custom']),
+  speechVoices: z.enum(['real', 'custom', 'off']),
+  battery: z.enum(['real', 'off']),
+  portScanProtect: z.boolean(),
+});
+
+export const profileMediaDevicesSchema = z.object({
+  cameras: z.number().int().min(0).max(8),
+  microphones: z.number().int().min(0).max(8),
+  speakers: z.number().int().min(0).max(8),
+  mode: z.enum(['real', 'fake']),
+});
+
+export const profileDataOnCloseSchema = z.object({
+  clearCookies: z.boolean(),
+  clearCache: z.boolean(),
+  clearHistory: z.boolean(),
+  clearLocalStorage: z.boolean(),
+});
+
+export const profileWindowSchema = z.object({
+  width: z.number().int().min(320).max(7680),
+  height: z.number().int().min(240).max(4320),
+  x: z.number().int().nullable().optional(),
+  y: z.number().int().nullable().optional(),
+  randomizeSlightly: z.boolean(),
+  maximized: z.boolean(),
+});
+
+export const profileBandwidthSchema = z.object({
+  blockImages: z.boolean(),
+  blockMedia: z.boolean(),
+  blockExternalFonts: z.boolean(),
+  blockAds: z.boolean(),
+  blockTrackers: z.boolean(),
+  cacheStaticResources: z.boolean(),
+});
+
+export const profileBehaviorSchema = z.object({
+  doNotTrack: z.boolean(),
+  notifications: z.enum(['ask', 'block']),
+  hardwareAcceleration: z.boolean(),
+  geolocationPrompt: z.enum(['ask', 'allow', 'block']),
+  disableAutofill: z.boolean(),
+  disableGoogleSync: z.boolean(),
+});
+
+export const profileMetaSchema = z.object({
+  notes: z.string(),
+  color: z.string(),
+  expiresAt: z.string().nullable().optional(),
+});
+
 export const profileFingerprintSchema = z.object({
   screen: z.object({
     width: z.number().int().min(320).max(7680),
@@ -67,6 +126,7 @@ export const profileFingerprintSchema = z.object({
   audioNoiseSeed: z.number().int(),
   fonts: z.array(z.string()),
   webrtc: z.enum(['replace', 'disable', 'real']),
+  signals: profileSignalsSchema.optional(),
   mobile: z.boolean().optional(),
   maxTouchPoints: z.number().int().min(0).max(20).optional(),
   model: z.string().optional(),
@@ -97,7 +157,23 @@ export const profileFormSchema = z
     startup: z.object({
       urls: z.array(z.string()),
       restoreTabs: z.boolean(),
+      bookmarks: z
+        .array(
+          z.object({
+            title: z.string(),
+            url: z.string(),
+          }),
+        )
+        .optional(),
+      extensions: z.array(z.string()).optional(),
     }),
+    mediaDevices: profileMediaDevicesSchema.optional(),
+    dataOnClose: profileDataOnCloseSchema.optional(),
+    window: profileWindowSchema.optional(),
+    bandwidth: profileBandwidthSchema.optional(),
+    behavior: profileBehaviorSchema.optional(),
+    meta: profileMetaSchema.optional(),
+    presetId: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.proxy.type !== 'none') {

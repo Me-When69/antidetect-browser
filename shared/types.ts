@@ -55,6 +55,85 @@ export interface ProfileWebGL {
   renderer: string;
 }
 
+export type SignalMode = 'real' | 'noise' | 'off';
+
+export interface ProfileSignals {
+  canvas: SignalMode;
+  webgl: SignalMode;
+  webglMetadata: 'custom' | 'real';
+  audio: SignalMode;
+  clientRects: 'real' | 'noise';
+  fonts: 'real' | 'custom';
+  speechVoices: 'real' | 'custom' | 'off';
+  battery: 'real' | 'off';
+  portScanProtect: boolean;
+}
+
+export interface ProfileMediaDevices {
+  cameras: number;
+  microphones: number;
+  speakers: number;
+  mode: 'real' | 'fake';
+}
+
+export interface ProfileDataOnClose {
+  clearCookies: boolean;
+  clearCache: boolean;
+  clearHistory: boolean;
+  clearLocalStorage: boolean;
+}
+
+export interface ProfileWindow {
+  width: number;
+  height: number;
+  x?: number | null;
+  y?: number | null;
+  randomizeSlightly: boolean;
+  maximized: boolean;
+}
+
+export interface ProfileBookmark {
+  title: string;
+  url: string;
+}
+
+export interface ProfileBandwidth {
+  blockImages: boolean;
+  blockMedia: boolean;
+  blockExternalFonts: boolean;
+  blockAds: boolean;
+  blockTrackers: boolean;
+  cacheStaticResources: boolean;
+}
+
+export interface ProfileBehavior {
+  doNotTrack: boolean;
+  notifications: 'ask' | 'block';
+  hardwareAcceleration: boolean;
+  geolocationPrompt: 'ask' | 'allow' | 'block';
+  disableAutofill: boolean;
+  disableGoogleSync: boolean;
+}
+
+export interface ProfileMeta {
+  notes: string;
+  color: string;
+  expiresAt?: string | null;
+}
+
+export interface ProfilePreset {
+  id: string;
+  name: string;
+  description: string;
+  builtIn?: boolean;
+  signals: ProfileSignals;
+  mediaDevices: ProfileMediaDevices;
+  webrtc: WebRtcMode;
+  dataOnClose: ProfileDataOnClose;
+  bandwidth: ProfileBandwidth;
+  behavior: ProfileBehavior;
+}
+
 export interface ProfileFingerprint {
   screen: ProfileScreen;
   hardware: ProfileHardware;
@@ -63,6 +142,7 @@ export interface ProfileFingerprint {
   audioNoiseSeed: number;
   fonts: string[];
   webrtc: WebRtcMode;
+  signals?: ProfileSignals;
   mobile?: boolean;
   maxTouchPoints?: number;
   model?: string;
@@ -74,6 +154,8 @@ export interface ProfileFingerprint {
 export interface ProfileStartup {
   urls: string[];
   restoreTabs: boolean;
+  bookmarks?: ProfileBookmark[];
+  extensions?: string[];
 }
 
 export interface Profile {
@@ -96,6 +178,13 @@ export interface Profile {
   geo: ProfileGeo;
   fingerprint: ProfileFingerprint;
   startup: ProfileStartup;
+  mediaDevices?: ProfileMediaDevices;
+  dataOnClose?: ProfileDataOnClose;
+  window?: ProfileWindow;
+  bandwidth?: ProfileBandwidth;
+  behavior?: ProfileBehavior;
+  meta?: ProfileMeta;
+  presetId?: string;
   createdAt: string;
   lastRunAt: string | null;
   deletedAt: string | null;
@@ -256,6 +345,14 @@ export interface BulkUpdateInput {
   proxy?: ProfileProxy;
   browserVersion?: string;
   deviceId?: string;
+  presetId?: string;
+  signals?: Partial<ProfileSignals>;
+  mediaDevices?: Partial<ProfileMediaDevices>;
+  webrtc?: WebRtcMode;
+  dataOnClose?: Partial<ProfileDataOnClose>;
+  bandwidth?: Partial<ProfileBandwidth>;
+  behavior?: Partial<ProfileBehavior>;
+  meta?: Partial<ProfileMeta>;
 }
 
 export interface DevicePreset {
