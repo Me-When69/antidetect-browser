@@ -1,13 +1,15 @@
+import type { LocaleCode } from '@shared/types';
 import { vi, type TranslationDictionary } from './vi';
+import { en } from './en';
 
-export type Locale = 'vi';
-
-const dictionaries: Record<Locale, TranslationDictionary> = {
+const dictionaries: Record<LocaleCode, TranslationDictionary> = {
   vi,
+  en,
 };
 
-export function getTranslations(locale: Locale = 'vi'): TranslationDictionary {
-  return dictionaries[locale];
+export function getTranslations(locale: LocaleCode = 'vi'): TranslationDictionary {
+  return dictionaries[locale] ?? vi;
 }
 
 export const t = getTranslations('vi');
+export type { TranslationDictionary };

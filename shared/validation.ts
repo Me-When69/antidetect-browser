@@ -1,0 +1,367 @@
+import { z } from 'zod';
+import type {
+  CookieItem,
+  CreateProfileInput,
+  IdentityCheckResult,
+  IdentityCheckWarning,
+  Platform,
+  ProfileProxy,
+  ProxyCheckResult,
+  ProxyType,
+} from './types';
+
+export const profileProxySchema = z.object({
+  type: z.enum(['none', 'http', 'https', 'socks5']),
+  host: z.string(),
+  port: z.number().int().min(0).max(65535),
+  username: z.string(),
+  password: z.string(),
+});
+
+export const profileGeoSchema = z.object({
+  mode: z.enum(['auto', 'manual']),
+  timezone: z.string(),
+  language: z.string(),
+  lat: z.number().nullable(),
+  lon: z.number().nullable(),
+});
+
+export const profileFingerprintSchema = z.object({
+  screen: z.object({
+    width: z.number().int().min(320).max(7680),
+    height: z.number().int().min(240).max(4320),
+    dpr: z.number().min(0.5).max(4),
+  }),
+  hardware: z.object({
+    cores: z.number().int().min(1).max(128),
+    memory: z.number().int().min(1).max(256),
+  }),
+  webgl: z.object({
+    vendor: z.string(),
+    renderer: z.string(),
+  }),
+  canvasNoiseSeed: z.number().int(),
+  audioNoiseSeed: z.number().int(),
+  fonts: z.array(z.string()),
+  webrtc: z.enum(['replace', 'disable', 'real']),
+});
+
+export const profileFormSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Tên hồ sơ không được để trống').max(120),
+    folderId: z.string().nullable(),
+    status: z.enum(['none', 'active', 'banned', 'warming', 'ready']),
+    tags: z.array(z.string()),
+    notes: z.string(),
+    platform: z.enum(['windows', 'macos', 'linux']),
+    osVersion: z.string().min(1),
+    browser: z.enum(['chrome', 'firefox']),
+    browserVersion: z.string().min(1),
+    userAgent: z.string().min(1),
+    proxy: profileProxySchema,
+    geo: profileGeoSchema,
+    fingerprint: profileFingerprintSchema,
+    startup: z.object({
+      urls: z.array(z.string()),
+      restoreTabs: z.boolean(),
+    }),
+  })
+  .superRefine((data, ctx) => {
+    if (data.proxy.type !== 'none') {
+      if (!data.proxy.host.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['proxy', 'host'],
+          message: 'Vui lòng nhập host proxy',
+        });
+      }
+      if (data.proxy.port <= 0 || data.proxy.port > 65535) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['proxy', 'port'],
+          message: 'Port proxy phải từ 1 đến 65535',
+        });
+      }
+    }
+  });
+
+export function parseQuickProxy(
+  raw: string,
+  defaultType: Exclude<ProxyType, 'none'> = 'http',
+): ProfileProxy | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  // URL format: http://user:pass@host:port or socks5://host:port
+  const urlMatch = /^(https?|socks5):\/\/(?:([^:@]+):([^@]*)@)?([^:/]+):(\d+)$/i.exec(trimmed);
+  if (urlMatch) {
+    const typeRaw = urlMatch[1]?.toLowerCase() ?? defaultType;
+    const type: Exclude<ProxyType, 'none'> =
+      typeRaw === 'https' || typeRaw === 'socks5' ? typeRaw : 'http';
+    const port = Number(urlMatch[5]);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      return null;
+    }
+    return {
+      type,
+      host: urlMatch[4] ?? '',
+      port,
+      username: decodeURIComponent(urlMatch[2] ?? ''),
+      password: decodeURIComponent(urlMatch[3] ?? ''),
+    };
+  }
+
+  // Colon format: host:port or host:port:user:pass
+  const parts = trimmed.split(':');
+  if (parts.length === 2 || parts.length >= 4) {
+    const host = parts[0]?.trim() ?? '';
+    const port = Number(parts[1]?.trim() ?? '0');
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return null;
+    }
+    const username = parts.length >= 4 ? (parts[2] ?? '') : '';
+    const password = parts.length >= 4 ? parts.slice(3).join(':') : '';
+    return {
+      type: defaultType,
+      host,
+      port,
+      username,
+      password,
+    };
+  }
+
+  return null;
+}
+
+const COUNTRY_LANGUAGE_MAP: Record<string, string> = {
+  VN: 'vi-VN',
+  US: 'en-US',
+  GB: 'en-GB',
+  CA: 'en-CA',
+  AU: 'en-AU',
+  DE: 'de-DE',
+  FR: 'fr-FR',
+  JP: 'ja-JP',
+  KR: 'ko-KR',
+  SG: 'en-SG',
+  TH: 'th-TH',
+  ID: 'id-ID',
+  NL: 'nl-NL',
+  ES: 'es-ES',
+  IT: 'it-IT',
+  BR: 'pt-BR',
+  RU: 'ru-RU',
+  TW: 'zh-TW',
+  HK: 'zh-HK',
+};
+
+export function inferLanguageFromCountry(countryCode: string): string {
+  const upper = countryCode.trim().toUpperCase();
+  return COUNTRY_LANGUAGE_MAP[upper] ?? 'en-US';
+}
+
+const OS_UA_MARKERS: Record<Platform, RegExp> = {
+  windows: /Windows NT/i,
+  macos: /Macintosh|Mac OS X/i,
+  linux: /Linux|X11/i,
+};
+
+const MAC_ONLY_FONTS = new Set(['San Francisco', 'Helvetica Neue', 'Apple Color Emoji', 'Menlo']);
+const WIN_ONLY_FONTS = new Set(['Segoe UI', 'Calibri', 'Consolas', 'Cambria']);
+
+export function checkIdentityConsistency(
+  profile: Pick<CreateProfileInput, 'platform' | 'userAgent' | 'proxy' | 'geo' | 'fingerprint'>,
+  proxyCheck?: ProxyCheckResult | null,
+): IdentityCheckResult {
+  const warnings: IdentityCheckWarning[] = [];
+
+  // 1. OS vs User-Agent
+  if (profile.userAgent !== 'auto' && !OS_UA_MARKERS[profile.platform].test(profile.userAgent)) {
+    warnings.push({
+      code: 'UA_OS_MISMATCH',
+      severity: 'error',
+      message: `User-Agent không khớp với nền tảng ${profile.platform.toUpperCase()}.`,
+      suggestion: 'Đặt User-Agent về tự động hoặc sinh lại dấu vân tay khớp hệ điều hành.',
+    });
+  }
+
+  // 2. OS vs GPU WebGL
+  const renderer = profile.fingerprint.webgl.renderer.toLowerCase();
+  if (profile.platform === 'windows' && (renderer.includes('apple') || renderer.includes('mesa'))) {
+    warnings.push({
+      code: 'GPU_OS_MISMATCH',
+      severity: 'error',
+      message: 'GPU WebGL kiểu Apple/Mesa không tự nhiên trên Windows.',
+      suggestion: 'Chọn lại preset Windows (NVIDIA, Intel UHD hoặc AMD Radeon).',
+    });
+  }
+  if (profile.platform === 'macos' && renderer.includes('direct3d')) {
+    warnings.push({
+      code: 'GPU_OS_MISMATCH',
+      severity: 'error',
+      message: 'GPU WebGL chứa Direct3D không tồn tại trên macOS.',
+      suggestion: 'Chọn lại preset macOS (Apple M1/M2/M3 hoặc AMD/Intel Metal).',
+    });
+  }
+
+  // 3. OS vs Fonts
+  if (profile.platform === 'windows') {
+    const hasMacFont = profile.fingerprint.fonts.some((f) => MAC_ONLY_FONTS.has(f));
+    if (hasMacFont) {
+      warnings.push({
+        code: 'FONT_OS_MISMATCH',
+        severity: 'warning',
+        message: 'Danh sách font chứa font đặc trưng của macOS trên hồ sơ Windows.',
+        suggestion: 'Loại bỏ font macOS và giữ bộ font chuẩn Windows.',
+      });
+    }
+  } else if (profile.platform === 'macos') {
+    const hasWinFont = profile.fingerprint.fonts.some((f) => WIN_ONLY_FONTS.has(f));
+    if (hasWinFont) {
+      warnings.push({
+        code: 'FONT_OS_MISMATCH',
+        severity: 'warning',
+        message: 'Danh sách font chứa font đặc trưng của Windows trên hồ sơ macOS.',
+        suggestion: 'Loại bỏ font Windows và giữ bộ font chuẩn macOS.',
+      });
+    }
+  }
+
+  // 4. WebRTC real with proxy enabled
+  if (profile.proxy.type !== 'none' && profile.fingerprint.webrtc === 'real') {
+    warnings.push({
+      code: 'WEBRTC_LEAK_RISK',
+      severity: 'error',
+      message: 'WebRTC đang ở chế độ Real trong khi có sử dụng Proxy — dễ lộ IP thật.',
+      suggestion: 'Chuyển WebRTC sang chế độ Replace hoặc Disable.',
+    });
+  }
+
+  // 5. Proxy IP geo vs manual timezone/language
+  if (proxyCheck && proxyCheck.ok) {
+    if (profile.geo.mode === 'manual') {
+      if (
+        profile.geo.timezone &&
+        proxyCheck.timezone &&
+        profile.geo.timezone !== proxyCheck.timezone
+      ) {
+        warnings.push({
+          code: 'TIMEZONE_IP_MISMATCH',
+          severity: 'warning',
+          message: `Múi giờ (${profile.geo.timezone}) không khớp với IP đầu ra (${proxyCheck.timezone}).`,
+          suggestion: 'Bật chế độ tự động theo IP hoặc đổi múi giờ cho khớp.',
+        });
+      }
+      const expectedLang = inferLanguageFromCountry(proxyCheck.countryCode);
+      const primaryExpected = expectedLang.split('-')[0];
+      const primaryCurrent = profile.geo.language.split('-')[0];
+      if (
+        profile.geo.language &&
+        primaryExpected &&
+        primaryCurrent &&
+        primaryExpected !== primaryCurrent
+      ) {
+        warnings.push({
+          code: 'LANGUAGE_IP_MISMATCH',
+          severity: 'warning',
+          message: `Ngôn ngữ (${profile.geo.language}) chưa khớp quốc gia IP (${proxyCheck.country} - gợi ý ${expectedLang}).`,
+          suggestion: `Đổi ngôn ngữ sang ${expectedLang} hoặc bật tự động theo IP.`,
+        });
+      }
+    }
+  }
+
+  const penalty = warnings.reduce((acc, w) => acc + (w.severity === 'error' ? 30 : 15), 0);
+  const score = Math.max(0, 100 - penalty);
+
+  return {
+    score,
+    ok: warnings.filter((w) => w.severity === 'error').length === 0,
+    warnings,
+  };
+}
+
+export function parseCookiesText(raw: string): CookieItem[] {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  // JSON format
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    const parsed: unknown = JSON.parse(trimmed);
+    const arr = Array.isArray(parsed) ? parsed : [parsed];
+    const items: CookieItem[] = [];
+    for (const entry of arr) {
+      if (typeof entry !== 'object' || entry === null) continue;
+      const rec = entry as Record<string, unknown>;
+      const name = typeof rec['name'] === 'string' ? rec['name'] : '';
+      const value = typeof rec['value'] === 'string' ? rec['value'] : '';
+      const domain = typeof rec['domain'] === 'string' ? rec['domain'] : '';
+      if (!name || !domain) continue;
+      const sameSiteRaw =
+        typeof rec['sameSite'] === 'string' ? rec['sameSite'].toLowerCase() : 'lax';
+      const sameSite: CookieItem['sameSite'] =
+        sameSiteRaw === 'strict' ? 'Strict' : sameSiteRaw === 'none' ? 'None' : 'Lax';
+      const expiresNum =
+        typeof rec['expires'] === 'number'
+          ? rec['expires']
+          : typeof rec['expirationDate'] === 'number'
+            ? rec['expirationDate']
+            : -1;
+      items.push({
+        name,
+        value,
+        domain,
+        path: typeof rec['path'] === 'string' ? rec['path'] : '/',
+        expires: expiresNum,
+        httpOnly: Boolean(rec['httpOnly']),
+        secure: Boolean(rec['secure']),
+        sameSite,
+      });
+    }
+    return items;
+  }
+
+  // Netscape format: domain\tflag\tpath\tsecure\texpiration\tname\tvalue
+  const items: CookieItem[] = [];
+  for (const line of trimmed.split(/\r?\n/)) {
+    const clean = line.trim();
+    if (!clean || clean.startsWith('#')) continue;
+    const cols = clean.split('\t');
+    if (cols.length < 7) continue;
+    const domain = cols[0] ?? '';
+    const path = cols[2] ?? '/';
+    const secure = (cols[3] ?? '').toUpperCase() === 'TRUE';
+    const expires = Number(cols[4] ?? '-1');
+    const name = cols[5] ?? '';
+    const value = cols[6] ?? '';
+    if (!domain || !name) continue;
+    items.push({
+      name,
+      value,
+      domain,
+      path,
+      expires: Number.isFinite(expires) ? expires : -1,
+      httpOnly: false,
+      secure,
+      sameSite: 'Lax',
+    });
+  }
+  return items;
+}
+
+export function serializeCookiesNetscape(cookies: CookieItem[]): string {
+  const header = '# Netscape HTTP Cookie File\n# Exported by Antidetect Browser\n\n';
+  const rows = cookies.map((c) => {
+    const includeSubdomains = c.domain.startsWith('.') ? 'TRUE' : 'FALSE';
+    const secure = c.secure ? 'TRUE' : 'FALSE';
+    const exp = c.expires > 0 ? Math.floor(c.expires) : 0;
+    return [c.domain, includeSubdomains, c.path || '/', secure, String(exp), c.name, c.value].join(
+      '\t',
+    );
+  });
+  return header + rows.join('\n');
+}

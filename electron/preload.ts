@@ -1,8 +1,65 @@
-import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS, type AppInfo, type ElectronApi } from '@shared/ipc';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { IPC_CHANNELS, type ElectronApi } from '@shared/ipc';
+import type { ProfileRunStatusEvent } from '@shared/types';
 
 const electronApi: ElectronApi = {
-  getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_INFO),
+  getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_INFO),
+
+  listProfiles: (filter) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_LIST, filter),
+  getProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_GET, id),
+  createProfile: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_CREATE, input),
+  updateProfile: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_UPDATE, input),
+  deleteProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_DELETE, id),
+  duplicateProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_DUPLICATE, id),
+  bulkDeleteProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_BULK_DELETE, ids),
+  bulkUpdateProfiles: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_BULK_UPDATE, input),
+  bulkCreateProfiles: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_BULK_CREATE, input),
+
+  listFolders: () => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_LIST),
+  createFolder: (name) => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_CREATE, name),
+  deleteFolder: (id) => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_DELETE, id),
+  listTags: () => ipcRenderer.invoke(IPC_CHANNELS.TAGS_LIST),
+  createTag: (name, color) => ipcRenderer.invoke(IPC_CHANNELS.TAGS_CREATE, name, color),
+  deleteTag: (id) => ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, id),
+
+  startProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_START, id),
+  stopProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_STOP, id),
+  bulkStartProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_BULK_START, ids),
+  bulkStopProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_BULK_STOP, ids),
+  getRunningProfileIds: () => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_RUNNING_IDS),
+  onProfileRunStatus: (listener) => {
+    const handler = (_event: IpcRendererEvent, payload: ProfileRunStatusEvent): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC_CHANNELS.LAUNCHER_STATUS_EVENT, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.LAUNCHER_STATUS_EVENT, handler);
+    };
+  },
+
+  listProxies: () => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_LIST),
+  createProxy: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_CREATE, input),
+  updateProxy: (id, input) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_UPDATE, id, input),
+  deleteProxy: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_DELETE, id),
+  checkProxy: (proxy) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_CHECK, proxy),
+
+  generateFingerprint: (platform, browser) =>
+    ipcRenderer.invoke(IPC_CHANNELS.FINGERPRINT_GENERATE, platform, browser),
+  listDevicePresets: () => ipcRenderer.invoke(IPC_CHANNELS.FINGERPRINT_PRESETS),
+
+  importCookies: (profileId, rawText) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COOKIES_IMPORT, profileId, rawText),
+  exportCookies: (profileId, format) =>
+    ipcRenderer.invoke(IPC_CHANNELS.COOKIES_EXPORT, profileId, format),
+
+  getSettings: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GET),
+  updateSettings: (patch) => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_UPDATE, patch),
+  regenerateApiKey: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_REGEN_API_KEY),
+  getLocalApiStatus: () => ipcRenderer.invoke(IPC_CHANNELS.API_STATUS),
+
+  exportBackup: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
+  importBackup: (payload) => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_IMPORT, payload),
+  exportLogs: () => ipcRenderer.invoke(IPC_CHANNELS.LOGS_EXPORT),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

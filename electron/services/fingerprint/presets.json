@@ -1,0 +1,842 @@
+[
+  {
+    "id": "win11-rtx3060-1080p",
+    "label": "Windows 11 • RTX 3060 • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Cambria",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Trebuchet MS",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-rtx4070-1440p",
+    "label": "Windows 11 • RTX 4070 • 2560x1440",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 2560, "height": 1440, "dpr": 1 },
+    "hardware": { "cores": 16, "memory": 32 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Cambria",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Impact",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-intel-uhd770-1080p",
+    "label": "Windows 11 • Intel UHD 770 • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.139",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.139 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1.25 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-intel-irisxe-1080p",
+    "label": "Windows 11 • Intel Iris Xe • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "130.0.6723.117",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1.25 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Cambria",
+      "Consolas",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-rx6600-1080p",
+    "label": "Windows 11 • AMD RX 6600 • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (AMD)",
+      "renderer": "ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win10-gtx1660s-1080p",
+    "label": "Windows 10 • GTX 1660 Super • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 10",
+    "browser": "chrome",
+    "browserVersion": "130.0.6723.92",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.92 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 6, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1660 SUPER Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win10-intel-uhd630-1366",
+    "label": "Windows 10 • Intel UHD 630 • 1366x768",
+    "platform": "windows",
+    "osVersion": "Windows 10",
+    "browser": "chrome",
+    "browserVersion": "129.0.6668.101",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.101 Safari/537.36",
+    "screen": { "width": 1366, "height": 768, "dpr": 1 },
+    "hardware": { "cores": 4, "memory": 8 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": ["Segoe UI", "Arial", "Calibri", "Courier New", "Tahoma", "Times New Roman", "Verdana"]
+  },
+  {
+    "id": "win11-rtx3050-laptop",
+    "label": "Windows 11 • RTX 3050 Laptop • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1.25 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Laptop GPU Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Cambria",
+      "Consolas",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-amd-vega8-1080p",
+    "label": "Windows 11 • AMD Radeon Graphics • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "130.0.6723.117",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1.25 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (AMD)",
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win10-gtx1050ti-1080p",
+    "label": "Windows 10 • GTX 1050 Ti • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 10",
+    "browser": "chrome",
+    "browserVersion": "129.0.6668.90",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.90 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 4, "memory": 8 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-rtx4060-1080p",
+    "label": "Windows 11 • RTX 4060 • 1920x1080",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Cambria",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-rx7600-1440p",
+    "label": "Windows 11 • AMD RX 7600 • 2560x1440",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.139",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.139 Safari/537.36",
+    "screen": { "width": 2560, "height": 1440, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 32 },
+    "webgl": {
+      "vendor": "Google Inc. (AMD)",
+      "renderer": "ANGLE (AMD, AMD Radeon RX 7600 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-ff-rtx3060",
+    "label": "Windows 11 • Firefox 133 • RTX 3060",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Courier New",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win10-ff-uhd630",
+    "label": "Windows 10 • Firefox 132 • Intel UHD 630",
+    "platform": "windows",
+    "osVersion": "Windows 10",
+    "browser": "firefox",
+    "browserVersion": "132.0",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 6, "memory": 8 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": ["Segoe UI", "Arial", "Calibri", "Courier New", "Tahoma", "Times New Roman", "Verdana"]
+  },
+  {
+    "id": "win11-ff-rx6600",
+    "label": "Windows 11 • Firefox 133 • AMD RX 6600",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 2560, "height": 1440, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (AMD)",
+      "renderer": "ANGLE (AMD, AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": [
+      "Segoe UI",
+      "Arial",
+      "Calibri",
+      "Consolas",
+      "Georgia",
+      "Tahoma",
+      "Times New Roman",
+      "Verdana"
+    ]
+  },
+  {
+    "id": "win11-ff-irisxe",
+    "label": "Windows 11 • Firefox 133 • Intel Iris Xe",
+    "platform": "windows",
+    "osVersion": "Windows 11",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1.25 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "fonts": ["Segoe UI", "Arial", "Calibri", "Consolas", "Tahoma", "Times New Roman", "Verdana"]
+  },
+  {
+    "id": "mac15-m3-pro-14",
+    "label": "macOS 15 Sequoia • Apple M3 Pro • 1512x982",
+    "platform": "macos",
+    "osVersion": "macOS 15 Sequoia",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1512, "height": 982, "dpr": 2 },
+    "hardware": { "cores": 12, "memory": 18 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Verdana",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac14-m2-air-13",
+    "label": "macOS 14 Sonoma • Apple M2 • 1470x956",
+    "platform": "macos",
+    "osVersion": "macOS 14 Sonoma",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.139",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.139 Safari/537.36",
+    "screen": { "width": 1470, "height": 956, "dpr": 2 },
+    "hardware": { "cores": 8, "memory": 8 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac14-m1-air-13",
+    "label": "macOS 14 Sonoma • Apple M1 • 1440x900",
+    "platform": "macos",
+    "osVersion": "macOS 14 Sonoma",
+    "browser": "chrome",
+    "browserVersion": "130.0.6723.117",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36",
+    "screen": { "width": 1440, "height": 900, "dpr": 2 },
+    "hardware": { "cores": 8, "memory": 8 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac15-m3-max-16",
+    "label": "macOS 15 Sequoia • Apple M3 Max • 1728x1117",
+    "platform": "macos",
+    "osVersion": "macOS 15 Sequoia",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1728, "height": 1117, "dpr": 2 },
+    "hardware": { "cores": 14, "memory": 36 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Verdana",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac14-m2-pro-14",
+    "label": "macOS 14 Sonoma • Apple M2 Pro • 1512x982",
+    "platform": "macos",
+    "osVersion": "macOS 14 Sonoma",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1512, "height": 982, "dpr": 2 },
+    "hardware": { "cores": 10, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac13-intel-iris-plus",
+    "label": "macOS 13 Ventura • Intel Iris Plus • 1440x900",
+    "platform": "macos",
+    "osVersion": "macOS 13 Ventura",
+    "browser": "chrome",
+    "browserVersion": "129.0.6668.101",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.101 Safari/537.36",
+    "screen": { "width": 1440, "height": 900, "dpr": 2 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel Inc.)",
+      "renderer": "ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics OpenGL Engine, OpenGL 4.1)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac15-m4-imac",
+    "label": "macOS 15 Sequoia • Apple M4 • 2240x1260",
+    "platform": "macos",
+    "osVersion": "macOS 15 Sequoia",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 2240, "height": 1260, "dpr": 2 },
+    "hardware": { "cores": 10, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac14-m1-pro-16",
+    "label": "macOS 14 Sonoma • Apple M1 Pro • 1728x1117",
+    "platform": "macos",
+    "osVersion": "macOS 14 Sonoma",
+    "browser": "chrome",
+    "browserVersion": "130.0.6723.117",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36",
+    "screen": { "width": 1728, "height": 1117, "dpr": 2 },
+    "hardware": { "cores": 10, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac15-ff-m3",
+    "label": "macOS 15 Sequoia • Firefox 133 • Apple M3",
+    "platform": "macos",
+    "osVersion": "macOS 15 Sequoia",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 1512, "height": 982, "dpr": 2 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Apple",
+      "renderer": "Apple M3"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac14-ff-m2",
+    "label": "macOS 14 Sonoma • Firefox 132 • Apple M2",
+    "platform": "macos",
+    "osVersion": "macOS 14 Sonoma",
+    "browser": "firefox",
+    "browserVersion": "132.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0",
+    "screen": { "width": 1470, "height": 956, "dpr": 2 },
+    "hardware": { "cores": 8, "memory": 8 },
+    "webgl": {
+      "vendor": "Apple",
+      "renderer": "Apple M2"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac14-ff-m1",
+    "label": "macOS 14 Sonoma • Firefox 133 • Apple M1",
+    "platform": "macos",
+    "osVersion": "macOS 14 Sonoma",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 1440, "height": 900, "dpr": 2 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Apple",
+      "renderer": "Apple M1"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "mac15-ff-m3-pro",
+    "label": "macOS 15 Sequoia • Firefox 133 • Apple M3 Pro",
+    "platform": "macos",
+    "osVersion": "macOS 15 Sequoia",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 1728, "height": 1117, "dpr": 2 },
+    "hardware": { "cores": 12, "memory": 18 },
+    "webgl": {
+      "vendor": "Apple",
+      "renderer": "Apple M3 Pro"
+    },
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ]
+  },
+  {
+    "id": "linux-ubuntu24-intel",
+    "label": "Ubuntu 24.04 • Mesa Intel UHD • 1920x1080",
+    "platform": "linux",
+    "osVersion": "Ubuntu 24.04 LTS",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics 770 (ADL-S GT1), OpenGL 4.6)"
+    },
+    "fonts": [
+      "Ubuntu",
+      "DejaVu Sans",
+      "DejaVu Serif",
+      "DejaVu Sans Mono",
+      "Liberation Sans",
+      "Liberation Mono",
+      "Noto Sans"
+    ]
+  },
+  {
+    "id": "linux-ubuntu24-nvidia",
+    "label": "Ubuntu 24.04 • NVIDIA RTX 3060 • 2560x1440",
+    "platform": "linux",
+    "osVersion": "Ubuntu 24.04 LTS",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.204",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36",
+    "screen": { "width": 2560, "height": 1440, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 32 },
+    "webgl": {
+      "vendor": "Google Inc. (NVIDIA Corporation)",
+      "renderer": "ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 3060/PCIe/SSE2, OpenGL 4.6.0)"
+    },
+    "fonts": [
+      "Ubuntu",
+      "DejaVu Sans",
+      "DejaVu Serif",
+      "Liberation Sans",
+      "Liberation Mono",
+      "Noto Sans"
+    ]
+  },
+  {
+    "id": "linux-ubuntu22-amd",
+    "label": "Ubuntu 22.04 • Mesa AMD Radeon • 1920x1080",
+    "platform": "linux",
+    "osVersion": "Ubuntu 22.04 LTS",
+    "browser": "chrome",
+    "browserVersion": "130.0.6723.117",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.117 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (AMD)",
+      "renderer": "ANGLE (AMD, AMD Radeon RX 6600 (radeonsi, navi23, LLVM 15.0.7), OpenGL 4.6)"
+    },
+    "fonts": ["Ubuntu", "DejaVu Sans", "DejaVu Sans Mono", "Liberation Sans", "Noto Sans"]
+  },
+  {
+    "id": "linux-fedora40-intel",
+    "label": "Fedora 40 • Mesa Intel Iris Xe • 1920x1080",
+    "platform": "linux",
+    "osVersion": "Fedora 40",
+    "browser": "chrome",
+    "browserVersion": "131.0.6778.139",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.139 Safari/537.36",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Mesa Intel(R) Xe Graphics (TGL GT2), OpenGL 4.6)"
+    },
+    "fonts": ["Cantarell", "DejaVu Sans", "DejaVu Sans Mono", "Liberation Sans", "Noto Sans"]
+  },
+  {
+    "id": "linux-ubuntu24-ff-intel",
+    "label": "Ubuntu 24.04 • Firefox 133 • Mesa Intel",
+    "platform": "linux",
+    "osVersion": "Ubuntu 24.04 LTS",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 8, "memory": 16 },
+    "webgl": {
+      "vendor": "Intel",
+      "renderer": "Mesa Intel(R) UHD Graphics 770 (ADL-S GT1)"
+    },
+    "fonts": ["Ubuntu", "DejaVu Sans", "DejaVu Serif", "Liberation Sans", "Noto Sans"]
+  },
+  {
+    "id": "linux-ubuntu24-ff-amd",
+    "label": "Ubuntu 24.04 • Firefox 133 • Mesa AMD",
+    "platform": "linux",
+    "osVersion": "Ubuntu 24.04 LTS",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 2560, "height": 1440, "dpr": 1 },
+    "hardware": { "cores": 12, "memory": 32 },
+    "webgl": {
+      "vendor": "AMD",
+      "renderer": "AMD Radeon RX 6600 (radeonsi, navi23)"
+    },
+    "fonts": ["Ubuntu", "DejaVu Sans", "Liberation Sans", "Noto Sans"]
+  },
+  {
+    "id": "linux-debian12-ff",
+    "label": "Debian 12 • Firefox 132 • Mesa Intel",
+    "platform": "linux",
+    "osVersion": "Debian 12",
+    "browser": "firefox",
+    "browserVersion": "132.0",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0",
+    "screen": { "width": 1920, "height": 1080, "dpr": 1 },
+    "hardware": { "cores": 4, "memory": 8 },
+    "webgl": {
+      "vendor": "Intel",
+      "renderer": "Mesa Intel(R) UHD Graphics 630 (CFL GT2)"
+    },
+    "fonts": ["DejaVu Sans", "DejaVu Serif", "DejaVu Sans Mono", "Liberation Sans", "Noto Sans"]
+  },
+  {
+    "id": "linux-arch-ff-nvidia",
+    "label": "Arch Linux • Firefox 133 • NVIDIA RTX",
+    "platform": "linux",
+    "osVersion": "Arch Linux",
+    "browser": "firefox",
+    "browserVersion": "133.0",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "screen": { "width": 2560, "height": 1440, "dpr": 1 },
+    "hardware": { "cores": 16, "memory": 32 },
+    "webgl": {
+      "vendor": "NVIDIA Corporation",
+      "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+    },
+    "fonts": ["DejaVu Sans", "Liberation Sans", "Noto Sans", "Noto Sans Mono"]
+  }
+]

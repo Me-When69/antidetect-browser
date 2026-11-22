@@ -1,87 +1,77 @@
-import { useEffect, useState } from 'react';
-import { Folder, Globe, LayoutGrid, PlusCircle, Settings } from 'lucide-react';
-import { Sidebar, type NavPageId } from '@/components/layout/Sidebar';
+import { useEffect } from 'react';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
-import { t } from '@/i18n';
-import type { AppInfo } from '@shared/ipc';
-
-interface PageMeta {
-  title: string;
-  description: string;
-  emptyTitle: string;
-  emptyDescription: string;
-  icon: typeof LayoutGrid;
-}
-
-const pageMetadata: Record<NavPageId, PageMeta> = {
-  profiles: {
-    ...t.pages.allProfiles,
-    icon: LayoutGrid,
-  },
-  folders: {
-    ...t.pages.folders,
-    icon: Folder,
-  },
-  proxies: {
-    ...t.pages.proxies,
-    icon: Globe,
-  },
-  settings: {
-    ...t.pages.settings,
-    icon: Settings,
-  },
-  'new-profile': {
-    ...t.pages.newProfile,
-    icon: PlusCircle,
-  },
-};
+import { ProfilesPage } from '@/pages/ProfilesPage';
+import { ProfileFormPage } from '@/pages/ProfileFormPage';
+import { FoldersPage } from '@/pages/FoldersPage';
+import { ProxiesPage } from '@/pages/ProxiesPage';
+import { SettingsPage } from '@/pages/SettingsPage';
+import { getTranslations } from '@/i18n';
+import { useAppStore } from '@/store/useAppStore';
+import { cn } from '@/lib/utils';
 
 export function App(): React.JSX.Element {
-  const [activePage, setActivePage] = useState<NavPageId>('profiles');
-  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  const { activePage, editingProfileId, locale, toast, bootstrap, setRunningStatus, showToast } =
+    useAppStore();
+  const dict = getTranslations(locale);
 
   useEffect(() => {
-    let active = true;
-    const loadInfo = async (): Promise<void> => {
-      if (!window.electronAPI) {
-        return;
+    void bootstrap();
+    if (!window.electronAPI) return;
+    const unsubscribe = window.electronAPI.onProfileRunStatus((event) => {
+      setRunningStatus(event.profileId, event.running);
+      if (event.error) {
+        showToast(event.error, 'error');
       }
-      const info = await window.electronAPI.getAppInfo();
-      if (active) {
-        setAppInfo(info);
-      }
-    };
-    void loadInfo();
+    });
     return () => {
-      active = false;
+      unsubscribe();
     };
-  }, []);
+  }, [bootstrap, setRunningStatus, showToast]);
 
-  const current = pageMetadata[activePage];
-  const PageIcon = current.icon;
+  const pageTitle = (() => {
+    switch (activePage) {
+      case 'profiles':
+        return dict.profiles.title;
+      case 'folders':
+        return dict.folders.title;
+      case 'proxies':
+        return dict.proxies.title;
+      case 'settings':
+        return dict.settings.title;
+      case 'new-profile':
+        return editingProfileId ? dict.form.editTitle : dict.form.newTitle;
+    }
+  })();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-      <Sidebar activePage={activePage} onSelectPage={setActivePage} appInfo={appInfo} />
+      <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title={current.title} />
+        <Topbar title={pageTitle} />
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-foreground">{current.title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{current.description}</p>
-          </div>
+        <main className="relative flex-1 overflow-y-auto p-6">
+          {activePage === 'profiles' && <ProfilesPage />}
+          {activePage === 'new-profile' && <ProfileFormPage />}
+          {activePage === 'folders' && <FoldersPage />}
+          {activePage === 'proxies' && <ProxiesPage />}
+          {activePage === 'settings' && <SettingsPage />}
 
-          <section className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40 p-10 text-center">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
-              <PageIcon className="h-6 w-6" />
+          {toast && (
+            <div
+              className={cn(
+                'fixed bottom-5 right-5 z-50 rounded-lg border px-4 py-2.5 text-sm shadow-lg',
+                toast.type === 'error'
+                  ? 'border-destructive/60 bg-destructive text-destructive-foreground'
+                  : toast.type === 'success'
+                    ? 'border-emerald-500/40 bg-emerald-950/95 text-emerald-200'
+                    : 'border-border bg-card text-foreground',
+              )}
+            >
+              {toast.text}
             </div>
-            <h3 className="text-base font-medium text-foreground">{current.emptyTitle}</h3>
-            <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
-              {current.emptyDescription}
-            </p>
-          </section>
+          )}
         </main>
       </div>
     </div>

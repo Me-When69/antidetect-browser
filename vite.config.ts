@@ -18,6 +18,11 @@ export default defineConfig({
               '@shared': path.resolve(__dirname, 'shared'),
             },
           },
+          build: {
+            rollupOptions: {
+              external: ['better-sqlite3', 'playwright-core', 'proxy-chain'],
+            },
+          },
         },
       },
       preload: {
