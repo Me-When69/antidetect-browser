@@ -26,6 +26,8 @@ export default defineConfig({
                 'proxy-chain',
                 'https-proxy-agent',
                 'socks-proxy-agent',
+                'socks',
+                'ssh2',
               ],
             },
           },

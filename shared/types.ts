@@ -1,6 +1,18 @@
 export type Platform = 'windows' | 'macos' | 'linux';
 export type BrowserType = 'chrome' | 'firefox';
-export type ProxyType = 'none' | 'http' | 'https' | 'socks5';
+export type ProxyType =
+  | 'none'
+  | 'http'
+  | 'https'
+  | 'socks4'
+  | 'socks4a'
+  | 'socks5'
+  | 'socks5h'
+  | 'ssh'
+  | 'shadowsocks'
+  | 'vmess'
+  | 'vless'
+  | 'trojan';
 export type GeoMode = 'auto' | 'manual';
 export type WebRtcMode = 'replace' | 'disable' | 'real';
 export type Ipv6Policy = 'block' | 'proxy-only';
@@ -12,7 +24,12 @@ export interface ProfileProxy {
   port: number;
   username: string;
   password: string;
+  privateKey?: string;
+  extra?: Record<string, string>;
+  chain?: ProfileProxy[];
 }
+
+export type ProxyConfig = ProfileProxy;
 
 export interface ProfileGeo {
   mode: GeoMode;
@@ -109,6 +126,9 @@ export interface ProxyCheckResult {
   ok: boolean;
   ip: string;
   ipVersion?: 4 | 6;
+  protocolUsed?: ProxyType;
+  viaBridge?: boolean;
+  dnsLeakRisk?: boolean;
   country: string;
   countryCode: string;
   city: string;
@@ -117,6 +137,22 @@ export interface ProxyCheckResult {
   lon: number | null;
   language: string;
   latencyMs: number;
+  error?: string;
+}
+
+export interface ProxyCoreInfo {
+  name: 'sing-box' | 'xray';
+  installed: boolean;
+  version: string;
+  executablePath: string;
+}
+
+export interface ProxyCoreDownloadProgress {
+  core: 'sing-box' | 'xray';
+  percent: number | null;
+  line: string;
+  done?: boolean;
+  success?: boolean;
   error?: string;
 }
 

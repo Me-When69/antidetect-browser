@@ -12,12 +12,33 @@ import type {
   ProxyType,
 } from './types';
 
-export const profileProxySchema = z.object({
-  type: z.enum(['none', 'http', 'https', 'socks5']),
+const PROXY_TYPE_VALUES = [
+  'none',
+  'http',
+  'https',
+  'socks4',
+  'socks4a',
+  'socks5',
+  'socks5h',
+  'ssh',
+  'shadowsocks',
+  'vmess',
+  'vless',
+  'trojan',
+] as const;
+
+const baseProxySchema = z.object({
+  type: z.enum(PROXY_TYPE_VALUES),
   host: z.string(),
   port: z.number().int().min(0).max(65535),
   username: z.string(),
   password: z.string(),
+  privateKey: z.string().optional(),
+  extra: z.record(z.string(), z.string()).optional(),
+});
+
+export const profileProxySchema = baseProxySchema.extend({
+  chain: z.array(baseProxySchema).max(3).optional(),
 });
 
 export const profileGeoSchema = z.object({
@@ -88,6 +109,17 @@ export const profileFormSchema = z
     }
   });
 
+function decodeBase64Utf8(raw: string): string {
+  const normalized = raw.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  if (typeof atob === 'function') {
+    const bin = atob(padded);
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
 export function parseQuickProxyDetailed(
   raw: string,
   defaultType: Exclude<ProxyType, 'none'> = 'http',
@@ -97,8 +129,149 @@ export function parseQuickProxyDetailed(
     return { ok: false, error: 'Chuỗi proxy trống' };
   }
 
+  // ss://
+  if (/^ss:\/\//i.test(trimmed)) {
+    const body = trimmed.slice(5).split('#')[0] ?? '';
+    let method = '';
+    let password = '';
+    let host = '';
+    let port = 0;
+    if (body.includes('@')) {
+      const atIdx = body.lastIndexOf('@');
+      const uRaw = body.slice(0, atIdx);
+      const hpRaw = (body.slice(atIdx + 1).split('?')[0] ?? '').trim();
+      const dec = uRaw.includes(':') ? decodeURIComponent(uRaw) : decodeBase64Utf8(uRaw);
+      const cIdx = dec.indexOf(':');
+      method = cIdx > 0 ? dec.slice(0, cIdx).toLowerCase() : '';
+      password = cIdx > 0 ? dec.slice(cIdx + 1) : '';
+      const hp = /^(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/.exec(hpRaw);
+      host = (hp?.[1] ?? hp?.[2] ?? '').trim();
+      port = Number(hp?.[3] ?? '0');
+    } else {
+      const dec = decodeBase64Utf8(body.split('?')[0] ?? '');
+      const m = /^([^:]+):([^@]*)@(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/.exec(dec.trim());
+      method = (m?.[1] ?? '').toLowerCase();
+      password = m?.[2] ?? '';
+      host = (m?.[3] ?? m?.[4] ?? '').trim();
+      port = Number(m?.[5] ?? '0');
+    }
+    if (!method || !host || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return { ok: false, error: 'Chuỗi Shadowsocks (ss://) không hợp lệ' };
+    }
+    return {
+      ok: true,
+      proxy: { type: 'shadowsocks', host, port, username: '', password, extra: { cipher: method } },
+    };
+  }
+
+  // vmess://
+  if (/^vmess:\/\//i.test(trimmed)) {
+    try {
+      const json = JSON.parse(decodeBase64Utf8(trimmed.slice(8))) as Record<string, unknown>;
+      const host = typeof json['add'] === 'string' ? json['add'].trim() : '';
+      const port = Number(json['port']);
+      const uuid = typeof json['id'] === 'string' ? json['id'].trim() : '';
+      if (!uuid || !host || !Number.isInteger(port) || port < 1 || port > 65535) {
+        return { ok: false, error: 'VMess thiếu UUID, host hoặc port hợp lệ' };
+      }
+      return {
+        ok: true,
+        proxy: {
+          type: 'vmess',
+          host,
+          port,
+          username: '',
+          password: '',
+          extra: {
+            uuid,
+            network: typeof json['net'] === 'string' ? json['net'] : 'tcp',
+            tls: typeof json['tls'] === 'string' ? json['tls'] : 'none',
+            sni: typeof json['sni'] === 'string' ? json['sni'] : '',
+            path: typeof json['path'] === 'string' ? json['path'] : '',
+          },
+        },
+      };
+    } catch {
+      return { ok: false, error: 'Chuỗi VMess không phải base64 JSON hợp lệ' };
+    }
+  }
+
+  // vless://
+  if (/^vless:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      const uuid = decodeURIComponent(u.username).trim();
+      const host = u.hostname.replace(/^\[|\]$/g, '');
+      const port = Number(u.port);
+      if (!uuid || !host || !Number.isInteger(port) || port < 1 || port > 65535) {
+        return { ok: false, error: 'VLESS thiếu UUID, host hoặc port hợp lệ' };
+      }
+      return {
+        ok: true,
+        proxy: {
+          type: 'vless',
+          host,
+          port,
+          username: '',
+          password: '',
+          extra: {
+            uuid,
+            network: u.searchParams.get('type') ?? 'tcp',
+            tls: u.searchParams.get('security') ?? 'none',
+            sni: u.searchParams.get('sni') ?? '',
+            path: u.searchParams.get('path') ?? '',
+          },
+        },
+      };
+    } catch {
+      return { ok: false, error: 'URL VLESS không hợp lệ' };
+    }
+  }
+
+  // trojan://
+  if (/^trojan:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      const password = decodeURIComponent(u.username);
+      const host = u.hostname.replace(/^\[|\]$/g, '');
+      const port = Number(u.port);
+      if (!password || !host || !Number.isInteger(port) || port < 1 || port > 65535) {
+        return { ok: false, error: 'Trojan thiếu mật khẩu, host hoặc port hợp lệ' };
+      }
+      return {
+        ok: true,
+        proxy: {
+          type: 'trojan',
+          host,
+          port,
+          username: '',
+          password,
+          extra: {
+            network: u.searchParams.get('type') ?? 'tcp',
+            tls: u.searchParams.get('security') ?? 'tls',
+            sni: u.searchParams.get('sni') ?? host,
+            path: u.searchParams.get('path') ?? '',
+          },
+        },
+      };
+    } catch {
+      return { ok: false, error: 'URL Trojan không hợp lệ' };
+    }
+  }
+
+  // Reject unknown URL schemes (e.g. ftp://)
+  if (
+    /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) &&
+    !/^(https?|socks4a?|socks5h?|ssh):\/\//i.test(trimmed)
+  ) {
+    return {
+      ok: false,
+      error: 'Giao thức proxy không được hỗ trợ',
+    };
+  }
+
   // Detect unbracketed IPv6
-  const withoutScheme = trimmed.replace(/^(https?|socks5):\/\//i, '');
+  const withoutScheme = trimmed.replace(/^(https?|socks4a?|socks5h?|ssh):\/\//i, '');
   const hostCandidate = withoutScheme.includes('@')
     ? (withoutScheme.split('@').pop() ?? '')
     : withoutScheme;
@@ -110,23 +283,13 @@ export function parseQuickProxyDetailed(
     };
   }
 
-  // Reject unknown URL schemes (e.g. ftp://)
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) && !/^(https?|socks5):\/\//i.test(trimmed)) {
-    return {
-      ok: false,
-      error: 'Giao thức proxy không được hỗ trợ (chỉ hỗ trợ http, https, socks5)',
-    };
-  }
-
   // URL format: scheme://[user:pass@]([ipv6]|host):port
   const urlMatch =
-    /^(https?|socks5):\/\/(?:([^:@\s]+):([^@\s]*)@)?(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/i.exec(
+    /^(https?|socks4a?|socks5h?|ssh):\/\/(?:([^:@\s]+)(?::([^@\s]*))?@)?(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/i.exec(
       trimmed,
     );
   if (urlMatch) {
-    const typeRaw = urlMatch[1]?.toLowerCase() ?? defaultType;
-    const type: Exclude<ProxyType, 'none'> =
-      typeRaw === 'https' || typeRaw === 'socks5' ? typeRaw : 'http';
+    const type = (urlMatch[1]?.toLowerCase() ?? defaultType) as Exclude<ProxyType, 'none'>;
     const host = (urlMatch[4] ?? urlMatch[5] ?? '').trim();
     const port = Number(urlMatch[6]);
     if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
