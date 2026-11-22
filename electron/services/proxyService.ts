@@ -243,13 +243,14 @@ function probeProxyTcp(host: string, port: number, timeoutMs = 3000): Promise<vo
 
 const defaultProxyFetcher: ProxyHttpFetcher = async (targetUrl, proxy, timeoutMs) => {
   if (proxy.type !== 'none' && proxy.host.trim() && proxy.port > 0) {
-    await probeProxyTcp(proxy.host, proxy.port, Math.min(3000, timeoutMs));
+    await probeProxyTcp(proxy.host, proxy.port, Math.min(5000, timeoutMs));
   }
 
   return new Promise((resolve, reject) => {
     const parsed = new URL(targetUrl);
     const isHttps = parsed.protocol === 'https:';
-    const agent = buildAgent(proxy);
+    const useDirectHttpProxy = !isHttps && proxy.type === 'http' && proxy.host.trim() && proxy.port > 0;
+    const agent = useDirectHttpProxy ? undefined : buildAgent(proxy);
     const transport = isHttps ? https : http;
     let settled = false;
 
@@ -261,8 +262,29 @@ const defaultProxyFetcher: ProxyHttpFetcher = async (targetUrl, proxy, timeoutMs
       else if (result) resolve(result);
     };
 
-    const req = transport.request(
-      {
+    const headers: Record<string, string> = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
+      Accept: 'application/json',
+    };
+
+    let reqOptions: http.RequestOptions;
+    if (useDirectHttpProxy) {
+      headers['Host'] = parsed.host;
+      if (proxy.username || proxy.password) {
+        const creds = Buffer.from(`${proxy.username}:${proxy.password}`).toString('base64');
+        headers['Proxy-Authorization'] = `Basic ${creds}`;
+      }
+      reqOptions = {
+        hostname: proxy.host.trim().replace(/^\[|\]$/g, ''),
+        port: proxy.port,
+        path: targetUrl,
+        method: 'GET',
+        timeout: timeoutMs,
+        headers,
+      };
+    } else {
+      reqOptions = {
         protocol: parsed.protocol,
         hostname: parsed.hostname,
         port: parsed.port ? Number(parsed.port) : isHttps ? 443 : 80,
@@ -270,22 +292,20 @@ const defaultProxyFetcher: ProxyHttpFetcher = async (targetUrl, proxy, timeoutMs
         method: 'GET',
         agent,
         timeout: timeoutMs,
-        headers: {
-          'User-Agent': 'FacetBrowser/1.0',
-          Accept: 'application/json',
-        },
-      },
-      (res) => {
-        let body = '';
-        res.setEncoding('utf8');
-        res.on('data', (chunk) => {
-          body += chunk;
-        });
-        res.on('end', () => {
-          finish(null, { statusCode: res.statusCode ?? 0, body });
-        });
-      },
-    );
+        headers,
+      };
+    }
+
+    const req = transport.request(reqOptions, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        finish(null, { statusCode: res.statusCode ?? 0, body });
+      });
+    });
 
     const hardTimer = setTimeout(() => {
       const timeoutErr = new Error('ETIMEDOUT') as NodeJS.ErrnoException;
