@@ -1,5 +1,5 @@
-export type Platform = 'windows' | 'macos' | 'linux';
-export type BrowserType = 'chrome' | 'firefox';
+export type Platform = 'windows' | 'macos' | 'linux' | 'android' | 'ios';
+export type BrowserType = 'chrome' | 'firefox' | 'webkit';
 export type ProxyType =
   | 'none'
   | 'http'
@@ -63,6 +63,12 @@ export interface ProfileFingerprint {
   audioNoiseSeed: number;
   fonts: string[];
   webrtc: WebRtcMode;
+  mobile?: boolean;
+  maxTouchPoints?: number;
+  model?: string;
+  architecture?: string;
+  bitness?: string;
+  platformVersion?: string;
 }
 
 export interface ProfileStartup {
@@ -79,8 +85,11 @@ export interface Profile {
   notes: string;
   platform: Platform;
   osVersion: string;
+  deviceId?: string | null;
+  deviceLabel?: string;
   browser: BrowserType;
   browserVersion: string;
+  lastBrowserVersion?: string | null;
   userAgent: string;
   proxy: ProfileProxy;
   ipv6Policy: Ipv6Policy;
@@ -90,6 +99,64 @@ export interface Profile {
   createdAt: string;
   lastRunAt: string | null;
   deletedAt: string | null;
+}
+
+export interface EmulatedDevice {
+  id: string;
+  label: string;
+  platform: Platform;
+  osVersion: string;
+  mobile: boolean;
+  model?: string;
+  brand?: string;
+  weight?: number;
+  screen: ProfileScreen;
+  viewport: { width: number; height: number };
+  hardware: ProfileHardware;
+  gpu: ProfileWebGL;
+  touch: { maxTouchPoints: number };
+  fonts: string[];
+  uaTemplate: string;
+  clientHints: {
+    platform: string;
+    platformVersion: string;
+    architecture: string;
+    bitness: string;
+    model: string;
+    mobile: boolean;
+  } | null;
+  languagesHint?: string[];
+  notes?: string;
+}
+
+export interface ManagedBrowserVersion {
+  id: string;
+  browserKind: BrowserType;
+  channel: 'stable' | 'beta' | 'archive' | 'system' | 'playwright' | 'camoufox';
+  version: string;
+  major: number;
+  installed: boolean;
+  executablePath: string;
+  sizeBytes: number;
+  profileCount: number;
+}
+
+export interface BrowserDownloadProgress {
+  version: string;
+  percent: number;
+  downloadedBytes: number;
+  totalBytes: number;
+  done?: boolean;
+  cancelled?: boolean;
+  error?: string;
+}
+
+export interface BulkVersionPreviewItem {
+  profileId: string;
+  profileName: string;
+  currentVersion: string;
+  targetVersion: string;
+  action: 'upgrade' | 'same' | 'downgrade';
 }
 
 export type CreateProfileInput = Omit<Profile, 'id' | 'createdAt' | 'lastRunAt' | 'deletedAt'>;
@@ -187,6 +254,8 @@ export interface BulkUpdateInput {
   addTags?: string[];
   status?: ProfileStatus;
   proxy?: ProfileProxy;
+  browserVersion?: string;
+  deviceId?: string;
 }
 
 export interface DevicePreset {

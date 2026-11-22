@@ -57,8 +57,11 @@ export function createDatabase(dbPath: string): DbContext {
       notes TEXT NOT NULL DEFAULT '',
       platform TEXT NOT NULL DEFAULT 'windows',
       os_version TEXT NOT NULL DEFAULT 'Windows 11',
+      device_id TEXT,
+      device_label TEXT NOT NULL DEFAULT '',
       browser TEXT NOT NULL DEFAULT 'chrome',
       browser_version TEXT NOT NULL DEFAULT '131.0.6778.204',
+      last_browser_version TEXT,
       user_agent TEXT NOT NULL DEFAULT 'auto',
       proxy_json TEXT NOT NULL,
       ipv6_policy TEXT NOT NULL DEFAULT 'block',
@@ -83,6 +86,15 @@ export function createDatabase(dbPath: string): DbContext {
   }
   if (!columns.some((c) => c.name === 'ipv6_policy')) {
     sqlite.exec("ALTER TABLE profiles ADD COLUMN ipv6_policy TEXT NOT NULL DEFAULT 'block'");
+  }
+  if (!columns.some((c) => c.name === 'device_id')) {
+    sqlite.exec('ALTER TABLE profiles ADD COLUMN device_id TEXT');
+  }
+  if (!columns.some((c) => c.name === 'device_label')) {
+    sqlite.exec("ALTER TABLE profiles ADD COLUMN device_label TEXT NOT NULL DEFAULT ''");
+  }
+  if (!columns.some((c) => c.name === 'last_browser_version')) {
+    sqlite.exec('ALTER TABLE profiles ADD COLUMN last_browser_version TEXT');
   }
 
   const db = drizzle(sqlite, { schema });

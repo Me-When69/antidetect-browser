@@ -67,6 +67,12 @@ export const profileFingerprintSchema = z.object({
   audioNoiseSeed: z.number().int(),
   fonts: z.array(z.string()),
   webrtc: z.enum(['replace', 'disable', 'real']),
+  mobile: z.boolean().optional(),
+  maxTouchPoints: z.number().int().min(0).max(20).optional(),
+  model: z.string().optional(),
+  architecture: z.string().optional(),
+  bitness: z.string().optional(),
+  platformVersion: z.string().optional(),
 });
 
 export const profileFormSchema = z
@@ -76,10 +82,13 @@ export const profileFormSchema = z
     status: z.enum(['none', 'active', 'banned', 'warming', 'ready']),
     tags: z.array(z.string()),
     notes: z.string(),
-    platform: z.enum(['windows', 'macos', 'linux']),
+    platform: z.enum(['windows', 'macos', 'linux', 'android', 'ios']),
     osVersion: z.string().min(1),
-    browser: z.enum(['chrome', 'firefox']),
+    deviceId: z.string().nullable().optional(),
+    deviceLabel: z.string().optional(),
+    browser: z.enum(['chrome', 'firefox', 'webkit']),
     browserVersion: z.string().min(1),
+    lastBrowserVersion: z.string().nullable().optional(),
     userAgent: z.string().min(1),
     proxy: profileProxySchema,
     ipv6Policy: z.enum(['block', 'proxy-only']),
@@ -416,6 +425,8 @@ const OS_UA_MARKERS: Record<Platform, RegExp> = {
   windows: /Windows NT/i,
   macos: /Macintosh|Mac OS X/i,
   linux: /Linux|X11/i,
+  android: /Android/i,
+  ios: /iPhone|iPad|iOS|CPU OS/i,
 };
 
 const MAC_ONLY_FONTS = new Set(['San Francisco', 'Helvetica Neue', 'Apple Color Emoji', 'Menlo']);

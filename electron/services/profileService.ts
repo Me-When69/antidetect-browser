@@ -80,8 +80,11 @@ export class ProfileService {
       notes: row.notes,
       platform: row.platform as Platform,
       osVersion: row.osVersion,
+      deviceId: row.deviceId ?? null,
+      deviceLabel: row.deviceLabel ?? '',
       browser: row.browser as BrowserType,
       browserVersion: row.browserVersion,
+      lastBrowserVersion: row.lastBrowserVersion ?? null,
       userAgent: row.userAgent,
       proxy: this.decryptProxy(rawProxy),
       ipv6Policy: (row.ipv6Policy === 'proxy-only' ? 'proxy-only' : 'block') as Ipv6Policy,
@@ -163,8 +166,11 @@ export class ProfileService {
         notes: input.notes,
         platform: input.platform,
         osVersion: input.osVersion,
+        deviceId: input.deviceId ?? null,
+        deviceLabel: input.deviceLabel ?? '',
         browser: input.browser,
         browserVersion: input.browserVersion,
+        lastBrowserVersion: input.lastBrowserVersion ?? null,
         userAgent: input.userAgent,
         proxyJson: JSON.stringify(storedProxy),
         ipv6Policy: input.ipv6Policy ?? 'block',
@@ -218,8 +224,11 @@ export class ProfileService {
         notes: merged.notes,
         platform: merged.platform,
         osVersion: merged.osVersion,
+        deviceId: merged.deviceId ?? null,
+        deviceLabel: merged.deviceLabel ?? '',
         browser: merged.browser,
         browserVersion: merged.browserVersion,
+        lastBrowserVersion: merged.lastBrowserVersion ?? null,
         userAgent: merged.userAgent,
         proxyJson: JSON.stringify(this.encryptProxy(merged.proxy)),
         ipv6Policy: merged.ipv6Policy ?? 'block',
@@ -233,10 +242,13 @@ export class ProfileService {
     return merged;
   }
 
-  touchLastRun(id: string): void {
+  touchLastRun(id: string, browserVersion?: string): void {
     this.db
       .update(profilesTable)
-      .set({ lastRunAt: new Date().toISOString() })
+      .set({
+        lastRunAt: new Date().toISOString(),
+        ...(browserVersion ? { lastBrowserVersion: browserVersion } : {}),
+      })
       .where(eq(profilesTable.id, id))
       .run();
   }

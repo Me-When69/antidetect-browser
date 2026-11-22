@@ -9,6 +9,10 @@ function getNavigatorPlatform(platform: Platform): string {
       return 'MacIntel';
     case 'linux':
       return 'Linux x86_64';
+    case 'android':
+      return 'Linux armv8l';
+    case 'ios':
+      return 'iPhone';
   }
 }
 
@@ -20,6 +24,10 @@ function getUaPlatformName(platform: Platform): string {
       return 'macOS';
     case 'linux':
       return 'Linux';
+    case 'android':
+      return 'Android';
+    case 'ios':
+      return 'iOS';
   }
 }
 

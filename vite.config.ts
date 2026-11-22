@@ -28,6 +28,7 @@ export default defineConfig({
                 'socks-proxy-agent',
                 'socks',
                 'ssh2',
+                '@puppeteer/browsers',
               ],
             },
           },

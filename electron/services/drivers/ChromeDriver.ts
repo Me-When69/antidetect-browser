@@ -4,6 +4,7 @@ import net from 'node:net';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
 import { resolveBrowserExecutable } from '../browserPath';
+import { CHROME_NO_AUTOUPDATE_ARGS } from '../browserManager';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
 import { runContextWarmup } from './warmupHelper';
 import type {
@@ -120,6 +121,7 @@ export class ChromeDriver implements BrowserDriver {
       '--disable-blink-features=AutomationControlled',
       '--no-first-run',
       '--no-default-browser-check',
+      ...CHROME_NO_AUTOUPDATE_ARGS,
       `--window-size=${profile.fingerprint.screen.width},${profile.fingerprint.screen.height}`,
     ];
 
