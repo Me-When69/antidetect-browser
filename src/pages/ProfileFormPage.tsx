@@ -6,8 +6,10 @@ import {
   CheckCircle2,
   Cpu,
   Dices,
+  Download,
   Fingerprint,
   Globe,
+  Info,
   Laptop,
   Loader2,
   MapPin,
@@ -18,6 +20,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sliders,
+  Smartphone,
   Sparkles,
   Terminal,
   User,
@@ -42,6 +45,9 @@ import {
 import type {
   BrowserType,
   CreateProfileInput,
+  EmulatedDevice,
+  EmulationConfidence,
+  ManagedBrowserVersion,
   Platform,
   ProxyCheckResult,
   ProxyLeakCheckResult,
@@ -108,6 +114,10 @@ export function ProfileFormPage(): React.JSX.Element {
   const [leakResult, setLeakResult] = useState<ProxyLeakCheckResult | null>(null);
   const [autoMatchedGeo, setAutoMatchedGeo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [devices, setDevices] = useState<EmulatedDevice[]>([]);
+  const [deviceSearch, setDeviceSearch] = useState('');
+  const [managedBrowsers, setManagedBrowsers] = useState<ManagedBrowserVersion[]>([]);
+  const [confidence, setConfidence] = useState<EmulationConfidence | null>(null);
 
   const form = useForm<CreateProfileInput>({
     resolver: zodResolver(profileFormSchema),
@@ -116,17 +126,106 @@ export function ProfileFormPage(): React.JSX.Element {
 
   const watched = useWatch({ control: form.control });
 
+  const getDefaultRealVersion = (
+    browser: BrowserType,
+    installedList: ManagedBrowserVersion[] = managedBrowsers,
+  ): string => {
+    const match = installedList.find((b) => b.installed && b.browserKind === browser);
+    if (match?.version && /^\d+/.test(match.version)) {
+      return match.version;
+    }
+    return form.getValues('browserVersion') || '136.0.0.0';
+  };
+
+  const applyDeviceSelection = async (
+    deviceId: string,
+    overrideVersion?: string,
+  ): Promise<void> => {
+    if (!window.electronAPI) return;
+    const current = form.getValues();
+    const version = overrideVersion ?? getDefaultRealVersion(current.browser);
+    const applied = await window.electronAPI.applyEmulatedDevice(current, deviceId, version);
+    form.setValue('platform', applied.platform);
+    form.setValue('osVersion', applied.osVersion);
+    form.setValue('deviceId', applied.deviceId ?? null);
+    form.setValue('deviceLabel', applied.deviceLabel ?? '');
+    form.setValue('browser', applied.browser);
+    form.setValue('browserVersion', applied.browserVersion);
+    form.setValue('userAgent', applied.userAgent);
+    form.setValue('fingerprint', applied.fingerprint);
+  };
+
+  const handleSelectPlatform = async (platform: Platform): Promise<void> => {
+    if (!window.electronAPI) return;
+    const randomDev = await window.electronAPI.pickRandomDevice(platform);
+    const currentBrowser = form.getValues('browser');
+    const targetBrowser: BrowserType =
+      platform === 'android'
+        ? 'chrome'
+        : platform === 'ios'
+          ? currentBrowser === 'webkit'
+            ? 'webkit'
+            : 'chrome'
+          : currentBrowser === 'webkit'
+            ? 'chrome'
+            : currentBrowser;
+    form.setValue('browser', targetBrowser);
+    await applyDeviceSelection(randomDev.id, getDefaultRealVersion(targetBrowser));
+  };
+
+  const handleRandomDevice = async (): Promise<void> => {
+    if (!window.electronAPI) return;
+    const platform = form.getValues('platform');
+    const randomDev = await window.electronAPI.pickRandomDevice(platform);
+    await applyDeviceSelection(randomDev.id);
+    showToast(`Đã chọn thiết bị: ${randomDev.label}`, 'info');
+  };
+
+  const handleSelectBrowserVersion = async (version: string): Promise<void> => {
+    form.setValue('browserVersion', version);
+    const currentDeviceId = form.getValues('deviceId');
+    if (currentDeviceId && window.electronAPI) {
+      await applyDeviceSelection(currentDeviceId, version);
+      return;
+    }
+    const ua = form.getValues('userAgent');
+    const platform = form.getValues('platform');
+    const browser = form.getValues('browser');
+    if (platform !== 'ios' && ua !== 'auto') {
+      if (browser === 'firefox') {
+        const major = version.split('.')[0] ?? '136';
+        form.setValue(
+          'userAgent',
+          ua.replace(/rv:\d+\.\d+/i, `rv:${major}.0`).replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`),
+        );
+      } else {
+        form.setValue('userAgent', ua.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${version}`));
+      }
+    }
+  };
+
   const applyGeneratedIdentity = async (
     platform: Platform,
     browser: BrowserType,
   ): Promise<void> => {
     if (!window.electronAPI) return;
+    if (platform === 'android' || platform === 'ios') {
+      await handleSelectPlatform(platform);
+      return;
+    }
     const generated = await window.electronAPI.generateFingerprint(platform, browser);
+    const realVersion = getDefaultRealVersion(browser);
     form.setValue('platform', generated.platform);
     form.setValue('osVersion', generated.osVersion);
     form.setValue('browser', generated.browser);
-    form.setValue('browserVersion', generated.browserVersion);
-    form.setValue('userAgent', generated.userAgent);
+    form.setValue('browserVersion', realVersion);
+    const alignedUa =
+      browser === 'firefox'
+        ? generated.userAgent
+            .replace(/rv:\d+\.\d+/i, `rv:${realVersion.split('.')[0] ?? '136'}.0`)
+            .replace(/Firefox\/\d+\.\d+/i, `Firefox/${realVersion.split('.')[0] ?? '136'}.0`)
+        : generated.userAgent.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${realVersion}`);
+    form.setValue('userAgent', alignedUa);
     form.setValue('fingerprint', generated.fingerprint);
   };
 
@@ -134,6 +233,18 @@ export function ProfileFormPage(): React.JSX.Element {
     let active = true;
     const load = async (): Promise<void> => {
       if (!window.electronAPI) return;
+      const [allDevs, installedBrowsers] = await Promise.all([
+        window.electronAPI.listEmulatedDevices(),
+        window.electronAPI.listManagedBrowsers(),
+      ]);
+      if (active) {
+        setDevices(allDevs);
+        setManagedBrowsers(installedBrowsers);
+      }
+      const defaultChromeVer =
+        installedBrowsers.find((b) => b.installed && b.browserKind === 'chrome')?.version ||
+        '136.0.0.0';
+
       if (editingProfileId) {
         const existing = await window.electronAPI.getProfile(editingProfileId);
         if (existing && active) {
@@ -145,8 +256,11 @@ export function ProfileFormPage(): React.JSX.Element {
             notes: existing.notes,
             platform: existing.platform,
             osVersion: existing.osVersion,
+            deviceId: existing.deviceId ?? null,
+            deviceLabel: existing.deviceLabel ?? '',
             browser: existing.browser,
             browserVersion: existing.browserVersion,
+            lastBrowserVersion: existing.lastBrowserVersion ?? null,
             userAgent: existing.userAgent,
             proxy: existing.proxy,
             ipv6Policy: existing.ipv6Policy ?? 'block',
@@ -160,15 +274,13 @@ export function ProfileFormPage(): React.JSX.Element {
       } else {
         const name =
           RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)] ?? 'Essie Crooks';
-        form.reset({ ...DEFAULT_VALUES, name });
-        setTagsText('');
-        setStartupUrlsText('');
-        const generated = await window.electronAPI.generateFingerprint('windows', 'chrome');
+        const base: CreateProfileInput = { ...DEFAULT_VALUES, name, browserVersion: defaultChromeVer };
+        const picked = await window.electronAPI.pickRandomDevice('windows');
+        const applied = await window.electronAPI.applyEmulatedDevice(base, picked.id, defaultChromeVer);
         if (active) {
-          form.setValue('osVersion', generated.osVersion);
-          form.setValue('browserVersion', generated.browserVersion);
-          form.setValue('userAgent', generated.userAgent);
-          form.setValue('fingerprint', generated.fingerprint);
+          form.reset(applied);
+          setTagsText('');
+          setStartupUrlsText('');
         }
       }
     };
@@ -178,11 +290,34 @@ export function ProfileFormPage(): React.JSX.Element {
     };
   }, [editingProfileId, form]);
 
+  useEffect(() => {
+    let active = true;
+    const plat = watched.platform ?? 'windows';
+    const br = watched.browser ?? 'chrome';
+    if (!window.electronAPI) return;
+    void window.electronAPI.getEmulationConfidence(plat, br).then((res) => {
+      if (active) setConfidence(res);
+    });
+    return () => {
+      active = false;
+    };
+  }, [watched.platform, watched.browser]);
+
   const identityReport = useMemo(() => {
     const current = form.getValues();
-    return checkIdentityConsistency(current, proxyCheck);
+    const matchedInstalled = managedBrowsers.find(
+      (b) => b.installed && b.browserKind === current.browser && b.version === current.browserVersion,
+    );
+    const fallbackInstalled = managedBrowsers.find(
+      (b) => b.installed && b.browserKind === current.browser,
+    );
+    const realEngineVersion = matchedInstalled?.version ?? fallbackInstalled?.version;
+    return checkIdentityConsistency(current, proxyCheck, {
+      realEngineVersion,
+      browser: current.browser,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watched, proxyCheck]);
+  }, [watched, proxyCheck, managedBrowsers]);
 
   const handleCheckProxy = async (): Promise<void> => {
     if (!window.electronAPI) return;
@@ -479,18 +614,54 @@ export function ProfileFormPage(): React.JSX.Element {
 
           {/* 2. Environment */}
           <Card id="sec-environment" className="space-y-4 p-5">
-            <h3 className="text-sm font-semibold">{dict.form.secEnvironment}</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">{dict.form.secEnvironment}</h3>
+              {confidence && (
+                <div
+                  className="inline-flex items-center gap-1.5"
+                  title="Giả lập chỉ thay đổi thông tin trình duyệt báo cáo; render canvas, font hệ thống và GPU thật vẫn là của máy bạn."
+                >
+                  <Badge
+                    className={cn(
+                      'cursor-help text-[11px]',
+                      confidence.level === 'high'
+                        ? 'bg-emerald-500/15 text-emerald-400'
+                        : confidence.level === 'medium'
+                          ? 'bg-amber-500/15 text-amber-400'
+                          : 'bg-destructive/15 text-destructive',
+                    )}
+                  >
+                    <Info className="mr-1 h-3 w-3" />
+                    Độ tin cậy: {confidence.label}
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            {confidence?.osMismatch && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                <div>
+                  <p className="font-medium">
+                    Hệ điều hành giả lập ({currentPlatform.toUpperCase()}) khác với hệ điều hành máy chủ.
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-amber-200/80">{confidence.reason}</p>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="mb-2 block text-xs text-muted-foreground">
                 {dict.form.platformLabel} *
               </label>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {(
                   [
                     { id: 'windows', label: 'Windows', icon: Monitor },
                     { id: 'macos', label: 'macOS', icon: Laptop },
                     { id: 'linux', label: 'Linux', icon: Terminal },
+                    { id: 'android', label: 'Android', icon: Smartphone },
+                    { id: 'ios', label: 'iOS', icon: Smartphone },
                   ] as const
                 ).map((item) => {
                   const Icon = item.icon;
@@ -499,20 +670,76 @@ export function ProfileFormPage(): React.JSX.Element {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => void applyGeneratedIdentity(item.id, currentBrowser)}
+                      onClick={() => void handleSelectPlatform(item.id)}
                       className={cn(
-                        'flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs font-medium transition-all',
+                        'flex flex-col items-center gap-1.5 rounded-lg border p-2.5 text-xs font-medium transition-all',
                         selected
                           ? 'border-primary bg-primary/15 text-primary'
                           : 'border-border bg-secondary/40 text-muted-foreground hover:border-primary/40 hover:text-foreground',
                       )}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </button>
                   );
                 })}
               </div>
+            </div>
+
+            {/* Emulated Device Picker */}
+            <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-medium text-foreground">
+                  Thiết bị giả lập ({devices.filter((d) => d.platform === currentPlatform).length} mẫu)
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 text-xs"
+                  onClick={() => void handleRandomDevice()}
+                >
+                  <Dices className="h-3.5 w-3.5" />
+                  Ngẫu nhiên
+                </Button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)]">
+                <Input
+                  placeholder="Tìm thiết bị..."
+                  value={deviceSearch}
+                  onChange={(e) => setDeviceSearch(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <Select
+                  className="h-8 text-xs"
+                  value={watched.deviceId ?? ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      void applyDeviceSelection(e.target.value);
+                    }
+                  }}
+                >
+                  <option value="">-- Chọn thiết bị giả lập --</option>
+                  {devices
+                    .filter(
+                      (d) =>
+                        d.platform === currentPlatform &&
+                        (!deviceSearch.trim() ||
+                          d.label.toLowerCase().includes(deviceSearch.trim().toLowerCase()) ||
+                          d.gpu.renderer.toLowerCase().includes(deviceSearch.trim().toLowerCase())),
+                    )
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label} • {d.screen.width}x{d.screen.height} @{d.screen.dpr}x
+                      </option>
+                    ))}
+                </Select>
+              </div>
+              {watched.deviceLabel && (
+                <p className="text-[11px] text-muted-foreground">
+                  Đang áp dụng: <span className="font-medium text-foreground">{watched.deviceLabel}</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -527,13 +754,18 @@ export function ProfileFormPage(): React.JSX.Element {
                   ] as const
                 ).map((item) => {
                   const selected = currentBrowser === item.id;
+                  const disabled =
+                    (currentPlatform === 'android' || currentPlatform === 'ios') &&
+                    item.id === 'firefox';
                   return (
                     <button
                       key={item.id}
                       type="button"
+                      disabled={disabled}
                       onClick={() => void applyGeneratedIdentity(currentPlatform, item.id)}
                       className={cn(
                         'rounded-lg border px-4 py-2.5 text-left text-xs font-medium transition-all',
+                        disabled && 'cursor-not-allowed opacity-45',
                         selected
                           ? 'border-primary bg-primary/15 text-primary'
                           : 'border-border bg-secondary/40 text-muted-foreground hover:border-primary/40 hover:text-foreground',
@@ -554,10 +786,42 @@ export function ProfileFormPage(): React.JSX.Element {
                 <Input {...form.register('osVersion')} />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">
-                  {dict.form.browserVersionLabel}
-                </label>
-                <Input {...form.register('browserVersion')} />
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="text-xs text-muted-foreground">
+                    {dict.form.browserVersionLabel} (Nhân thật)
+                  </label>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                    onClick={() => setActivePage('settings')}
+                  >
+                    <Download className="h-3 w-3" />
+                    Tải thêm phiên bản
+                  </button>
+                </div>
+                <Select
+                  value={watched.browserVersion ?? ''}
+                  onChange={(e) => void handleSelectBrowserVersion(e.target.value)}
+                >
+                  {managedBrowsers
+                    .filter((b) => b.installed && b.browserKind === currentBrowser)
+                    .map((b) => (
+                      <option key={b.id} value={b.version}>
+                        {b.browserKind === 'chrome' ? 'Chrome' : 'Firefox'} {b.version} ({b.channel})
+                      </option>
+                    ))}
+                  {watched.browserVersion &&
+                    !managedBrowsers.some(
+                      (b) =>
+                        b.installed &&
+                        b.browserKind === currentBrowser &&
+                        b.version === watched.browserVersion,
+                    ) && (
+                      <option value={watched.browserVersion}>
+                        {watched.browserVersion} (hiện tại)
+                      </option>
+                    )}
+                </Select>
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs text-muted-foreground">

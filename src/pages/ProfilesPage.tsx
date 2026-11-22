@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   Cookie,
   Copy,
   Download,
@@ -23,7 +24,15 @@ import { Card } from '@/components/ui/card';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import { parseProfilesCsv } from '@shared/validation';
-import type { BrowserType, Platform, Profile, ProfileStatus } from '@shared/types';
+import type {
+  BrowserType,
+  BulkVersionPreviewItem,
+  EmulatedDevice,
+  ManagedBrowserVersion,
+  Platform,
+  Profile,
+  ProfileStatus,
+} from '@shared/types';
 
 function formatDate(iso: string | null, neverLabel: string): string {
   if (!iso) return neverLabel;
@@ -106,24 +115,96 @@ export function ProfilesPage(): React.JSX.Element {
   const [installFailed, setInstallFailed] = useState(false);
   const [installLogs, setInstallLogs] = useState<string[]>([]);
 
-  // Bulk assign folder state
+  // Bulk assign folder / device / version state
   const [bulkFolderId, setBulkFolderId] = useState('');
+  const [bulkDeviceId, setBulkDeviceId] = useState('');
+  const [bulkTargetVersion, setBulkTargetVersion] = useState('');
+  const [versionPreview, setVersionPreview] = useState<BulkVersionPreviewItem[] | null>(null);
 
-  const allSelected = profiles.length > 0 && selectedIds.length === profiles.length;
+  // Filter by platform/version & sort
+  const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
+  const [versionFilter, setVersionFilter] = useState<string>('all');
+  const [extraSort, setExtraSort] = useState<'none' | 'device' | 'version'>('none');
+
+  // Devices & managed browsers
+  const [devices, setDevices] = useState<EmulatedDevice[]>([]);
+  const [managedBrowsers, setManagedBrowsers] = useState<ManagedBrowserVersion[]>([]);
+
+  // Downgrade warning modal state
+  const [downgradePrompt, setDowngradePrompt] = useState<{
+    profileId: string;
+    lastVersion: string;
+    targetVersion: string;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!window.electronAPI) return;
+    void Promise.all([
+      window.electronAPI.listEmulatedDevices(),
+      window.electronAPI.listManagedBrowsers(),
+    ]).then(([devs, brs]) => {
+      setDevices(devs);
+      setManagedBrowsers(brs);
+    });
+  }, []);
+
+  const distinctVersions = useMemo(() => {
+    return Array.from(new Set(profiles.map((p) => p.browserVersion).filter(Boolean))).sort();
+  }, [profiles]);
+
+  const displayedProfiles = useMemo(() => {
+    let list = profiles;
+    if (platformFilter !== 'all') {
+      list = list.filter((p) => p.platform === platformFilter);
+    }
+    if (versionFilter !== 'all') {
+      list = list.filter((p) => p.browserVersion === versionFilter);
+    }
+    if (extraSort === 'device') {
+      list = [...list].sort((a, b) =>
+        (a.deviceLabel || a.platform).localeCompare(b.deviceLabel || b.platform),
+      );
+    } else if (extraSort === 'version') {
+      list = [...list].sort((a, b) => b.browserVersion.localeCompare(a.browserVersion));
+    }
+    return list;
+  }, [profiles, platformFilter, versionFilter, extraSort]);
+
+  const allSelected =
+    displayedProfiles.length > 0 && selectedIds.length === displayedProfiles.length;
   const csvPreviewCount = csvText.trim() ? parseProfilesCsv(csvText).length : 0;
 
   const handleToggleAll = (): void => {
     if (allSelected) {
       clearSelection();
     } else {
-      setSelectedIds(profiles.map((p) => p.id));
+      setSelectedIds(displayedProfiles.map((p) => p.id));
     }
   };
 
-  const handleStart = async (id: string, useFallbackGeo = false): Promise<void> => {
+  const handleStart = async (
+    id: string,
+    useFallbackGeo = false,
+    allowDowngrade = false,
+  ): Promise<void> => {
     if (!window.electronAPI) return;
     try {
-      const result = await window.electronAPI.startProfile(id, { useFallbackGeo });
+      const result = await window.electronAPI.startProfile(id, {
+        useFallbackGeo,
+        allowDowngrade,
+      });
+      if (result.downgradeDetected || result.errorCode === 'VERSION_DOWNGRADE') {
+        setDowngradePrompt({
+          profileId: id,
+          lastVersion: result.downgradeInfo?.lastVersion ?? '',
+          targetVersion: result.downgradeInfo?.targetVersion ?? '',
+          message:
+            result.error ??
+            'Hạ phiên bản trình duyệt có thể làm hỏng dữ liệu hồ sơ. Khuyến nghị nhân bản sang thư mục mới.',
+        });
+        return;
+      }
       if (result.browserNotFound || result.errorCode === 'BROWSER_NOT_INSTALLED') {
         setBrowserMissing({
           profileId: id,
@@ -231,6 +312,36 @@ export function ProfilesPage(): React.JSX.Element {
     });
     await refreshProfiles();
     showToast(isEn ? 'Updated folder' : 'Đã cập nhật thư mục hàng loạt', 'success');
+  };
+
+  const handleBulkAssignDevice = async (): Promise<void> => {
+    if (!window.electronAPI || selectedIds.length === 0 || !bulkDeviceId) return;
+    const count = await window.electronAPI.bulkUpdateProfiles({
+      ids: selectedIds,
+      deviceId: bulkDeviceId,
+    });
+    await refreshProfiles();
+    showToast(`Đã đổi thiết bị cho ${count} hồ sơ`, 'success');
+  };
+
+  const handleOpenVersionPreview = async (): Promise<void> => {
+    if (!window.electronAPI || selectedIds.length === 0 || !bulkTargetVersion) return;
+    const preview = await window.electronAPI.previewBulkVersionUpdate(
+      selectedIds,
+      bulkTargetVersion,
+    );
+    setVersionPreview(preview);
+  };
+
+  const handleConfirmBulkVersion = async (): Promise<void> => {
+    if (!window.electronAPI || selectedIds.length === 0 || !bulkTargetVersion) return;
+    const count = await window.electronAPI.bulkUpdateProfiles({
+      ids: selectedIds,
+      browserVersion: bulkTargetVersion,
+    });
+    setVersionPreview(null);
+    await refreshProfiles();
+    showToast(`Đã cập nhật phiên bản ${bulkTargetVersion} cho ${count} hồ sơ`, 'success');
   };
 
   const handleBulkCreateSubmit = async (): Promise<void> => {
@@ -412,15 +523,53 @@ export function ProfilesPage(): React.JSX.Element {
         )}
 
         <Select
+          className="w-36"
+          value={platformFilter}
+          onChange={(e) => setPlatformFilter(e.target.value as Platform | 'all')}
+        >
+          <option value="all">Thiết bị: Tất cả</option>
+          <option value="windows">Windows</option>
+          <option value="macos">macOS</option>
+          <option value="linux">Linux</option>
+          <option value="android">Android</option>
+          <option value="ios">iOS</option>
+        </Select>
+
+        {distinctVersions.length > 0 && (
+          <Select
+            className="w-40"
+            value={versionFilter}
+            onChange={(e) => setVersionFilter(e.target.value)}
+          >
+            <option value="all">Phiên bản: Tất cả</option>
+            {distinctVersions.map((v) => (
+              <option key={v} value={v}>
+                v{v}
+              </option>
+            ))}
+          </Select>
+        )}
+
+        <Select
           className="w-44"
-          value={filter.sortBy ?? 'createdAt'}
-          onChange={(e) =>
-            setFilter({ sortBy: e.target.value as 'name' | 'createdAt' | 'lastRunAt' })
-          }
+          value={extraSort !== 'none' ? `extra:${extraSort}` : (filter.sortBy ?? 'createdAt')}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === 'extra:device') {
+              setExtraSort('device');
+            } else if (val === 'extra:version') {
+              setExtraSort('version');
+            } else {
+              setExtraSort('none');
+              setFilter({ sortBy: val as 'name' | 'createdAt' | 'lastRunAt' });
+            }
+          }}
         >
           <option value="createdAt">{isEn ? 'Sort: Newest' : 'Sắp xếp: Mới nhất'}</option>
           <option value="name">{isEn ? 'Sort: Name A-Z' : 'Sắp xếp: Tên A-Z'}</option>
           <option value="lastRunAt">{isEn ? 'Sort: Last Run' : 'Sắp xếp: Chạy gần nhất'}</option>
+          <option value="extra:device">Sắp xếp: Thiết bị</option>
+          <option value="extra:version">Sắp xếp: Phiên bản</option>
         </Select>
       </Card>
 
@@ -440,7 +589,7 @@ export function ProfilesPage(): React.JSX.Element {
               {dict.profiles.bulkStop}
             </Button>
             <Select
-              className="h-8 w-36 text-xs"
+              className="h-8 w-32 text-xs"
               value={bulkFolderId}
               onChange={(e) => setBulkFolderId(e.target.value)}
             >
@@ -454,6 +603,51 @@ export function ProfilesPage(): React.JSX.Element {
             <Button size="sm" variant="outline" onClick={() => void handleBulkAssignFolder()}>
               {dict.profiles.assignFolder}
             </Button>
+
+            <Select
+              className="h-8 w-40 text-xs"
+              value={bulkDeviceId}
+              onChange={(e) => setBulkDeviceId(e.target.value)}
+            >
+              <option value="">-- Đổi thiết bị --</option>
+              {devices.map((d) => (
+                <option key={d.id} value={d.id}>
+                  [{d.platform.toUpperCase()}] {d.label}
+                </option>
+              ))}
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!bulkDeviceId}
+              onClick={() => void handleBulkAssignDevice()}
+            >
+              Đổi thiết bị
+            </Button>
+
+            <Select
+              className="h-8 w-40 text-xs"
+              value={bulkTargetVersion}
+              onChange={(e) => setBulkTargetVersion(e.target.value)}
+            >
+              <option value="">-- Đổi phiên bản --</option>
+              {managedBrowsers
+                .filter((b) => b.installed && b.browserKind === 'chrome')
+                .map((b) => (
+                  <option key={b.id} value={b.version}>
+                    Chrome {b.version}
+                  </option>
+                ))}
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!bulkTargetVersion}
+              onClick={() => void handleOpenVersionPreview()}
+            >
+              Cập nhật phiên bản
+            </Button>
+
             <Button size="sm" variant="destructive" onClick={() => void handleBulkDelete()}>
               <Trash2 className="h-3.5 w-3.5" />
               {dict.profiles.bulkDelete}
@@ -463,14 +657,14 @@ export function ProfilesPage(): React.JSX.Element {
       )}
 
       {/* Table */}
-      {profiles.length === 0 ? (
+      {displayedProfiles.length === 0 ? (
         <Card className="flex min-h-[300px] flex-col items-center justify-center p-10 text-center">
           <p className="text-base font-medium">{dict.profiles.emptyTitle}</p>
           <p className="mt-1 text-sm text-muted-foreground">{dict.profiles.emptyDesc}</p>
         </Card>
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
+          <table className="w-full min-w-[1020px] text-left text-sm">
             <thead className="border-b border-border bg-secondary/40 text-xs text-muted-foreground">
               <tr>
                 <th className="w-10 px-4 py-3">
@@ -482,6 +676,8 @@ export function ProfilesPage(): React.JSX.Element {
                   />
                 </th>
                 <th className="px-4 py-3">{dict.profiles.colName}</th>
+                <th className="px-4 py-3">Thiết bị</th>
+                <th className="px-4 py-3">Phiên bản</th>
                 <th className="px-4 py-3">{dict.profiles.colStatus}</th>
                 <th className="px-4 py-3">{dict.profiles.colTags}</th>
                 <th className="px-4 py-3">{dict.profiles.colProxy}</th>
@@ -490,7 +686,7 @@ export function ProfilesPage(): React.JSX.Element {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {profiles.map((profile) => {
+              {displayedProfiles.map((profile) => {
                 const isRunning = runningIds.includes(profile.id);
                 const isChecked = selectedIds.includes(profile.id);
                 const folderName = profile.folderId ? folderMap.get(profile.folderId) : null;
@@ -507,19 +703,22 @@ export function ProfilesPage(): React.JSX.Element {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="font-medium text-foreground">{profile.name}</div>
-                      <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                        <span className="uppercase">{profile.platform}</span>
-                        <span>•</span>
-                        <span className="capitalize">
-                          {profile.browser === 'firefox' ? 'Camoufox' : 'Chrome'}
-                        </span>
-                        {folderName && (
-                          <>
-                            <span>•</span>
-                            <span className="font-sans text-primary">{folderName}</span>
-                          </>
-                        )}
+                      {folderName && (
+                        <div className="mt-0.5 text-[11px] text-primary">{folderName}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="max-w-[200px] truncate text-xs font-medium text-foreground">
+                        {profile.deviceLabel || `${profile.platform.toUpperCase()} (${profile.osVersion})`}
                       </div>
+                      <div className="mt-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                        {profile.platform} • {profile.fingerprint.screen.width}x{profile.fingerprint.screen.height}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Badge variant="outline" className="font-mono text-[11px]">
+                        {profile.browser === 'firefox' ? 'FF' : 'CR'} {profile.browserVersion}
+                      </Badge>
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
@@ -927,6 +1126,108 @@ export function ProfilesPage(): React.JSX.Element {
                 }}
               >
                 Mở bằng cấu hình geo đã lưu lần trước
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Bulk Version Update Preview Modal */}
+      {versionPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-xl space-y-4 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">
+                Xem trước cập nhật phiên bản trình duyệt ({versionPreview.length} hồ sơ)
+              </h3>
+              <Button size="sm" variant="ghost" onClick={() => setVersionPreview(null)}>
+                Đóng
+              </Button>
+            </div>
+            {versionPreview.some((item) => item.action === 'downgrade') && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                <span>
+                  Có hồ sơ bị hạ phiên bản (downgrade). Hạ phiên bản có thể gây lỗi dữ liệu hồ sơ cũ
+                  khi mở lại.
+                </span>
+              </div>
+            )}
+            <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border text-xs">
+              {versionPreview.map((item) => (
+                <div
+                  key={item.profileId}
+                  className="flex items-center justify-between gap-2 px-3 py-2"
+                >
+                  <span className="font-medium">{item.profileName}</span>
+                  <div className="flex items-center gap-2 font-mono">
+                    <span className="text-muted-foreground">{item.currentVersion}</span>
+                    <span>→</span>
+                    <span>{item.targetVersion}</span>
+                    <Badge
+                      className={
+                        item.action === 'upgrade'
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : item.action === 'downgrade'
+                            ? 'bg-destructive/15 text-destructive'
+                            : 'bg-secondary text-muted-foreground'
+                      }
+                    >
+                      {item.action === 'upgrade'
+                        ? 'Nâng cấp'
+                        : item.action === 'downgrade'
+                          ? 'Hạ phiên bản'
+                          : 'Giữ nguyên'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setVersionPreview(null)}>
+                Hủy
+              </Button>
+              <Button onClick={() => void handleConfirmBulkVersion()}>
+                Áp dụng cho {versionPreview.length} hồ sơ
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Downgrade Warning Modal */}
+      {downgradePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-md space-y-4 p-6 shadow-2xl">
+            <div className="flex items-center gap-2 text-amber-400">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="text-base font-semibold">Cảnh báo hạ phiên bản trình duyệt</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">{downgradePrompt.message}</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="outline" onClick={() => setDowngradePrompt(null)}>
+                Hủy
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  const id = downgradePrompt.profileId;
+                  setDowngradePrompt(null);
+                  await handleDuplicate(id);
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Nhân bản sang thư mục mới
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  const id = downgradePrompt.profileId;
+                  setDowngradePrompt(null);
+                  void handleStart(id, false, true);
+                }}
+              >
+                Vẫn mở (Rủi ro)
               </Button>
             </div>
           </Card>

@@ -9,7 +9,9 @@ import {
   RefreshCw,
   Save,
   Server,
+  Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +20,18 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
-import type { BackupPayload, BrowserInventoryItem, LocaleCode, ProxyCoreInfo } from '@shared/types';
+import type {
+  BackupPayload,
+  BrowserInventoryItem,
+  LocaleCode,
+  ManagedBrowserVersion,
+  ProxyCoreInfo,
+} from '@shared/types';
+
+function formatBytesMb(bytes: number): string {
+  if (!bytes || bytes <= 0) return '—';
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function downloadTextFile(filename: string, content: string, mime = 'application/json'): void {
   const blob = new Blob([content], { type: mime });
@@ -57,14 +70,78 @@ export function SettingsPage(): React.JSX.Element {
   const [downloadingCore, setDownloadingCore] = useState<'sing-box' | 'xray' | null>(null);
   const [corePercent, setCorePercent] = useState<number>(0);
 
+  const [managedVersions, setManagedVersions] = useState<ManagedBrowserVersion[]>([]);
+  const [availableVersions, setAvailableVersions] = useState<ManagedBrowserVersion[]>([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
+  const [downloadingVersion, setDownloadingVersion] = useState<string | null>(null);
+  const [versionPercent, setVersionPercent] = useState<number>(0);
+
   const loadBrowsers = async (): Promise<void> => {
     if (!window.electronAPI) return;
-    const [list, cores] = await Promise.all([
+    const [list, cores, managed] = await Promise.all([
       window.electronAPI.listInstalledBrowsers(),
       window.electronAPI.listProxyCores(),
+      window.electronAPI.listManagedBrowsers(),
     ]);
     setBrowsers(list);
     setProxyCores(cores);
+    setManagedVersions(managed);
+  };
+
+  const handleFetchAvailableVersions = async (): Promise<void> => {
+    if (!window.electronAPI) return;
+    setLoadingAvailable(true);
+    try {
+      const list = await window.electronAPI.fetchAvailableChromeVersions();
+      setAvailableVersions(list);
+      if (list.length === 0) {
+        showToast('Không lấy được danh sách Chrome for Testing', 'error');
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Lỗi kết nối Chrome for Testing', 'error');
+    } finally {
+      setLoadingAvailable(false);
+    }
+  };
+
+  const handleDownloadChromeVersion = async (version: string): Promise<void> => {
+    if (!window.electronAPI) return;
+    setDownloadingVersion(version);
+    setVersionPercent(0);
+    const unsub = window.electronAPI.onBrowserDownloadProgress((ev) => {
+      if (ev.version === version) {
+        setVersionPercent(ev.percent);
+      }
+    });
+    try {
+      const res = await window.electronAPI.downloadChromeVersion(version);
+      if (res.ok) {
+        showToast(`Đã tải Chrome ${version} thành công`, 'success');
+        await loadBrowsers();
+      } else {
+        showToast(res.error ?? `Tải Chrome ${version} thất bại`, 'error');
+      }
+    } finally {
+      unsub();
+      setDownloadingVersion(null);
+    }
+  };
+
+  const handleCancelChromeDownload = async (version: string): Promise<void> => {
+    if (!window.electronAPI) return;
+    await window.electronAPI.cancelChromeDownload(version);
+    showToast(`Đã gửi yêu cầu hủy tải Chrome ${version}`, 'info');
+  };
+
+  const handleDeleteChromeVersion = async (version: string): Promise<void> => {
+    if (!window.electronAPI) return;
+    const res = await window.electronAPI.deleteChromeVersion(version);
+    if (res.ok) {
+      showToast(`Đã xóa Chrome ${version}`, 'info');
+      await loadBrowsers();
+    } else {
+      showToast(res.error ?? `Không thể xóa Chrome ${version}`, 'error');
+    }
   };
 
   const handleDownloadCore = async (core: 'sing-box' | 'xray'): Promise<void> => {
@@ -273,6 +350,141 @@ export function SettingsPage(): React.JSX.Element {
               </div>
             );
           })}
+        </div>
+
+        {/* Managed multi-version list */}
+        <div className="space-y-2 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-xs font-semibold text-foreground">
+              Các phiên bản nhân đang quản lý ({managedVersions.length})
+            </h4>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={loadingAvailable}
+              onClick={() => void handleFetchAvailableVersions()}
+            >
+              {loadingAvailable ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              Tải thêm phiên bản Chrome for Testing
+            </Button>
+          </div>
+
+          <div className="divide-y divide-border rounded-lg border border-border">
+            {managedVersions.map((mv) => (
+              <div
+                key={mv.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-xs"
+              >
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium capitalize">{mv.browserKind}</span>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {mv.version}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px] uppercase">
+                      {mv.channel}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground">
+                      Dung lượng: {formatBytesMb(mv.sizeBytes)}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      • {mv.profileCount} hồ sơ
+                    </span>
+                  </div>
+                  <p className="truncate font-mono text-[10px] text-muted-foreground">
+                    {mv.executablePath}
+                  </p>
+                </div>
+                {mv.channel === 'archive' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 border-destructive/40 text-destructive hover:bg-destructive/10"
+                    onClick={() => void handleDeleteChromeVersion(mv.version)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Xóa
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {availableVersions.length > 0 && (
+            <div className="space-y-2 pt-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                Phiên bản Chrome for Testing khả dụng (Stable / Beta / 10 bản major gần nhất):
+              </p>
+              <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+                {availableVersions.map((av) => {
+                  const alreadyInstalled = managedVersions.some(
+                    (m) => m.browserKind === 'chrome' && m.version === av.version,
+                  );
+                  const isDownloading = downloadingVersion === av.version;
+                  return (
+                    <div
+                      key={av.id}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-medium">Chrome {av.version}</span>
+                        <Badge
+                          className={
+                            av.channel === 'stable'
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : av.channel === 'beta'
+                                ? 'bg-amber-500/15 text-amber-400'
+                                : 'bg-secondary text-muted-foreground'
+                          }
+                        >
+                          {av.channel}
+                        </Badge>
+                        {alreadyInstalled && (
+                          <Badge variant="outline" className="text-[10px] text-emerald-400">
+                            Đã tải
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isDownloading ? (
+                          <>
+                            <span className="font-mono text-[11px] text-primary">
+                              {versionPercent}%
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7"
+                              onClick={() => void handleCancelChromeDownload(av.version)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Hủy
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant={alreadyInstalled ? 'outline' : 'default'}
+                            className="h-7"
+                            disabled={downloadingVersion !== null}
+                            onClick={() => void handleDownloadChromeVersion(av.version)}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            {alreadyInstalled ? 'Tải lại' : 'Tải'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
