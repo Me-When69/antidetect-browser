@@ -24,6 +24,7 @@ export function getBuiltInPresetById(id: string): ProfilePreset | null {
 
 export class PresetService {
   private db: AppDatabase;
+  private cachedPresets: ProfilePreset[] | null = null;
 
   constructor(db: AppDatabase) {
     this.db = db;
@@ -67,7 +68,11 @@ export class PresetService {
   }
 
   listPresets(): ProfilePreset[] {
-    return [...BUILTIN_PRESETS, ...this.readCustomPresets()];
+    if (this.cachedPresets) {
+      return [...this.cachedPresets];
+    }
+    this.cachedPresets = [...BUILTIN_PRESETS, ...this.readCustomPresets()];
+    return [...this.cachedPresets];
   }
 
   getPresetById(id: string): ProfilePreset | null {
@@ -93,6 +98,7 @@ export class PresetService {
     };
     const existing = this.readCustomPresets();
     this.writeCustomPresets([...existing, created]);
+    this.cachedPresets = null;
     return created;
   }
 
@@ -104,6 +110,7 @@ export class PresetService {
     const filtered = existing.filter((p) => p.id !== id);
     if (filtered.length === existing.length) return false;
     this.writeCustomPresets(filtered);
+    this.cachedPresets = null;
     return true;
   }
 }

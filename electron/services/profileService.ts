@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '../db';
 import { foldersTable, profilesTable, proxiesTable, tagsTable } from '../db/schema';
 import type {
@@ -151,44 +151,48 @@ export class ProfileService {
   }
 
   list(filter?: ProfileFilter): Profile[] {
-    const rows = this.db.select().from(profilesTable).all();
-    let profiles = rows.map((r) => this.rowToProfile(r)).filter((p) => p.deletedAt === null);
+    const conditions: SQL[] = [isNull(profilesTable.deletedAt)];
 
     if (filter) {
-      if (filter.search && filter.search.trim()) {
-        const q = filter.search.trim().toLowerCase();
-        profiles = profiles.filter(
-          (p) =>
-            p.name.toLowerCase().includes(q) ||
-            p.notes.toLowerCase().includes(q) ||
-            p.proxy.host.toLowerCase().includes(q) ||
-            p.tags.some((t) => t.toLowerCase().includes(q)),
-        );
-      }
       if (filter.folderId !== undefined && filter.folderId !== null && filter.folderId !== '') {
-        profiles = profiles.filter((p) => p.folderId === filter.folderId);
-      }
-      if (filter.tag && filter.tag.trim()) {
-        profiles = profiles.filter((p) => p.tags.includes(filter.tag!));
+        conditions.push(eq(profilesTable.folderId, filter.folderId));
       }
       if (filter.status && filter.status !== 'all') {
-        profiles = profiles.filter((p) => p.status === filter.status);
+        conditions.push(eq(profilesTable.status, filter.status));
       }
+    }
 
-      const sortBy = filter.sortBy ?? 'createdAt';
-      const sortDir = filter.sortDir ?? 'desc';
-      const dir = sortDir === 'asc' ? 1 : -1;
-      profiles.sort((a, b) => {
-        if (sortBy === 'name') {
-          return a.name.localeCompare(b.name) * dir;
-        }
-        if (sortBy === 'lastRunAt') {
-          return (a.lastRunAt ?? '').localeCompare(b.lastRunAt ?? '') * dir;
-        }
-        return a.createdAt.localeCompare(b.createdAt) * dir;
-      });
-    } else {
-      profiles.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const sortBy = filter?.sortBy ?? 'createdAt';
+    const sortDir = filter?.sortDir ?? 'desc';
+    const orderCol =
+      sortBy === 'name'
+        ? profilesTable.name
+        : sortBy === 'lastRunAt'
+          ? profilesTable.lastRunAt
+          : profilesTable.createdAt;
+    const orderExpr = sortDir === 'asc' ? asc(orderCol) : desc(orderCol);
+
+    const rows = this.db
+      .select()
+      .from(profilesTable)
+      .where(and(...conditions))
+      .orderBy(orderExpr)
+      .all();
+
+    let profiles = rows.map((r) => this.rowToProfile(r));
+
+    if (filter?.search && filter.search.trim()) {
+      const q = filter.search.trim().toLowerCase();
+      profiles = profiles.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.notes.toLowerCase().includes(q) ||
+          p.proxy.host.toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+    if (filter?.tag && filter.tag.trim()) {
+      profiles = profiles.filter((p) => p.tags.includes(filter.tag!));
     }
 
     return profiles;
@@ -461,12 +465,13 @@ export class ProfileService {
   }
 
   bulkUpdate(input: BulkUpdateInput): number {
-    let count = 0;
     const device = input.deviceId ? getDeviceById(input.deviceId) : null;
     const presetService = input.presetId ? new PresetService(this.db) : null;
     const preset = input.presetId && presetService ? presetService.getPresetById(input.presetId) : null;
 
-    for (const id of input.ids) {
+    return this.db.transaction(() => {
+      let count = 0;
+      for (const id of input.ids) {
       const existing = this.getById(id);
       if (!existing) continue;
       const nextTags = input.addTags
@@ -571,6 +576,7 @@ export class ProfileService {
       count += 1;
     }
     return count;
+    });
   }
 
   bulkCreate(input: BulkCreateInput): Profile[] {

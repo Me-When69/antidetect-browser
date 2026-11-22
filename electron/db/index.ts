@@ -20,6 +20,10 @@ export function createDatabase(dbPath: string): DbContext {
 
   const sqlite = new Database(dbPath);
   sqlite.pragma('journal_mode = WAL');
+  sqlite.pragma('synchronous = NORMAL');
+  sqlite.pragma('temp_store = MEMORY');
+  sqlite.pragma('cache_size = -16000');
+  sqlite.pragma('busy_timeout = 5000');
   sqlite.pragma('foreign_keys = ON');
 
   sqlite.exec(`
@@ -104,6 +108,15 @@ export function createDatabase(dbPath: string): DbContext {
   if (!columns.some((c) => c.name === 'preset_id')) {
     sqlite.exec("ALTER TABLE profiles ADD COLUMN preset_id TEXT NOT NULL DEFAULT 'balanced'");
   }
+
+  // Indexes for fast filtering & sorting on 1,000+ profiles
+  sqlite.exec(`
+    CREATE INDEX IF NOT EXISTS idx_profiles_active_created ON profiles (deleted_at, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_profiles_active_folder_created ON profiles (deleted_at, folder_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_profiles_active_status ON profiles (deleted_at, status);
+    CREATE INDEX IF NOT EXISTS idx_profiles_active_name ON profiles (deleted_at, name);
+    CREATE INDEX IF NOT EXISTS idx_profiles_active_lastrun ON profiles (deleted_at, last_run_at DESC);
+  `);
 
   const db = drizzle(sqlite, { schema });
   return { sqlite, db, dbPath };
