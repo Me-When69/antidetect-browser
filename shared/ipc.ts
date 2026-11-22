@@ -24,6 +24,7 @@ import type {
   Profile,
   ProfileFilter,
   ProfileFingerprint,
+  ProfilePreset,
   ProfileProxy,
   ProfileRunStatusEvent,
   ProxyCheckResult,
@@ -113,6 +114,10 @@ export const IPC_CHANNELS = {
   BROWSERS_DELETE_VERSION: 'browsers:deleteVersion',
   BROWSERS_DOWNLOAD_PROGRESS: 'browsers:downloadProgress',
   PROFILES_PREVIEW_BULK_VERSION: 'profiles:previewBulkVersion',
+
+  PRESETS_LIST: 'presets:list',
+  PRESETS_SAVE: 'presets:save',
+  PRESETS_DELETE: 'presets:delete',
 } as const;
 
 export interface AppInfo {
@@ -238,6 +243,11 @@ export interface ElectronApi {
     profileIds: string[],
     targetVersion: string,
   ) => Promise<BulkVersionPreviewItem[]>;
+
+  // Advanced Profile Presets
+  listPresets: () => Promise<ProfilePreset[]>;
+  saveCustomPreset: (input: Omit<ProfilePreset, 'id' | 'builtIn'>) => Promise<ProfilePreset>;
+  deleteCustomPreset: (id: string) => Promise<boolean>;
 }
 
 export type { CookieItem };

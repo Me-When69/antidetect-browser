@@ -1,0 +1,186 @@
+[
+  {
+    "id": "balanced",
+    "name": "Cân bằng",
+    "description": "Khuyến nghị cho đa số hồ sơ: nhiễu ổn định theo seed, thay thế WebRTC an toàn và giữ nguyên hiển thị trang web.",
+    "builtIn": true,
+    "signals": {
+      "canvas": "noise",
+      "webgl": "noise",
+      "webglMetadata": "custom",
+      "audio": "noise",
+      "clientRects": "noise",
+      "fonts": "custom",
+      "speechVoices": "custom",
+      "battery": "off",
+      "portScanProtect": true
+    },
+    "mediaDevices": {
+      "cameras": 1,
+      "microphones": 1,
+      "speakers": 1,
+      "mode": "fake"
+    },
+    "webrtc": "replace",
+    "dataOnClose": {
+      "clearCookies": false,
+      "clearCache": false,
+      "clearHistory": false,
+      "clearLocalStorage": false
+    },
+    "bandwidth": {
+      "blockImages": false,
+      "blockMedia": false,
+      "blockExternalFonts": false,
+      "blockAds": false,
+      "blockTrackers": false,
+      "cacheStaticResources": false
+    },
+    "behavior": {
+      "doNotTrack": false,
+      "notifications": "block",
+      "hardwareAcceleration": true,
+      "geolocationPrompt": "allow",
+      "disableAutofill": true,
+      "disableGoogleSync": true
+    }
+  },
+  {
+    "id": "max-privacy",
+    "name": "Bảo mật tối đa",
+    "description": "Tắt WebRTC, chặn quảng cáo & tracker, bật Do Not Track và tự động dọn sạch dữ liệu sau khi đóng trình duyệt.",
+    "builtIn": true,
+    "signals": {
+      "canvas": "noise",
+      "webgl": "noise",
+      "webglMetadata": "custom",
+      "audio": "noise",
+      "clientRects": "noise",
+      "fonts": "custom",
+      "speechVoices": "off",
+      "battery": "off",
+      "portScanProtect": true
+    },
+    "mediaDevices": {
+      "cameras": 1,
+      "microphones": 1,
+      "speakers": 1,
+      "mode": "fake"
+    },
+    "webrtc": "disable",
+    "dataOnClose": {
+      "clearCookies": true,
+      "clearCache": true,
+      "clearHistory": true,
+      "clearLocalStorage": true
+    },
+    "bandwidth": {
+      "blockImages": false,
+      "blockMedia": false,
+      "blockExternalFonts": false,
+      "blockAds": true,
+      "blockTrackers": true,
+      "cacheStaticResources": false
+    },
+    "behavior": {
+      "doNotTrack": true,
+      "notifications": "block",
+      "hardwareAcceleration": true,
+      "geolocationPrompt": "block",
+      "disableAutofill": true,
+      "disableGoogleSync": true
+    }
+  },
+  {
+    "id": "low-bandwidth",
+    "name": "Tiết kiệm băng thông",
+    "description": "Chặn ảnh, media, font ngoài, quảng cáo/tracker và lưu cache tài nguyên tĩnh — phù hợp proxy trả phí theo GB.",
+    "builtIn": true,
+    "signals": {
+      "canvas": "noise",
+      "webgl": "noise",
+      "webglMetadata": "custom",
+      "audio": "noise",
+      "clientRects": "noise",
+      "fonts": "custom",
+      "speechVoices": "custom",
+      "battery": "off",
+      "portScanProtect": true
+    },
+    "mediaDevices": {
+      "cameras": 1,
+      "microphones": 1,
+      "speakers": 1,
+      "mode": "fake"
+    },
+    "webrtc": "replace",
+    "dataOnClose": {
+      "clearCookies": false,
+      "clearCache": false,
+      "clearHistory": false,
+      "clearLocalStorage": false
+    },
+    "bandwidth": {
+      "blockImages": true,
+      "blockMedia": true,
+      "blockExternalFonts": true,
+      "blockAds": true,
+      "blockTrackers": true,
+      "cacheStaticResources": true
+    },
+    "behavior": {
+      "doNotTrack": false,
+      "notifications": "block",
+      "hardwareAcceleration": true,
+      "geolocationPrompt": "allow",
+      "disableAutofill": true,
+      "disableGoogleSync": true
+    }
+  },
+  {
+    "id": "test-real",
+    "name": "Thử nghiệm (tín hiệu thật)",
+    "description": "Mọi tín hiệu để ở chế độ Thật (không can thiệp) để đối chiếu với các chế độ nhiễu/tắt trong quá trình kiểm thử.",
+    "builtIn": true,
+    "signals": {
+      "canvas": "real",
+      "webgl": "real",
+      "webglMetadata": "real",
+      "audio": "real",
+      "clientRects": "real",
+      "fonts": "real",
+      "speechVoices": "real",
+      "battery": "real",
+      "portScanProtect": false
+    },
+    "mediaDevices": {
+      "cameras": 1,
+      "microphones": 1,
+      "speakers": 1,
+      "mode": "real"
+    },
+    "webrtc": "real",
+    "dataOnClose": {
+      "clearCookies": false,
+      "clearCache": false,
+      "clearHistory": false,
+      "clearLocalStorage": false
+    },
+    "bandwidth": {
+      "blockImages": false,
+      "blockMedia": false,
+      "blockExternalFonts": false,
+      "blockAds": false,
+      "blockTrackers": false,
+      "cacheStaticResources": false
+    },
+    "behavior": {
+      "doNotTrack": false,
+      "notifications": "ask",
+      "hardwareAcceleration": true,
+      "geolocationPrompt": "ask",
+      "disableAutofill": false,
+      "disableGoogleSync": false
+    }
+  }
+]

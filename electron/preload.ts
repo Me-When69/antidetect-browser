@@ -129,6 +129,10 @@ const electronApi: ElectronApi = {
   },
   previewBulkVersionUpdate: (profileIds, targetVersion) =>
     ipcRenderer.invoke(IPC_CHANNELS.PROFILES_PREVIEW_BULK_VERSION, profileIds, targetVersion),
+
+  listPresets: () => ipcRenderer.invoke(IPC_CHANNELS.PRESETS_LIST),
+  saveCustomPreset: (input) => ipcRenderer.invoke(IPC_CHANNELS.PRESETS_SAVE, input),
+  deleteCustomPreset: (id) => ipcRenderer.invoke(IPC_CHANNELS.PRESETS_DELETE, id),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

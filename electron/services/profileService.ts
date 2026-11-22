@@ -36,6 +36,7 @@ import {
 } from '@shared/advancedDefaults';
 import { generateConsistentIdentity } from './fingerprint/generator';
 import { applyDevice, getDeviceById, normalizeBrowserVersion } from './deviceCatalog';
+import { PresetService } from './presetService';
 import type { SecretService } from './secretService';
 
 type ProfileRow = typeof profilesTable.$inferSelect;
@@ -462,6 +463,9 @@ export class ProfileService {
   bulkUpdate(input: BulkUpdateInput): number {
     let count = 0;
     const device = input.deviceId ? getDeviceById(input.deviceId) : null;
+    const presetService = input.presetId ? new PresetService(this.db) : null;
+    const preset = input.presetId && presetService ? presetService.getPresetById(input.presetId) : null;
+
     for (const id of input.ids) {
       const existing = this.getById(id);
       if (!existing) continue;
@@ -473,6 +477,43 @@ export class ProfileService {
         ? normalizeBrowserVersion(input.browserVersion)
         : existing.browserVersion;
 
+      const baseSignals = normalizeSignals(preset ? preset.signals : existing.fingerprint.signals);
+      const nextSignals = input.signals ? normalizeSignals({ ...baseSignals, ...input.signals }) : baseSignals;
+      const nextWebrtc = input.webrtc ?? (preset ? preset.webrtc : existing.fingerprint.webrtc);
+      const nextMediaDevices = normalizeMediaDevices({
+        ...(preset ? preset.mediaDevices : existing.mediaDevices),
+        ...(input.mediaDevices ?? {}),
+      });
+      const nextDataOnClose = normalizeDataOnClose({
+        ...(preset ? preset.dataOnClose : existing.dataOnClose),
+        ...(input.dataOnClose ?? {}),
+      });
+      const nextBandwidth = normalizeBandwidth({
+        ...(preset ? preset.bandwidth : existing.bandwidth),
+        ...(input.bandwidth ?? {}),
+      });
+      const nextBehavior = normalizeBehavior({
+        ...(preset ? preset.behavior : existing.behavior),
+        ...(input.behavior ?? {}),
+      });
+      const nextMeta = normalizeMeta(
+        {
+          ...(existing.meta ?? {}),
+          ...(input.meta ?? {}),
+        },
+        existing.notes,
+      );
+      const nextPresetId = preset
+        ? preset.id
+        : input.signals ||
+            input.mediaDevices ||
+            input.webrtc ||
+            input.dataOnClose ||
+            input.bandwidth ||
+            input.behavior
+          ? 'custom'
+          : existing.presetId;
+
       if (device) {
         const applied = applyDevice(existing, device, targetVersion);
         this.update({
@@ -482,6 +523,17 @@ export class ProfileService {
           status: input.status ?? existing.status,
           tags: nextTags,
           proxy: input.proxy ?? existing.proxy,
+          fingerprint: {
+            ...applied.fingerprint,
+            webrtc: nextWebrtc,
+            signals: nextSignals,
+          },
+          mediaDevices: nextMediaDevices,
+          dataOnClose: nextDataOnClose,
+          bandwidth: nextBandwidth,
+          behavior: nextBehavior,
+          meta: nextMeta,
+          presetId: nextPresetId,
         });
       } else {
         let nextUa = existing.userAgent;
@@ -503,6 +555,17 @@ export class ProfileService {
           proxy: input.proxy ?? existing.proxy,
           browserVersion: targetVersion,
           userAgent: nextUa,
+          fingerprint: {
+            ...existing.fingerprint,
+            webrtc: nextWebrtc,
+            signals: nextSignals,
+          },
+          mediaDevices: nextMediaDevices,
+          dataOnClose: nextDataOnClose,
+          bandwidth: nextBandwidth,
+          behavior: nextBehavior,
+          meta: nextMeta,
+          presetId: nextPresetId,
         });
       }
       count += 1;

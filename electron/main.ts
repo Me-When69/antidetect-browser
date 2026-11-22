@@ -22,6 +22,7 @@ import type {
   LaunchOptions,
   Platform,
   ProfileFilter,
+  ProfilePreset,
   ProfileProxy,
   UpdateProfileInput,
   WarmupConfig,
@@ -30,6 +31,7 @@ import { createDatabase, type DbContext } from './db';
 import { SecretService } from './services/secretService';
 import { AppLogger } from './services/logger';
 import { ProfileService } from './services/profileService';
+import { PresetService } from './services/presetService';
 import { ProxyService } from './services/proxyService';
 import { SettingsService } from './services/settingsService';
 import { ProfileLauncher } from './services/launcher';
@@ -416,6 +418,17 @@ function registerIpcHandlers(): void {
         .filter((p): p is NonNullable<typeof p> => p !== null);
       return previewBulkVersionUpdate(selected, targetVersion);
     },
+  );
+
+  // Advanced Profile Presets
+  const presetService = new PresetService(dbCtx!.db);
+  ipcMain.handle(IPC_CHANNELS.PRESETS_LIST, () => presetService.listPresets());
+  ipcMain.handle(
+    IPC_CHANNELS.PRESETS_SAVE,
+    (_e, input: Omit<ProfilePreset, 'id' | 'builtIn'>) => presetService.saveCustomPreset(input),
+  );
+  ipcMain.handle(IPC_CHANNELS.PRESETS_DELETE, (_e, id: string) =>
+    presetService.deleteCustomPreset(id),
   );
 }
 
