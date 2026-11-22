@@ -97,6 +97,7 @@ export function ProfileFormPage(): React.JSX.Element {
   const [quickProxyText, setQuickProxyText] = useState('');
   const [checkingProxy, setCheckingProxy] = useState(false);
   const [proxyCheck, setProxyCheck] = useState<ProxyCheckResult | null>(null);
+  const [autoMatchedGeo, setAutoMatchedGeo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<CreateProfileInput>({
@@ -185,6 +186,9 @@ export function ProfileFormPage(): React.JSX.Element {
         form.setValue('geo.language', res.language);
         form.setValue('geo.lat', res.lat);
         form.setValue('geo.lon', res.lon);
+        setAutoMatchedGeo(true);
+      } else {
+        setAutoMatchedGeo(false);
       }
     } finally {
       setCheckingProxy(false);
@@ -543,35 +547,137 @@ export function ProfileFormPage(): React.JSX.Element {
 
           {/* 3. Geo */}
           <Card id="sec-geo" className="space-y-4 p-5">
-            <h3 className="text-sm font-semibold">{dict.form.secGeo}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs text-muted-foreground">
-                  {dict.form.geoModeLabel}
-                </label>
-                <Select {...form.register('geo.mode')}>
-                  <option value="auto">{dict.form.geoAuto}</option>
-                  <option value="manual">{dict.form.geoManual}</option>
-                </Select>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">{dict.form.secGeo}</h3>
+              {autoMatchedGeo && watched.geo?.mode === 'auto' && (
+                <Badge className="bg-emerald-500/15 text-emerald-400">
+                  Đã tự khớp theo IP proxy
+                </Badge>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs text-muted-foreground">
+                {dict.form.geoModeLabel}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => form.setValue('geo.mode', 'auto')}
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
+                    watched.geo?.mode === 'auto'
+                      ? 'border-primary bg-primary/15 text-primary'
+                      : 'border-border bg-secondary/40 text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Tự động theo IP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    form.setValue('geo.mode', 'manual');
+                    setAutoMatchedGeo(false);
+                  }}
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
+                    watched.geo?.mode === 'manual'
+                      ? 'border-primary bg-primary/15 text-primary'
+                      : 'border-border bg-secondary/40 text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  Nhập tay
+                </button>
               </div>
+            </div>
+
+            {watched.geo?.mode === 'manual' &&
+              proxyCheck?.ok &&
+              proxyCheck.timezone &&
+              watched.geo?.timezone &&
+              watched.geo.timezone !== proxyCheck.timezone && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                  <span>
+                    Múi giờ đang chọn ({watched.geo.timezone}) không khớp với múi giờ IP proxy (
+                    {proxyCheck.timezone}).
+                  </span>
+                </div>
+              )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
                   {dict.form.timezoneLabel}
                 </label>
-                <Input {...form.register('geo.timezone')} placeholder="America/New_York" />
+                <Input
+                  {...form.register('geo.timezone')}
+                  disabled={watched.geo?.mode === 'auto'}
+                  placeholder="Asia/Ho_Chi_Minh"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
                   {dict.form.languageLabel}
                 </label>
-                <Input {...form.register('geo.language')} placeholder="en-US" />
+                <Input
+                  {...form.register('geo.language')}
+                  disabled={watched.geo?.mode === 'auto'}
+                  placeholder="vi-VN"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {dict.form.latLabel}
+                </label>
+                <Input
+                  type="number"
+                  step="any"
+                  disabled={watched.geo?.mode === 'auto'}
+                  value={watched.geo?.lat ?? ''}
+                  onChange={(e) =>
+                    form.setValue('geo.lat', e.target.value === '' ? null : Number(e.target.value))
+                  }
+                  placeholder="10.8231"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {dict.form.lonLabel}
+                </label>
+                <Input
+                  type="number"
+                  step="any"
+                  disabled={watched.geo?.mode === 'auto'}
+                  value={watched.geo?.lon ?? ''}
+                  onChange={(e) =>
+                    form.setValue('geo.lon', e.target.value === '' ? null : Number(e.target.value))
+                  }
+                  placeholder="106.6297"
+                />
               </div>
             </div>
           </Card>
 
           {/* 4. Proxy */}
           <Card id="sec-proxy" className="space-y-4 p-5">
-            <h3 className="text-sm font-semibold">{dict.form.secProxy}</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{dict.form.secProxy}</h3>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={checkingProxy}
+                onClick={() => void handleCheckProxy()}
+              >
+                {checkingProxy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Globe className="h-3.5 w-3.5" />
+                )}
+                {checkingProxy ? dict.form.checkingIp : 'Kiểm tra proxy'}
+              </Button>
+            </div>
 
             {proxies.length > 0 && (
               <div>
@@ -804,19 +910,39 @@ export function ProfileFormPage(): React.JSX.Element {
                         <span className="font-mono text-emerald-400">{proxyCheck.ip}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Vị trí</span>
+                        <span className="text-muted-foreground">Quốc gia</span>
                         <span>
-                          {proxyCheck.city}, {proxyCheck.country}
+                          {proxyCheck.country} ({proxyCheck.countryCode})
                         </span>
                       </div>
                       <div className="flex justify-between">
+                        <span className="text-muted-foreground">Thành phố</span>
+                        <span>{proxyCheck.city || '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Múi giờ</span>
-                        <span>{proxyCheck.timezone}</span>
+                        <span>{proxyCheck.timezone || '—'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Độ trễ</span>
-                        <span>{proxyCheck.latencyMs} ms</span>
+                        <span
+                          className={cn(
+                            'font-mono font-medium',
+                            proxyCheck.latencyMs < 1500
+                              ? 'text-emerald-400'
+                              : proxyCheck.latencyMs < 4000
+                                ? 'text-amber-400'
+                                : 'text-destructive',
+                          )}
+                        >
+                          {proxyCheck.latencyMs} ms
+                        </span>
                       </div>
+                      {autoMatchedGeo && watched.geo?.mode === 'auto' && (
+                        <p className="pt-1 text-[11px] font-medium text-emerald-400">
+                          Đã tự khớp theo IP proxy
+                        </p>
+                      )}
                     </>
                   ) : (
                     <p className="text-destructive">{proxyCheck.error}</p>

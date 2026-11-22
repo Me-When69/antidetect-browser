@@ -89,6 +89,12 @@ export function ProfilesPage(): React.JSX.Element {
   const [cookieProfile, setCookieProfile] = useState<Profile | null>(null);
   const [cookieInput, setCookieInput] = useState('');
 
+  // Proxy check failed fallback modal state
+  const [fallbackPrompt, setFallbackPrompt] = useState<{
+    profileId: string;
+    error: string;
+  } | null>(null);
+
   // Bulk assign folder state
   const [bulkFolderId, setBulkFolderId] = useState('');
 
@@ -103,10 +109,17 @@ export function ProfilesPage(): React.JSX.Element {
     }
   };
 
-  const handleStart = async (id: string): Promise<void> => {
+  const handleStart = async (id: string, useFallbackGeo = false): Promise<void> => {
     if (!window.electronAPI) return;
     try {
-      await window.electronAPI.startProfile(id);
+      const result = await window.electronAPI.startProfile(id, { useFallbackGeo });
+      if (result.proxyCheckFailed) {
+        setFallbackPrompt({
+          profileId: id,
+          error: result.error ?? 'Không thể kiểm tra IP proxy để tự khớp vị trí/múi giờ.',
+        });
+        return;
+      }
       await refreshProfiles();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể mở trình duyệt', 'error');
@@ -776,6 +789,36 @@ export function ProfilesPage(): React.JSX.Element {
                   : isEn
                     ? 'Start Warm-up'
                     : 'Bắt đầu Warm-up'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Proxy geo check failed fallback modal */}
+      {fallbackPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-md space-y-4 p-6 shadow-2xl">
+            <h3 className="text-base font-semibold text-destructive">
+              Không thể kiểm tra proxy
+            </h3>
+            <p className="text-sm text-muted-foreground">{fallbackPrompt.error}</p>
+            <p className="text-xs text-muted-foreground">
+              Trình duyệt chưa được mở để tránh lộ múi giờ/vị trí không khớp. Bạn có muốn mở bằng
+              cấu hình geo đã lưu lần trước không?
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setFallbackPrompt(null)}>
+                Hủy
+              </Button>
+              <Button
+                onClick={() => {
+                  const targetId = fallbackPrompt.profileId;
+                  setFallbackPrompt(null);
+                  void handleStart(targetId, true);
+                }}
+              >
+                Mở bằng cấu hình geo đã lưu lần trước
               </Button>
             </div>
           </Card>
