@@ -177,10 +177,16 @@ export interface ProfileRunStatusEvent {
   error?: string;
 }
 
+export interface LaunchOptions {
+  useFallbackGeo?: boolean;
+}
+
 export interface LaunchResult {
   profileId: string;
   running: boolean;
   wsEndpoint: string;
+  proxyCheckFailed?: boolean;
+  error?: string;
 }
 
 export interface CookieItem {

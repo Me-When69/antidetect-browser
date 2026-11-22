@@ -3,8 +3,10 @@ import type { CookieItem, Profile, WarmupConfig, WarmupResult } from '@shared/ty
 export interface ResolvedGeo {
   timezone: string;
   language: string;
+  acceptLanguage: string;
   lat: number | null;
   lon: number | null;
+  accuracy?: number;
 }
 
 export interface DriverLaunchOptions {

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type {
   CookieItem,
+  LaunchOptions,
   LaunchResult,
   Profile,
   ProfileRunStatusEvent,
@@ -9,6 +10,7 @@ import type {
   WarmupResult,
 } from '@shared/types';
 import { parseCookiesText, serializeCookiesNetscape } from '@shared/validation';
+import { buildAcceptLanguage, deriveGeo } from './geoService';
 import type { BrowserDriver, ResolvedGeo } from './drivers/BrowserDriver';
 import { ChromeDriver } from './drivers/ChromeDriver';
 import { CamoufoxDriver } from './drivers/CamoufoxDriver';
@@ -74,36 +76,72 @@ export class ProfileLauncher {
     return this.runningDrivers.has(profileId);
   }
 
-  private async resolveGeo(profile: Profile): Promise<ResolvedGeo> {
-    if (profile.geo.mode === 'manual') {
+  private async resolveGeo(
+    profile: Profile,
+    useFallbackGeo: boolean,
+  ): Promise<{ ok: true; geo: ResolvedGeo; updatedProfile: Profile } | { ok: false; error: string }> {
+    if (profile.geo.mode === 'manual' || useFallbackGeo) {
+      const lang = profile.geo.language || 'en-US';
       return {
-        timezone: profile.geo.timezone,
-        language: profile.geo.language || 'en-US',
-        lat: profile.geo.lat,
-        lon: profile.geo.lon,
+        ok: true,
+        updatedProfile: profile,
+        geo: {
+          timezone: profile.geo.timezone,
+          language: lang,
+          acceptLanguage: buildAcceptLanguage(lang),
+          lat: profile.geo.lat,
+          lon: profile.geo.lon,
+          accuracy: 50,
+        },
       };
     }
 
-    // Auto mode: detect geo from proxy IP (or direct IP if no proxy)
+    // Auto mode: check proxy IP first; if check fails, do NOT open browser unless user confirms fallback
     const check = await this.proxyService.checkProxy(profile.proxy);
-    if (check.ok) {
+    if (!check.ok) {
       return {
-        timezone: check.timezone || profile.geo.timezone,
-        language: check.language || profile.geo.language || 'en-US',
+        ok: false,
+        error: check.error ?? 'Không thể kiểm tra IP proxy để tự khớp vị trí/múi giờ',
+      };
+    }
+
+    const derived = deriveGeo(
+      {
+        countryCode: check.countryCode,
+        timezone: check.timezone,
         lat: check.lat,
         lon: check.lon,
-      };
-    }
+      },
+      profile.id,
+    );
+
+    // Persist newly derived geo into DB
+    const updatedProfile = this.profileService.update({
+      id: profile.id,
+      geo: {
+        mode: 'auto',
+        timezone: derived.timezone,
+        language: derived.locale,
+        lat: derived.geolocation?.latitude ?? null,
+        lon: derived.geolocation?.longitude ?? null,
+      },
+    });
 
     return {
-      timezone: profile.geo.timezone,
-      language: profile.geo.language || 'en-US',
-      lat: profile.geo.lat,
-      lon: profile.geo.lon,
+      ok: true,
+      updatedProfile,
+      geo: {
+        timezone: derived.timezone,
+        language: derived.locale,
+        acceptLanguage: derived.acceptLanguage,
+        lat: derived.geolocation?.latitude ?? null,
+        lon: derived.geolocation?.longitude ?? null,
+        accuracy: derived.geolocation?.accuracy ?? 50,
+      },
     };
   }
 
-  async start(profileId: string): Promise<LaunchResult> {
+  async start(profileId: string, options?: LaunchOptions): Promise<LaunchResult> {
     const profile = this.profileService.getById(profileId);
     if (!profile) {
       throw new Error(`Không tìm thấy hồ sơ: ${profileId}`);
@@ -125,20 +163,31 @@ export class ProfileLauncher {
     const settings = this.settingsService.getSettings();
     const userDataDir = this.profileService.getProfileDir(profileId);
 
-    this.logger.info(
-      'launcher',
-      `Starting profile ${profile.name} (${profileId}) via ${driver.name}`,
-    );
+    this.logger.info('launcher', `Starting profile ${profile.name} (${profileId}) via ${driver.name}`);
+
+    const geoResolution = await this.resolveGeo(profile, Boolean(options?.useFallbackGeo));
+    if (!geoResolution.ok) {
+      this.logger.warn(
+        'launcher',
+        `Aborted launch for ${profileId}: proxy geo check failed (${geoResolution.error})`,
+      );
+      return {
+        profileId,
+        running: false,
+        wsEndpoint: '',
+        proxyCheckFailed: true,
+        error: geoResolution.error,
+      };
+    }
 
     const proxyServerUrl = await this.proxyService.openTunnelForProfile(profileId, profile.proxy);
-    const resolvedGeo = await this.resolveGeo(profile);
 
     try {
       const instance = await driver.launch({
-        profile,
+        profile: geoResolution.updatedProfile,
         userDataDir,
         proxyServerUrl,
-        resolvedGeo,
+        resolvedGeo: geoResolution.geo,
         customExecutablePath:
           profile.browser === 'firefox' ? settings.camoufoxPath : settings.chromePath,
         onUnexpectedClose: (closedId) => {

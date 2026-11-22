@@ -9,6 +9,7 @@ import type {
   CreateSavedProxyInput,
   DevicePreset,
   Folder,
+  LaunchOptions,
   LaunchResult,
   LocalApiStatus,
   Platform,
@@ -125,7 +126,7 @@ export interface ElectronApi {
   deleteTag: (id: string) => Promise<void>;
 
   // Launcher
-  startProfile: (id: string) => Promise<LaunchResult>;
+  startProfile: (id: string, options?: LaunchOptions) => Promise<LaunchResult>;
   stopProfile: (id: string) => Promise<void>;
   bulkStartProfiles: (ids: string[]) => Promise<LaunchResult[]>;
   bulkStopProfiles: (ids: string[]) => Promise<void>;

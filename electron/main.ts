@@ -10,6 +10,7 @@ import type {
   BulkUpdateInput,
   CreateProfileInput,
   CreateSavedProxyInput,
+  LaunchOptions,
   Platform,
   ProfileFilter,
   ProfileProxy,
@@ -170,7 +171,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.TAGS_DELETE, (_e, id: string) => profileService.deleteTag(id));
 
   // Launcher
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_START, (_e, id: string) => profileLauncher.start(id));
+  ipcMain.handle(IPC_CHANNELS.LAUNCHER_START, (_e, id: string, options?: LaunchOptions) =>
+    profileLauncher.start(id, options),
+  );
   ipcMain.handle(IPC_CHANNELS.LAUNCHER_STOP, (_e, id: string) => profileLauncher.stop(id));
   ipcMain.handle(IPC_CHANNELS.LAUNCHER_BULK_START, (_e, ids: string[]) =>
     profileLauncher.bulkStart(ids),

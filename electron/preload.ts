@@ -28,7 +28,7 @@ const electronApi: ElectronApi = {
   createTag: (name, color) => ipcRenderer.invoke(IPC_CHANNELS.TAGS_CREATE, name, color),
   deleteTag: (id) => ipcRenderer.invoke(IPC_CHANNELS.TAGS_DELETE, id),
 
-  startProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_START, id),
+  startProfile: (id, options) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_START, id, options),
   stopProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_STOP, id),
   bulkStartProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_BULK_START, ids),
   bulkStopProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_BULK_STOP, ids),

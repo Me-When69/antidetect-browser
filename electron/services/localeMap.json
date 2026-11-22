@@ -1,0 +1,23 @@
+{
+  "VN": { "locale": "vi-VN", "acceptLanguage": "vi-VN,vi;q=0.9,en;q=0.8" },
+  "US": { "locale": "en-US", "acceptLanguage": "en-US,en;q=0.9" },
+  "GB": { "locale": "en-GB", "acceptLanguage": "en-GB,en;q=0.9" },
+  "CA": { "locale": "en-CA", "acceptLanguage": "en-CA,en;q=0.9,fr-CA;q=0.8" },
+  "AU": { "locale": "en-AU", "acceptLanguage": "en-AU,en;q=0.9" },
+  "SG": { "locale": "en-SG", "acceptLanguage": "en-SG,en;q=0.9" },
+  "JP": { "locale": "ja-JP", "acceptLanguage": "ja-JP,ja;q=0.9,en;q=0.8" },
+  "KR": { "locale": "ko-KR", "acceptLanguage": "ko-KR,ko;q=0.9,en;q=0.8" },
+  "DE": { "locale": "de-DE", "acceptLanguage": "de-DE,de;q=0.9,en;q=0.8" },
+  "FR": { "locale": "fr-FR", "acceptLanguage": "fr-FR,fr;q=0.9,en;q=0.8" },
+  "ES": { "locale": "es-ES", "acceptLanguage": "es-ES,es;q=0.9,en;q=0.8" },
+  "IT": { "locale": "it-IT", "acceptLanguage": "it-IT,it;q=0.9,en;q=0.8" },
+  "NL": { "locale": "nl-NL", "acceptLanguage": "nl-NL,nl;q=0.9,en;q=0.8" },
+  "BR": { "locale": "pt-BR", "acceptLanguage": "pt-BR,pt;q=0.9,en;q=0.8" },
+  "TH": { "locale": "th-TH", "acceptLanguage": "th-TH,th;q=0.9,en;q=0.8" },
+  "ID": { "locale": "id-ID", "acceptLanguage": "id-ID,id;q=0.9,en;q=0.8" },
+  "TW": { "locale": "zh-TW", "acceptLanguage": "zh-TW,zh;q=0.9,en;q=0.8" },
+  "HK": { "locale": "zh-HK", "acceptLanguage": "zh-HK,zh;q=0.9,en;q=0.8" },
+  "RU": { "locale": "ru-RU", "acceptLanguage": "ru-RU,ru;q=0.9,en;q=0.8" },
+  "PL": { "locale": "pl-PL", "acceptLanguage": "pl-PL,pl;q=0.9,en;q=0.8" },
+  "IN": { "locale": "en-IN", "acceptLanguage": "en-IN,en;q=0.9,hi;q=0.8" }
+}
