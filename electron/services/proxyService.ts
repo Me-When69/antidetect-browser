@@ -218,12 +218,48 @@ export function evaluateIpv6Leak(
   };
 }
 
-const defaultProxyFetcher: ProxyHttpFetcher = (targetUrl, proxy, timeoutMs) => {
+function probeProxyTcp(host: string, port: number, timeoutMs = 3000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const cleanHost = host.trim().replace(/^\[|\]$/g, '');
+    const socket = net.createConnection({ host: cleanHost, port });
+    let settled = false;
+    const done = (err?: Error): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.destroy();
+      if (err) reject(err);
+      else resolve();
+    };
+    const timer = setTimeout(() => {
+      const err = new Error('PROXY_TCP_TIMEOUT') as NodeJS.ErrnoException;
+      err.code = 'ETIMEDOUT';
+      done(err);
+    }, timeoutMs);
+    socket.once('connect', () => done());
+    socket.once('error', (err) => done(err));
+  });
+}
+
+const defaultProxyFetcher: ProxyHttpFetcher = async (targetUrl, proxy, timeoutMs) => {
+  if (proxy.type !== 'none' && proxy.host.trim() && proxy.port > 0) {
+    await probeProxyTcp(proxy.host, proxy.port, Math.min(3000, timeoutMs));
+  }
+
   return new Promise((resolve, reject) => {
     const parsed = new URL(targetUrl);
     const isHttps = parsed.protocol === 'https:';
     const agent = buildAgent(proxy);
     const transport = isHttps ? https : http;
+    let settled = false;
+
+    const finish = (err: Error | null, result?: { statusCode: number; body: string }): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(hardTimer);
+      if (err) reject(err);
+      else if (result) resolve(result);
+    };
 
     const req = transport.request(
       {
@@ -235,7 +271,7 @@ const defaultProxyFetcher: ProxyHttpFetcher = (targetUrl, proxy, timeoutMs) => {
         agent,
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'AntidetectBrowser/1.0',
+          'User-Agent': 'FacetBrowser/1.0',
           Accept: 'application/json',
         },
       },
@@ -246,16 +282,24 @@ const defaultProxyFetcher: ProxyHttpFetcher = (targetUrl, proxy, timeoutMs) => {
           body += chunk;
         });
         res.on('end', () => {
-          resolve({ statusCode: res.statusCode ?? 0, body });
+          finish(null, { statusCode: res.statusCode ?? 0, body });
         });
       },
     );
 
-    req.on('error', (err) => reject(err));
+    const hardTimer = setTimeout(() => {
+      const timeoutErr = new Error('ETIMEDOUT') as NodeJS.ErrnoException;
+      timeoutErr.code = 'ETIMEDOUT';
+      req.destroy(timeoutErr);
+      finish(timeoutErr);
+    }, timeoutMs);
+
+    req.on('error', (err) => finish(err));
     req.on('timeout', () => {
       const timeoutErr = new Error('ETIMEDOUT') as NodeJS.ErrnoException;
       timeoutErr.code = 'ETIMEDOUT';
       req.destroy(timeoutErr);
+      finish(timeoutErr);
     });
     req.end();
   });
@@ -558,7 +602,7 @@ export class ProxyService {
             rawCode === 'ECONNREFUSED' ||
             rawCode === 'ENOTFOUND' ||
             rawCode === 'ECONNRESET' ||
-            /Proxy connection ended/i.test(rawMsg)
+            /Proxy connection ended|PROXY_TCP_TIMEOUT/i.test(rawMsg)
           ) {
             return {
               ok: false,
