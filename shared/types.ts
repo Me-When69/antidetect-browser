@@ -198,7 +198,21 @@ export interface LaunchResult {
   running: boolean;
   wsEndpoint: string;
   proxyCheckFailed?: boolean;
+  browserNotFound?: boolean;
   error?: string;
+}
+
+export interface BrowserCheckResult {
+  found: boolean;
+  label?: string;
+  executablePath?: string;
+  error?: string;
+}
+
+export interface BrowserInstallProgressEvent {
+  line: string;
+  done?: boolean;
+  success?: boolean;
 }
 
 export interface CookieItem {

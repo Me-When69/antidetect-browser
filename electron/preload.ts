@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC_CHANNELS, type ElectronApi } from '@shared/ipc';
-import type { ProfileRunStatusEvent } from '@shared/types';
+import type { BrowserInstallProgressEvent, ProfileRunStatusEvent } from '@shared/types';
 
 const electronApi: ElectronApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_INFO),
@@ -70,6 +70,18 @@ const electronApi: ElectronApi = {
   exportBackup: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
   importBackup: (payload) => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_IMPORT, payload),
   exportLogs: () => ipcRenderer.invoke(IPC_CHANNELS.LOGS_EXPORT),
+
+  checkBrowserExecutable: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSER_CHECK),
+  installPlaywrightChromium: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSER_INSTALL_CHROMIUM),
+  onBrowserInstallProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, payload: BrowserInstallProgressEvent): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC_CHANNELS.BROWSER_INSTALL_PROGRESS, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.BROWSER_INSTALL_PROGRESS, handler);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

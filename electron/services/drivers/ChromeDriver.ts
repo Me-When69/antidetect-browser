@@ -3,6 +3,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
+import { resolveBrowserExecutable } from '../browserPath';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
 import { runContextWarmup } from './warmupHelper';
 import type {
@@ -11,36 +12,6 @@ import type {
   DriverLaunchOptions,
   ResolvedGeo,
 } from './BrowserDriver';
-
-function findSystemChrome(): string | undefined {
-  const candidates: string[] = [];
-  if (process.platform === 'win32') {
-    const localAppData = process.env['LOCALAPPDATA'] ?? '';
-    const programFiles = process.env['PROGRAMFILES'] ?? 'C:\\Program Files';
-    const programFilesX86 = process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)';
-    candidates.push(
-      `${programFiles}\\Google\\Chrome\\Application\\chrome.exe`,
-      `${programFilesX86}\\Google\\Chrome\\Application\\chrome.exe`,
-      `${localAppData}\\Google\\Chrome\\Application\\chrome.exe`,
-      `${programFiles}\\Microsoft\\Edge\\Application\\msedge.exe`,
-      `${programFilesX86}\\Microsoft\\Edge\\Application\\msedge.exe`,
-    );
-  } else if (process.platform === 'darwin') {
-    candidates.push(
-      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-      '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    );
-  } else {
-    candidates.push('/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser');
-  }
-
-  for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return undefined;
-}
 
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -140,10 +111,9 @@ export class ChromeDriver implements BrowserDriver {
     }
 
     const debugPort = await getFreePort();
-    const executablePath =
-      (customExecutablePath && fs.existsSync(customExecutablePath)
-        ? customExecutablePath
-        : undefined) ?? findSystemChrome();
+    const resolvedBrowser = resolveBrowserExecutable({ customPath: customExecutablePath });
+    const executablePath = resolvedBrowser.executablePath;
+    console.info(`[ChromeDriver] Selected browser: ${resolvedBrowser.label} (${executablePath})`);
 
     const args: string[] = [
       `--remote-debugging-port=${debugPort}`,
@@ -176,7 +146,8 @@ export class ChromeDriver implements BrowserDriver {
 
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: false,
-      executablePath,
+      executablePath: executablePath || undefined,
+      channel: executablePath ? undefined : 'chrome',
       userAgent: profile.userAgent !== 'auto' ? profile.userAgent : undefined,
       viewport: null,
       locale: resolvedGeo.language || 'en-US',

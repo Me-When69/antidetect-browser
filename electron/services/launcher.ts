@@ -11,6 +11,7 @@ import type {
 } from '@shared/types';
 import { parseCookiesText, serializeCookiesNetscape } from '@shared/validation';
 import { buildAcceptLanguage, deriveGeo } from './geoService';
+import { BrowserNotFoundError, resolveBrowserExecutable } from './browserPath';
 import type { BrowserDriver, ResolvedGeo } from './drivers/BrowserDriver';
 import { ChromeDriver } from './drivers/ChromeDriver';
 import { CamoufoxDriver } from './drivers/CamoufoxDriver';
@@ -169,6 +170,28 @@ export class ProfileLauncher {
       'launcher',
       `Starting profile ${profile.name} (${profileId}) via ${driver.name}`,
     );
+
+    if (profile.browser === 'chrome') {
+      try {
+        const resolved = resolveBrowserExecutable({ customPath: settings.chromePath });
+        this.logger.info(
+          'launcher',
+          `Resolved browser for ${profile.name}: ${resolved.label} (${resolved.executablePath})`,
+        );
+      } catch (err) {
+        if (err instanceof BrowserNotFoundError) {
+          this.logger.error('launcher', `Browser not found: ${err.message}`);
+          return {
+            profileId,
+            running: false,
+            wsEndpoint: '',
+            browserNotFound: true,
+            error: err.message,
+          };
+        }
+        throw err;
+      }
+    }
 
     const geoResolution = await this.resolveGeo(profile, Boolean(options?.useFallbackGeo));
     if (!geoResolution.ok) {

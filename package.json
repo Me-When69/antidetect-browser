@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node -e \"console.log('Antidetect: skipping Playwright browser download (using system Chrome/Edge)')\""
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.8",
@@ -25,7 +26,7 @@
     "drizzle-orm": "^0.45.4",
     "https-proxy-agent": "^9.1.0",
     "lucide-react": "^0.511.0",
-    "playwright-core": "^1.65.1",
+    "playwright-core": "1.65.1",
     "proxy-chain": "^3.0.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

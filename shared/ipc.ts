@@ -1,6 +1,8 @@
 import type {
   AppSettings,
   BackupPayload,
+  BrowserCheckResult,
+  BrowserInstallProgressEvent,
   BrowserType,
   BulkCreateInput,
   BulkUpdateInput,
@@ -81,6 +83,10 @@ export const IPC_CHANNELS = {
   BACKUP_EXPORT: 'backup:export',
   BACKUP_IMPORT: 'backup:import',
   LOGS_EXPORT: 'logs:export',
+
+  BROWSER_CHECK: 'browser:check',
+  BROWSER_INSTALL_CHROMIUM: 'browser:installChromium',
+  BROWSER_INSTALL_PROGRESS: 'browser:installProgress',
 } as const;
 
 export interface AppInfo {
@@ -168,6 +174,11 @@ export interface ElectronApi {
     payload: BackupPayload,
   ) => Promise<{ profiles: number; folders: number; proxies: number }>;
   exportLogs: () => Promise<string>;
+
+  // Browser Binary
+  checkBrowserExecutable: () => Promise<BrowserCheckResult>;
+  installPlaywrightChromium: () => Promise<{ ok: boolean; error?: string }>;
+  onBrowserInstallProgress: (listener: (event: BrowserInstallProgressEvent) => void) => () => void;
 }
 
 export type { CookieItem };

@@ -18,6 +18,7 @@ import type {
   SavedProxy,
 } from '@shared/types';
 import { inferLanguageFromCountry } from '@shared/validation';
+import { resolveBrowserExecutable } from './browserPath';
 import { formatHostForUrl } from './proxyParser';
 import type { SecretService } from './secretService';
 
@@ -536,14 +537,25 @@ export class ProxyService {
         }
       }
 
+      const resolvedBrowser = resolveBrowserExecutable();
+      console.info(
+        `[ProxyService] Leak check using browser: ${resolvedBrowser.label} (${resolvedBrowser.executablePath})`,
+      );
+
       const proxyHostIsIpv6 = net.isIP(proxy.host.trim().replace(/^\[|\]$/g, '')) === 6;
-      const args: string[] = ['--force-webrtc-ip-handling-policy=disable_non_proxied_udp'];
+      const args: string[] = [
+        '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
+        '--window-size=400,300',
+        '--window-position=-2400,-2400',
+      ];
       if (ipv6Policy === 'block' && !proxyHostIsIpv6) {
         args.push('--disable-ipv6');
       }
 
       const browser = await chromium.launch({
-        headless: true,
+        headless: false,
+        executablePath: resolvedBrowser.executablePath || undefined,
+        channel: resolvedBrowser.executablePath ? undefined : 'chrome',
         proxy: proxyServer ? { server: proxyServer } : undefined,
         args,
       });

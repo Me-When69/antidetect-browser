@@ -95,6 +95,11 @@ export function ProfilesPage(): React.JSX.Element {
     error: string;
   } | null>(null);
 
+  // Missing browser modal state
+  const [browserMissingError, setBrowserMissingError] = useState<string | null>(null);
+  const [installingChromium, setInstallingChromium] = useState(false);
+  const [installLogs, setInstallLogs] = useState<string[]>([]);
+
   // Bulk assign folder state
   const [bulkFolderId, setBulkFolderId] = useState('');
 
@@ -113,6 +118,13 @@ export function ProfilesPage(): React.JSX.Element {
     if (!window.electronAPI) return;
     try {
       const result = await window.electronAPI.startProfile(id, { useFallbackGeo });
+      if (result.browserNotFound) {
+        setBrowserMissingError(
+          result.error ?? "Không tìm thấy Chrome. Hãy cài Google Chrome hoặc bấm 'Tải Chromium'",
+        );
+        setInstallLogs([]);
+        return;
+      }
       if (result.proxyCheckFailed) {
         setFallbackPrompt({
           profileId: id,
@@ -123,6 +135,26 @@ export function ProfilesPage(): React.JSX.Element {
       await refreshProfiles();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể mở trình duyệt', 'error');
+    }
+  };
+
+  const handleInstallChromium = async (): Promise<void> => {
+    if (!window.electronAPI) return;
+    setInstallingChromium(true);
+    setInstallLogs([]);
+    const unsubscribe = window.electronAPI.onBrowserInstallProgress((ev) => {
+      setInstallLogs((prev) => [...prev.slice(-40), ev.line]);
+    });
+    try {
+      const res = await window.electronAPI.installPlaywrightChromium();
+      if (res.ok) {
+        showToast('Đã tải Chromium thành công! Bạn có thể mở hồ sơ ngay.', 'success');
+      } else {
+        showToast(res.error ?? 'Tải Chromium thất bại', 'error');
+      }
+    } finally {
+      unsubscribe();
+      setInstallingChromium(false);
     }
   };
 
@@ -790,6 +822,38 @@ export function ProfilesPage(): React.JSX.Element {
                   : isEn
                     ? 'Start Warm-up'
                     : 'Bắt đầu Warm-up'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Missing browser friendly modal with "Tải Chromium" button */}
+      {browserMissingError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-lg space-y-4 p-6 shadow-2xl">
+            <h3 className="text-base font-semibold text-destructive">Không tìm thấy trình duyệt</h3>
+            <p className="text-sm text-foreground">{browserMissingError}</p>
+            {installLogs.length > 0 && (
+              <pre className="max-h-44 overflow-y-auto rounded-lg border border-border bg-background p-3 font-mono text-[11px] text-muted-foreground">
+                {installLogs.join('\n')}
+              </pre>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                disabled={installingChromium}
+                onClick={() => setBrowserMissingError(null)}
+              >
+                {dict.common.close}
+              </Button>
+              <Button disabled={installingChromium} onClick={() => void handleInstallChromium()}>
+                {installingChromium ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {installingChromium ? 'Đang tải Chromium...' : 'Tải Chromium'}
               </Button>
             </div>
           </Card>
