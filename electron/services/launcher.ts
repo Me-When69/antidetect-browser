@@ -41,6 +41,7 @@ export class ProfileLauncher {
   private camoufoxDriver: BrowserDriver;
   private browserManager?: BrowserManager;
   private runningDrivers = new Map<string, BrowserDriver>();
+  private startingProfiles = new Set<string>();
   private listeners = new Set<StatusListener>();
 
   constructor(
@@ -175,6 +176,25 @@ export class ProfileLauncher {
       }
     }
 
+    if (this.startingProfiles.has(profileId)) {
+      return {
+        profileId,
+        running: false,
+        wsEndpoint: '',
+        error: 'Hồ sơ này đang trong quá trình khởi chạy, vui lòng đợi vài giây.',
+      };
+    }
+
+    this.startingProfiles.add(profileId);
+    try {
+      return await this.startInternal(profile, options);
+    } finally {
+      this.startingProfiles.delete(profileId);
+    }
+  }
+
+  private async startInternal(profile: Profile, options?: LaunchOptions): Promise<LaunchResult> {
+    const profileId = profile.id;
     const driver = this.pickDriver(profile);
     const settings = this.settingsService.getSettings();
     const userDataDir = this.profileService.getProfileDir(profileId);

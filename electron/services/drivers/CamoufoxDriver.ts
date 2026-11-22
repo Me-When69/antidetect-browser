@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import net from 'node:net';
+import path from 'node:path';
 import { firefox } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
 import { normalizeBehavior, normalizeWindow } from '@shared/advancedDefaults';
@@ -29,8 +30,21 @@ export class CamoufoxDriver implements BrowserDriver {
       return this.instances.get(profile.id)!;
     }
 
-    if (!fs.existsSync(userDataDir)) {
-      fs.mkdirSync(userDataDir, { recursive: true });
+    // Isolate Firefox profile directory from Chromium files inside data/profiles/<id>
+    const firefoxProfileDir = path.join(userDataDir, 'firefox-profile');
+    if (!fs.existsSync(firefoxProfileDir)) {
+      fs.mkdirSync(firefoxProfileDir, { recursive: true });
+    }
+    // Remove stale Firefox lock files if left over from an unexpected crash
+    for (const lockName of ['parent.lock', '.parentlock', 'lock']) {
+      const lockPath = path.join(firefoxProfileDir, lockName);
+      if (fs.existsSync(lockPath)) {
+        try {
+          fs.unlinkSync(lockPath);
+        } catch {
+          // Lock is actively held by an existing process
+        }
+      }
     }
 
     const resolvedFirefox = resolveFirefoxExecutable({ customPath: customExecutablePath });
@@ -81,7 +95,7 @@ export class CamoufoxDriver implements BrowserDriver {
       'extensions.formautofill.creditCards.enabled': !behavior.disableAutofill,
     };
 
-    const context = await firefox.launchPersistentContext(userDataDir, {
+    const context = await firefox.launchPersistentContext(firefoxProfileDir, {
       headless: false,
       executablePath,
       userAgent: profile.userAgent !== 'auto' ? profile.userAgent : undefined,
@@ -111,7 +125,7 @@ export class CamoufoxDriver implements BrowserDriver {
       },
     });
 
-    await attachBandwidthRouter(context, profile.bandwidth, userDataDir);
+    await attachBandwidthRouter(context, profile.bandwidth, firefoxProfileDir);
     await context.addInitScript(buildFingerprintInitScript(profile, resolvedGeo));
 
     const urls = profile.startup.urls.map((u) => u.trim()).filter(Boolean);
@@ -134,7 +148,7 @@ export class CamoufoxDriver implements BrowserDriver {
         this.instances.delete(profile.id);
         await applyInContextCleanup(context, profile.dataOnClose);
         await context.close().catch(() => {});
-        applyDiskDataOnClose(userDataDir, profile.dataOnClose);
+        applyDiskDataOnClose(firefoxProfileDir, profile.dataOnClose);
       },
       importCookies: async (cookies: CookieItem[]): Promise<number> => {
         if (cookies.length === 0) return 0;
@@ -172,7 +186,7 @@ export class CamoufoxDriver implements BrowserDriver {
       if (!closed) {
         closed = true;
         this.instances.delete(profile.id);
-        applyDiskDataOnClose(userDataDir, profile.dataOnClose);
+        applyDiskDataOnClose(firefoxProfileDir, profile.dataOnClose);
         options.onUnexpectedClose(profile.id);
       }
     });

@@ -413,9 +413,60 @@ export function ProfileFormPage(): React.JSX.Element {
 
   const saveProfile = async (runAfterSave: boolean): Promise<void> => {
     if (!window.electronAPI) return;
+
+    // Sanitize numeric fields that may become NaN when cleared in HTML number inputs
+    const currentRaw = form.getValues();
+    if (currentRaw.proxy.type === 'none') {
+      form.setValue('proxy.port', 0);
+      form.setValue('proxy.host', '');
+    } else if (!Number.isFinite(currentRaw.proxy.port)) {
+      form.setValue('proxy.port', 0);
+    }
+    if (!Number.isFinite(currentRaw.fingerprint.screen.width)) {
+      form.setValue('fingerprint.screen.width', 1920);
+    }
+    if (!Number.isFinite(currentRaw.fingerprint.screen.height)) {
+      form.setValue('fingerprint.screen.height', 1080);
+    }
+    if (!Number.isFinite(currentRaw.fingerprint.screen.dpr)) {
+      form.setValue('fingerprint.screen.dpr', 1);
+    }
+    if (!Number.isFinite(currentRaw.fingerprint.hardware.cores)) {
+      form.setValue('fingerprint.hardware.cores', 8);
+    }
+    if (!Number.isFinite(currentRaw.fingerprint.hardware.memory)) {
+      form.setValue('fingerprint.hardware.memory', 16);
+    }
+    if (currentRaw.window) {
+      if (!Number.isFinite(currentRaw.window.width)) form.setValue('window.width', 1280);
+      if (!Number.isFinite(currentRaw.window.height)) form.setValue('window.height', 800);
+      if (currentRaw.window.x !== null && currentRaw.window.x !== undefined && !Number.isFinite(currentRaw.window.x)) {
+        form.setValue('window.x', null);
+      }
+      if (currentRaw.window.y !== null && currentRaw.window.y !== undefined && !Number.isFinite(currentRaw.window.y)) {
+        form.setValue('window.y', null);
+      }
+    }
+
     const valid = await form.trigger();
     if (!valid) {
-      showToast('Vui lòng kiểm tra lại các trường bị lỗi', 'error');
+      const findFirstError = (obj: unknown, prefix = ''): string | null => {
+        if (!obj || typeof obj !== 'object') return null;
+        const rec = obj as Record<string, unknown>;
+        if (typeof rec['message'] === 'string' && rec['message']) {
+          return prefix ? `${prefix}: ${rec['message']}` : rec['message'];
+        }
+        for (const [k, v] of Object.entries(rec)) {
+          const nested = findFirstError(v, prefix ? `${prefix}.${k}` : k);
+          if (nested) return nested;
+        }
+        return null;
+      };
+      const detail = findFirstError(form.formState.errors);
+      showToast(
+        detail ? `Lỗi dữ liệu (${detail})` : 'Vui lòng kiểm tra lại các trường bị lỗi',
+        'error',
+      );
       return;
     }
 
@@ -455,7 +506,17 @@ export function ProfileFormPage(): React.JSX.Element {
       setActivePage('profiles');
 
       if (runAfterSave) {
-        await window.electronAPI.startProfile(savedId);
+        try {
+          const launchRes = await window.electronAPI.startProfile(savedId);
+          if (!launchRes.running && launchRes.error) {
+            showToast(`Hồ sơ đã lưu, nhưng chưa mở được trình duyệt: ${launchRes.error}`, 'error');
+          }
+        } catch (launchErr) {
+          showToast(
+            `Hồ sơ đã lưu, nhưng lỗi khi khởi chạy trình duyệt: ${launchErr instanceof Error ? launchErr.message : 'Không xác định'}`,
+            'error',
+          );
+        }
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Lỗi lưu hồ sơ', 'error');
