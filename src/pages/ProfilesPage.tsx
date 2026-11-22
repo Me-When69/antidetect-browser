@@ -105,6 +105,7 @@ export function ProfilesPage(): React.JSX.Element {
     profileId: string;
     error: string;
   } | null>(null);
+  const [startingIds, setStartingIds] = useState<string[]>([]);
 
   // Missing browser modal state
   const [browserMissing, setBrowserMissing] = useState<{
@@ -225,6 +226,7 @@ export function ProfilesPage(): React.JSX.Element {
     allowDowngrade = false,
   ): Promise<void> => {
     if (!window.electronAPI) return;
+    setStartingIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     try {
       const result = await window.electronAPI.startProfile(id, {
         useFallbackGeo,
@@ -261,9 +263,15 @@ export function ProfilesPage(): React.JSX.Element {
         });
         return;
       }
+      if (!result.running && result.error) {
+        showToast(result.error, 'error');
+        return;
+      }
       await refreshProfiles();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể mở trình duyệt', 'error');
+    } finally {
+      setStartingIds((prev) => prev.filter((item) => item !== id));
     }
   };
 
@@ -973,9 +981,21 @@ export function ProfilesPage(): React.JSX.Element {
                             {dict.common.stop}
                           </Button>
                         ) : (
-                          <Button size="sm" onClick={() => void handleStart(profile.id)}>
-                            <Play className="h-3.5 w-3.5" />
-                            {dict.common.run}
+                          <Button
+                            size="sm"
+                            disabled={startingIds.includes(profile.id)}
+                            onClick={() => void handleStart(profile.id)}
+                          >
+                            {startingIds.includes(profile.id) ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Play className="h-3.5 w-3.5" />
+                            )}
+                            {startingIds.includes(profile.id)
+                              ? isEn
+                                ? 'Starting...'
+                                : 'Đang mở...'
+                              : dict.common.run}
                           </Button>
                         )}
                         <Button

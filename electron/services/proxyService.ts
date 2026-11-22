@@ -553,7 +553,13 @@ export class ProxyService {
             typeof err === 'object' && err !== null && 'code' in err
               ? String((err as { code?: unknown }).code ?? '')
               : '';
-          if (rawCode === 'ECONNREFUSED' || rawCode === 'ENOTFOUND') {
+          const rawMsg = err instanceof Error ? err.message : '';
+          if (
+            rawCode === 'ECONNREFUSED' ||
+            rawCode === 'ENOTFOUND' ||
+            rawCode === 'ECONNRESET' ||
+            /Proxy connection ended/i.test(rawMsg)
+          ) {
             return {
               ok: false,
               ip: '',
