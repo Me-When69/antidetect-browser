@@ -45,7 +45,11 @@ function httpsGetJson(url: string): Promise<Record<string, unknown>> {
       url,
       { headers: { 'User-Agent': 'AntidetectBrowser/1.0', Accept: 'application/json' } },
       (res) => {
-        if ((res.statusCode ?? 500) >= 300 && (res.statusCode ?? 500) < 400 && res.headers.location) {
+        if (
+          (res.statusCode ?? 500) >= 300 &&
+          (res.statusCode ?? 500) < 400 &&
+          res.headers.location
+        ) {
           void httpsGetJson(res.headers.location).then(resolve, reject);
           return;
         }
@@ -134,9 +138,7 @@ function buildSingleSingBoxOutbound(
         ...(tlsEnabled
           ? { tls: { enabled: true, server_name: proxy.extra?.['sni'] || proxy.host } }
           : {}),
-        ...(net === 'ws'
-          ? { transport: { type: 'ws', path: proxy.extra?.['path'] || '/' } }
-          : {}),
+        ...(net === 'ws' ? { transport: { type: 'ws', path: proxy.extra?.['path'] || '/' } } : {}),
       };
     }
     case 'vless': {
@@ -150,9 +152,7 @@ function buildSingleSingBoxOutbound(
         ...(tlsEnabled
           ? { tls: { enabled: true, server_name: proxy.extra?.['sni'] || proxy.host } }
           : {}),
-        ...(net === 'ws'
-          ? { transport: { type: 'ws', path: proxy.extra?.['path'] || '/' } }
-          : {}),
+        ...(net === 'ws' ? { transport: { type: 'ws', path: proxy.extra?.['path'] || '/' } } : {}),
       };
     }
     case 'trojan': {
@@ -162,9 +162,7 @@ function buildSingleSingBoxOutbound(
         type: 'trojan',
         password: proxy.password,
         tls: { enabled: true, server_name: proxy.extra?.['sni'] || proxy.host },
-        ...(net === 'ws'
-          ? { transport: { type: 'ws', path: proxy.extra?.['path'] || '/' } }
-          : {}),
+        ...(net === 'ws' ? { transport: { type: 'ws', path: proxy.extra?.['path'] || '/' } } : {}),
       };
     }
     case 'socks5':
@@ -195,7 +193,10 @@ function buildSingleSingBoxOutbound(
   }
 }
 
-export function buildSingBoxConfig(proxy: ProfileProxy, localPort: number): Record<string, unknown> {
+export function buildSingBoxConfig(
+  proxy: ProfileProxy,
+  localPort: number,
+): Record<string, unknown> {
   const hops = [proxy, ...(proxy.chain ?? [])].slice(0, 3);
   const outbounds: Record<string, unknown>[] = [];
 
@@ -285,10 +286,18 @@ export class ProxyCoreManager {
       const asset = assets.find((a) => {
         const lower = a.name.toLowerCase();
         if (core === 'sing-box') {
-          return lower.includes(`${osToken}-${archToken}`) && (lower.endsWith('.zip') || lower.endsWith('.tar.gz'));
+          return (
+            lower.includes(`${osToken}-${archToken}`) &&
+            (lower.endsWith('.zip') || lower.endsWith('.tar.gz'))
+          );
         }
         const xrayArch = process.arch === 'arm64' ? 'arm64-v8a' : '64';
-        const xrayOs = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux';
+        const xrayOs =
+          process.platform === 'win32'
+            ? 'windows'
+            : process.platform === 'darwin'
+              ? 'macos'
+              : 'linux';
         return lower.includes(`${xrayOs}-${xrayArch}`) && lower.endsWith('.zip');
       });
 
@@ -301,15 +310,24 @@ export class ProxyCoreManager {
       const actualSha256 = await downloadFileWithProgress(
         asset.browser_download_url,
         archivePath,
-        (pct) => onProgress({ core, percent: 10 + Math.round(pct * 0.75), line: `Đang tải ${pct}%...` }),
+        (pct) =>
+          onProgress({ core, percent: 10 + Math.round(pct * 0.75), line: `Đang tải ${pct}%...` }),
       );
 
-      this.logger.info('proxyCore', `Downloaded ${asset.name} (sha256=${actualSha256.slice(0, 16)}...)`);
+      this.logger.info(
+        'proxyCore',
+        `Downloaded ${asset.name} (sha256=${actualSha256.slice(0, 16)}...)`,
+      );
 
       // Extract archive (PowerShell Expand-Archive on Windows, tar/unzip on POSIX)
       onProgress({ core, percent: 90, line: 'Đang giải nén...' });
       await new Promise<void>((resolve, reject) => {
-        const cmd = process.platform === 'win32' ? 'powershell' : archivePath.endsWith('.zip') ? 'unzip' : 'tar';
+        const cmd =
+          process.platform === 'win32'
+            ? 'powershell'
+            : archivePath.endsWith('.zip')
+              ? 'unzip'
+              : 'tar';
         const args =
           process.platform === 'win32'
             ? [
@@ -350,12 +368,25 @@ export class ProxyCoreManager {
         throw new Error(`Không tìm thấy file thực thi ${expectedBin} sau khi giải nén`);
       }
 
-      onProgress({ core, percent: 100, line: `Đã cài đặt ${core} thành công!`, done: true, success: true });
+      onProgress({
+        core,
+        percent: 100,
+        line: `Đã cài đặt ${core} thành công!`,
+        done: true,
+        success: true,
+      });
       return { ok: true };
     } catch (err) {
       const friendly = classifyDownloadError(err);
       this.logger.error('proxyCore', `Download ${core} failed: ${friendly}`);
-      onProgress({ core, percent: null, line: friendly, done: true, success: false, error: friendly });
+      onProgress({
+        core,
+        percent: null,
+        line: friendly,
+        done: true,
+        success: false,
+        error: friendly,
+      });
       return { ok: false, error: friendly };
     } finally {
       this.downloading.delete(core);

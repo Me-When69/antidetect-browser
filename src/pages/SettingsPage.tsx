@@ -18,12 +18,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
-import type {
-  BackupPayload,
-  BrowserInventoryItem,
-  LocaleCode,
-  ProxyCoreInfo,
-} from '@shared/types';
+import type { BackupPayload, BrowserInventoryItem, LocaleCode, ProxyCoreInfo } from '@shared/types';
 
 function downloadTextFile(filename: string, content: string, mime = 'application/json'): void {
   const blob = new Blob([content], { type: mime });

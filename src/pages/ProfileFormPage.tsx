@@ -1213,10 +1213,7 @@ export function ProfileFormPage(): React.JSX.Element {
                             </Badge>
                           )}
                           {proxyCheck.viaBridge !== undefined && (
-                            <Badge
-                              variant="secondary"
-                              className="px-1.5 py-0 text-[10px]"
-                            >
+                            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
                               {proxyCheck.viaBridge ? 'qua bridge' : 'trực tiếp'}
                             </Badge>
                           )}

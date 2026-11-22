@@ -117,7 +117,10 @@ function parseShadowsocks(trimmed: string): ParseProxyOutcome {
   }
 
   if (!SUPPORTED_SS_CIPHERS.has(method)) {
-    return { ok: false, error: `Phương thức mã hóa Shadowsocks (cipher) không được hỗ trợ: ${method}` };
+    return {
+      ok: false,
+      error: `Phương thức mã hóa Shadowsocks (cipher) không được hỗ trợ: ${method}`,
+    };
   }
   if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
     return { ok: false, error: 'Host hoặc port Shadowsocks không hợp lệ' };
@@ -164,7 +167,12 @@ function parseVmess(trimmed: string): ParseProxyOutcome {
     uuid,
     network: typeof json['net'] === 'string' && json['net'] ? json['net'] : 'tcp',
     tls: typeof json['tls'] === 'string' && json['tls'] ? json['tls'] : 'none',
-    sni: typeof json['sni'] === 'string' ? json['sni'] : typeof json['host'] === 'string' ? json['host'] : '',
+    sni:
+      typeof json['sni'] === 'string'
+        ? json['sni']
+        : typeof json['host'] === 'string'
+          ? json['host']
+          : '',
     path: typeof json['path'] === 'string' ? json['path'] : '',
     security: typeof json['scy'] === 'string' && json['scy'] ? json['scy'] : 'auto',
   };
@@ -327,8 +335,9 @@ export function parseProxy(
   }
 
   // 1b. Auth without scheme: user:pass@([ipv6]|ipv4|hostname):port
-  const authNoSchemeMatch =
-    /^([^:@\s]+):([^@\s]*)@(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/.exec(trimmed);
+  const authNoSchemeMatch = /^([^:@\s]+):([^@\s]*)@(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/.exec(
+    trimmed,
+  );
   if (authNoSchemeMatch) {
     const bracketedHost = authNoSchemeMatch[3];
     const plainHost = authNoSchemeMatch[4];

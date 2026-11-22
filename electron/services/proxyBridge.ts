@@ -37,7 +37,13 @@ export function isExternalCoreProtocol(type: ProxyType): boolean {
 export function hasDnsLeakRisk(proxy: ProfileProxy): boolean {
   if (proxy.type === 'none') return false;
   if (proxy.chain && proxy.chain.length > 0) {
-    return proxy.chain.every((hop) => hop.type === 'http' || hop.type === 'https' || hop.type === 'socks4' || hop.type === 'socks5');
+    return proxy.chain.every(
+      (hop) =>
+        hop.type === 'http' ||
+        hop.type === 'https' ||
+        hop.type === 'socks4' ||
+        hop.type === 'socks5',
+    );
   }
   return (
     proxy.type === 'http' ||
@@ -149,9 +155,14 @@ function assertLocalhostOnly(server: net.Server): number {
  */
 function createLocalSocks5Server(
   dial: (targetHost: string, targetPort: number) => Promise<net.Socket | NodeJS.ReadWriteStream>,
-): Promise<{ server: net.Server; port: number }> {
+): Promise<{ server: net.Server; port: number; destroyAllSockets: () => void }> {
+  const activeSockets = new Set<net.Socket>();
   return new Promise((resolve, reject) => {
     const server = net.createServer((client) => {
+      activeSockets.add(client);
+      client.on('close', () => {
+        activeSockets.delete(client);
+      });
       // Reject any non-loopback peer defensively
       const remote = client.remoteAddress ?? '';
       if (remote && remote !== '127.0.0.1' && remote !== '::1' && remote !== '::ffff:127.0.0.1') {
@@ -248,7 +259,16 @@ function createLocalSocks5Server(
     server.listen(0, '127.0.0.1', () => {
       try {
         const port = assertLocalhostOnly(server);
-        resolve({ server, port });
+        resolve({
+          server,
+          port,
+          destroyAllSockets: () => {
+            for (const sock of activeSockets) {
+              sock.destroy();
+            }
+            activeSockets.clear();
+          },
+        });
       } catch (err) {
         reject(err);
       }
@@ -423,24 +443,26 @@ export class ProxyBridgeManager {
 
   private async startSocksBridge(hops: ProfileProxy[], profileId: string): Promise<BridgeHandle> {
     const socksProxies = hops.map(toSocksProxyObj);
-    const { server, port } = await createLocalSocks5Server(async (targetHost, targetPort) => {
-      if (socksProxies.length === 1) {
-        const info = await SocksClient.createConnection({
-          proxy: socksProxies[0]!,
+    const { server, port, destroyAllSockets } = await createLocalSocks5Server(
+      async (targetHost, targetPort) => {
+        if (socksProxies.length === 1) {
+          const info = await SocksClient.createConnection({
+            proxy: socksProxies[0]!,
+            command: 'connect',
+            destination: { host: targetHost, port: targetPort },
+            timeout: 15_000,
+          });
+          return info.socket;
+        }
+        const info = await SocksClient.createConnectionChain({
           command: 'connect',
+          proxies: socksProxies,
           destination: { host: targetHost, port: targetPort },
           timeout: 15_000,
         });
         return info.socket;
-      }
-      const info = await SocksClient.createConnectionChain({
-        command: 'connect',
-        proxies: socksProxies,
-        destination: { host: targetHost, port: targetPort },
-        timeout: 15_000,
-      });
-      return info.socket;
-    });
+      },
+    );
 
     return {
       host: '127.0.0.1',
@@ -449,6 +471,7 @@ export class ProxyBridgeManager {
       stop: () =>
         new Promise<void>((resolve) => {
           this.bridges.delete(profileId);
+          destroyAllSockets();
           server.close(() => resolve());
         }),
     };
@@ -505,18 +528,20 @@ export class ProxyBridgeManager {
     sshClient = await connectSsh();
     attachReconnect(sshClient);
 
-    const { server, port } = await createLocalSocks5Server((targetHost, targetPort) => {
-      return new Promise((resolve, reject) => {
-        if (!sshClient || stopped) {
-          reject(new Error('SSH tunnel đã đóng'));
-          return;
-        }
-        sshClient.forwardOut('127.0.0.1', 0, targetHost, targetPort, (err, stream) => {
-          if (err) reject(err);
-          else resolve(stream);
+    const { server, port, destroyAllSockets } = await createLocalSocks5Server(
+      (targetHost, targetPort) => {
+        return new Promise((resolve, reject) => {
+          if (!sshClient || stopped) {
+            reject(new Error('SSH tunnel đã đóng'));
+            return;
+          }
+          sshClient.forwardOut('127.0.0.1', 0, targetHost, targetPort, (err, stream) => {
+            if (err) reject(err);
+            else resolve(stream);
+          });
         });
-      });
-    });
+      },
+    );
     serverRef = server;
 
     return {
@@ -528,6 +553,7 @@ export class ProxyBridgeManager {
           stopped = true;
           this.bridges.delete(profileId);
           sshClient?.end();
+          destroyAllSockets();
           server.close(() => resolve());
         }),
     };

@@ -171,7 +171,9 @@ describe('Unit: parseProxy', () => {
       expect(vless.proxy.extra?.['path']).toBe('/ray');
     }
 
-    const trojan = parseProxy('trojan://myTrojanPass@trojan.example.com:443?sni=trojan.example.com');
+    const trojan = parseProxy(
+      'trojan://myTrojanPass@trojan.example.com:443?sni=trojan.example.com',
+    );
     expect(trojan.ok && trojan.proxy.type).toBe('trojan');
     if (trojan.ok) {
       expect(trojan.proxy.password).toBe('myTrojanPass');
@@ -180,7 +182,9 @@ describe('Unit: parseProxy', () => {
   });
 
   it('báo lỗi tiếng Việt cụ thể khi ss cipher không hỗ trợ hoặc vmess/vless thiếu UUID', () => {
-    const badCipher = parseProxy(`ss://${Buffer.from('fake-cipher:123').toString('base64')}@1.2.3.4:8388`);
+    const badCipher = parseProxy(
+      `ss://${Buffer.from('fake-cipher:123').toString('base64')}@1.2.3.4:8388`,
+    );
     expect(badCipher.ok).toBe(false);
     if (!badCipher.ok) expect(badCipher.error).toContain('cipher');
 
@@ -188,7 +192,9 @@ describe('Unit: parseProxy', () => {
     expect(badVless.ok).toBe(false);
     if (!badVless.ok) expect(badVless.error).toContain('UUID');
 
-    const badVmess = parseProxy(`vmess://${Buffer.from(JSON.stringify({ add: '1.2.3.4', port: 443 })).toString('base64')}`);
+    const badVmess = parseProxy(
+      `vmess://${Buffer.from(JSON.stringify({ add: '1.2.3.4', port: 443 })).toString('base64')}`,
+    );
     expect(badVmess.ok).toBe(false);
     if (!badVmess.ok) expect(badVmess.error).toContain('UUID');
   });
