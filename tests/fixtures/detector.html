@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Antidetect Local Detector</title>
+  </head>
+  <body>
+    <pre id="out">Collecting...</pre>
+    <iframe id="probe-iframe" srcdoc="<!doctype html><html><body><script>
+      window.__iframeReport = {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        languages: Array.from(navigator.languages || []),
+        platform: navigator.platform,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        webdriver: navigator.webdriver
+      };
+    </script></body></html>"></iframe>
+
+    <script>
+      (async () => {
+        async function sha256Hex(str) {
+          const buf = new TextEncoder().encode(str);
+          const hash = await crypto.subtle.digest('SHA-256', buf);
+          return Array.from(new Uint8Array(hash))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join('');
+        }
+
+        function getWebGLInfo() {
+          try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (!gl) return { vendor: '', renderer: '' };
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            return {
+              vendor: dbg ? String(gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || '') : '',
+              renderer: dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '') : '',
+            };
+          } catch {
+            return { vendor: '', renderer: '' };
+          }
+        }
+
+        async function getCanvasHash() {
+          const canvas = document.createElement('canvas');
+          canvas.width = 240;
+          canvas.height = 60;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#10b981';
+          ctx.fillRect(0, 0, 240, 60);
+          ctx.fillStyle = '#0c0e11';
+          ctx.font = '16px Arial';
+          ctx.fillText('Antidetect Detector 123', 10, 35);
+          return sha256Hex(canvas.toDataURL());
+        }
+
+        async function getAudioHash() {
+          try {
+            const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+            if (!OfflineCtx) return '';
+            const ctx = new OfflineCtx(1, 4410, 44100);
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.value = 1000;
+            osc.connect(ctx.destination);
+            osc.start(0);
+            const rendered = await ctx.startRendering();
+            const data = rendered.getChannelData(0);
+            let acc = '';
+            for (let i = 0; i < data.length; i += 50) {
+              acc += data[i].toFixed(7) + ',';
+            }
+            return sha256Hex(acc);
+          } catch {
+            return '';
+          }
+        }
+
+        function collectWebRtcCandidates() {
+          return new Promise((resolve) => {
+            if (typeof window.RTCPeerConnection !== 'function') {
+              resolve({ blocked: true, candidates: [] });
+              return;
+            }
+            try {
+              const pc = new window.RTCPeerConnection({ iceServers: [] });
+              const candidates = [];
+              pc.createDataChannel('probe');
+              pc.addEventListener('icecandidate', (ev) => {
+                if (ev && ev.candidate && ev.candidate.candidate) {
+                  candidates.push(ev.candidate.candidate);
+                }
+              });
+              pc.createOffer()
+                .then((offer) => pc.setLocalDescription(offer))
+                .catch(() => {});
+              setTimeout(() => {
+                try {
+                  pc.close();
+                } catch {}
+                resolve({ blocked: false, candidates });
+              }, 600);
+            } catch {
+              resolve({ blocked: true, candidates: [] });
+            }
+          });
+        }
+
+        function collectWorkerReport() {
+          return new Promise((resolve) => {
+            try {
+              const code = `
+                self.postMessage({
+                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  language: navigator.language,
+                  languages: Array.from(navigator.languages || []),
+                  platform: navigator.platform,
+                  hardwareConcurrency: navigator.hardwareConcurrency,
+                  userAgent: navigator.userAgent
+                });
+              `;
+              const blob = new Blob([code], { type: 'application/javascript' });
+              const worker = new Worker(URL.createObjectURL(blob));
+              worker.onmessage = (ev) => {
+                worker.terminate();
+                resolve(ev.data);
+              };
+              worker.onerror = () => {
+                worker.terminate();
+                resolve(null);
+              };
+              setTimeout(() => {
+                worker.terminate();
+                resolve(null);
+              }, 1500);
+            } catch {
+              resolve(null);
+            }
+          });
+        }
+
+        function collectGeolocation() {
+          return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+              resolve(null);
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) =>
+                resolve({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                  accuracy: pos.coords.accuracy,
+                }),
+              () => resolve(null),
+              { timeout: 1500 },
+            );
+          });
+        }
+
+        const webgl = getWebGLInfo();
+        const [canvasHash, audioHash, webrtc, worker, geolocation] = await Promise.all([
+          getCanvasHash(),
+          getAudioHash(),
+          collectWebRtcCandidates(),
+          collectWorkerReport(),
+          collectGeolocation(),
+        ]);
+
+        const iframeEl = document.getElementById('probe-iframe');
+        const iframeReport =
+          iframeEl && iframeEl.contentWindow ? iframeEl.contentWindow.__iframeReport || null : null;
+
+        const ua = navigator.userAgent;
+        const platform = navigator.platform;
+        const isWinUa = /Windows NT/i.test(ua);
+        const isMacUa = /Macintosh|Mac OS X/i.test(ua);
+
+        const report = {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          timezoneOffset: new Date().getTimezoneOffset(),
+          language: navigator.language,
+          languages: Array.from(navigator.languages || []),
+          userAgent: ua,
+          userAgentData: navigator.userAgentData
+            ? {
+                brands: navigator.userAgentData.brands,
+                mobile: navigator.userAgentData.mobile,
+                platform: navigator.userAgentData.platform,
+              }
+            : null,
+          platform,
+          screen: {
+            width: screen.width,
+            height: screen.height,
+            availWidth: screen.availWidth,
+            availHeight: screen.availHeight,
+          },
+          devicePixelRatio: window.devicePixelRatio,
+          hardwareConcurrency: navigator.hardwareConcurrency,
+          deviceMemory: navigator.deviceMemory ?? null,
+          webgl,
+          canvasHash,
+          audioHash,
+          webrtc,
+          webdriver: navigator.webdriver,
+          toStringChecks: {
+            toDataURL: HTMLCanvasElement.prototype.toDataURL.toString(),
+            resolvedOptions: Intl.DateTimeFormat.prototype.resolvedOptions.toString(),
+            getParameter:
+              typeof WebGLRenderingContext !== 'undefined'
+                ? WebGLRenderingContext.prototype.getParameter.toString()
+                : '',
+          },
+          geolocation,
+          iframe: iframeReport,
+          worker,
+          crossChecks: {
+            uaMatchesPlatform:
+              (isWinUa && platform === 'Win32') ||
+              (isMacUa && platform === 'MacIntel') ||
+              (!isWinUa && !isMacUa),
+            gpuMatchesOs:
+              (isWinUa && !/apple/i.test(webgl.renderer)) ||
+              (isMacUa && !/direct3d/i.test(webgl.renderer)) ||
+              (!isWinUa && !isMacUa),
+          },
+        };
+
+        window.__report = report;
+        window.__reportReady = true;
+        document.getElementById('out').textContent = JSON.stringify(report, null, 2);
+      })();
+    </script>
+  </body>
+</html>
