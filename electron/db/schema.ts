@@ -43,6 +43,7 @@ export const profilesTable = sqliteTable('profiles', {
   startupJson: text('startup_json').notNull(),
   createdAt: text('created_at').notNull(),
   lastRunAt: text('last_run_at'),
+  deletedAt: text('deleted_at'),
 });
 
 export const settingsTable = sqliteTable('settings', {

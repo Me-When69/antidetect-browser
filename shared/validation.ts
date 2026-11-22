@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import type {
+  BrowserType,
   CookieItem,
   CreateProfileInput,
+  CsvProfileRow,
   IdentityCheckResult,
   IdentityCheckWarning,
   Platform,
@@ -364,4 +366,77 @@ export function serializeCookiesNetscape(cookies: CookieItem[]): string {
     );
   });
   return header + rows.join('\n');
+}
+
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+export function parseProfilesCsv(raw: string): CsvProfileRow[] {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return [];
+
+  const firstCols = splitCsvLine(lines[0]!).map((c) => c.toLowerCase());
+  const hasHeader =
+    firstCols.includes('name') || firstCols.includes('proxy') || firstCols.includes('platform');
+
+  const nameIdx = hasHeader ? Math.max(0, firstCols.indexOf('name')) : 0;
+  const proxyIdx = hasHeader ? firstCols.indexOf('proxy') : 1;
+  const tagsIdx = hasHeader ? firstCols.indexOf('tags') : 2;
+  const notesIdx = hasHeader ? firstCols.indexOf('notes') : 3;
+  const platformIdx = hasHeader ? firstCols.indexOf('platform') : 4;
+  const browserIdx = hasHeader ? firstCols.indexOf('browser') : 5;
+
+  const startRow = hasHeader ? 1 : 0;
+  const rows: CsvProfileRow[] = [];
+
+  for (let i = startRow; i < lines.length; i += 1) {
+    const cols = splitCsvLine(lines[i]!);
+    const name = cols[nameIdx]?.trim() || `Imported #${i + 1}`;
+    const proxyRaw = proxyIdx >= 0 ? (cols[proxyIdx] ?? '') : '';
+    const tagsRaw = tagsIdx >= 0 ? (cols[tagsIdx] ?? '') : '';
+    const notes = notesIdx >= 0 ? (cols[notesIdx] ?? '') : '';
+    const platformRaw = (platformIdx >= 0 ? (cols[platformIdx] ?? '') : '').toLowerCase();
+    const browserRaw = (browserIdx >= 0 ? (cols[browserIdx] ?? '') : '').toLowerCase();
+
+    const platform: Platform =
+      platformRaw === 'macos' || platformRaw === 'mac'
+        ? 'macos'
+        : platformRaw === 'linux'
+          ? 'linux'
+          : 'windows';
+    const browser: BrowserType =
+      browserRaw === 'firefox' || browserRaw === 'camoufox' ? 'firefox' : 'chrome';
+    const tags = tagsRaw
+      .split(/[;|]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    rows.push({ name, proxyRaw, tags, notes, platform, browser });
+  }
+
+  return rows;
 }

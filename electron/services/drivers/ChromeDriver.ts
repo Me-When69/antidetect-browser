@@ -4,6 +4,7 @@ import net from 'node:net';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
+import { runContextWarmup } from './warmupHelper';
 import type {
   BrowserDriver,
   DriverInstance,
@@ -248,6 +249,7 @@ export class ChromeDriver implements BrowserDriver {
           sameSite: c.sameSite,
         }));
       },
+      runWarmup: (config) => runContextWarmup(profile.id, context, config),
     };
 
     context.on('close', () => {

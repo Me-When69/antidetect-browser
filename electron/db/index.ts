@@ -65,7 +65,8 @@ export function createDatabase(dbPath: string): DbContext {
       fingerprint_json TEXT NOT NULL,
       startup_json TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      last_run_at TEXT
+      last_run_at TEXT,
+      deleted_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -73,6 +74,12 @@ export function createDatabase(dbPath: string): DbContext {
       value TEXT NOT NULL
     );
   `);
+
+  // Safe migration for existing databases created before Trash support
+  const columns = sqlite.prepare('PRAGMA table_info(profiles)').all() as { name: string }[];
+  if (!columns.some((c) => c.name === 'deleted_at')) {
+    sqlite.exec('ALTER TABLE profiles ADD COLUMN deleted_at TEXT');
+  }
 
   const db = drizzle(sqlite, { schema });
   return { sqlite, db, dbPath };

@@ -1,4 +1,4 @@
-import type { CookieItem, Profile } from '@shared/types';
+import type { CookieItem, Profile, WarmupConfig, WarmupResult } from '@shared/types';
 
 export interface ResolvedGeo {
   timezone: string;
@@ -22,6 +22,7 @@ export interface DriverInstance {
   close: () => Promise<void>;
   importCookies: (cookies: CookieItem[]) => Promise<number>;
   exportCookies: () => Promise<CookieItem[]>;
+  runWarmup: (config: WarmupConfig) => Promise<WarmupResult>;
 }
 
 export interface BrowserDriver {

@@ -2,14 +2,17 @@ import { useState } from 'react';
 import {
   Cookie,
   Copy,
+  Download,
   Edit3,
+  FileSpreadsheet,
+  Flame,
   Layers,
+  Loader2,
   Play,
   Plus,
   Square,
   Trash2,
   Upload,
-  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
+import { parseProfilesCsv } from '@shared/validation';
 import type { BrowserType, Platform, Profile, ProfileStatus } from '@shared/types';
 
 function formatDate(iso: string | null, neverLabel: string): string {
@@ -29,6 +33,13 @@ function formatDate(iso: string | null, neverLabel: string): string {
     return iso;
   }
 }
+
+const DEFAULT_WARMUP_URLS = [
+  'https://www.wikipedia.org',
+  'https://www.bbc.com',
+  'https://news.ycombinator.com',
+  'https://www.reddit.com',
+].join('\n');
 
 export function ProfilesPage(): React.JSX.Element {
   const {
@@ -46,10 +57,12 @@ export function ProfilesPage(): React.JSX.Element {
     openNewProfile,
     openEditProfile,
     refreshProfiles,
+    refreshTrash,
     showToast,
   } = useAppStore();
 
   const dict = getTranslations(locale);
+  const isEn = locale === 'en';
 
   // Bulk create modal state
   const [showBulkCreate, setShowBulkCreate] = useState(false);
@@ -59,6 +72,19 @@ export function ProfilesPage(): React.JSX.Element {
   const [bulkBrowser, setBulkBrowser] = useState<BrowserType>('chrome');
   const [bulkProxiesText, setBulkProxiesText] = useState('');
 
+  // CSV Import modal state
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [csvText, setCsvText] = useState('');
+  const [csvFolderId, setCsvFolderId] = useState('');
+
+  // Warm-up modal state
+  const [warmupProfile, setWarmupProfile] = useState<Profile | null>(null);
+  const [warmupUrls, setWarmupUrls] = useState(DEFAULT_WARMUP_URLS);
+  const [warmupMinSec, setWarmupMinSec] = useState(4);
+  const [warmupMaxSec, setWarmupMaxSec] = useState(8);
+  const [warmupScroll, setWarmupScroll] = useState(true);
+  const [warmingUp, setWarmingUp] = useState(false);
+
   // Cookie modal state
   const [cookieProfile, setCookieProfile] = useState<Profile | null>(null);
   const [cookieInput, setCookieInput] = useState('');
@@ -67,6 +93,7 @@ export function ProfilesPage(): React.JSX.Element {
   const [bulkFolderId, setBulkFolderId] = useState('');
 
   const allSelected = profiles.length > 0 && selectedIds.length === profiles.length;
+  const csvPreviewCount = csvText.trim() ? parseProfilesCsv(csvText).length : 0;
 
   const handleToggleAll = (): void => {
     if (allSelected) {
@@ -95,15 +122,15 @@ export function ProfilesPage(): React.JSX.Element {
     if (!window.electronAPI) return;
     await window.electronAPI.duplicateProfile(id);
     await refreshProfiles();
-    showToast('Đã nhân bản hồ sơ với dấu vân tay mới', 'success');
+    showToast(isEn ? 'Duplicated profile with new fingerprint' : 'Đã nhân bản hồ sơ', 'success');
   };
 
   const handleDelete = async (id: string): Promise<void> => {
     if (!window.electronAPI) return;
     await window.electronAPI.deleteProfile(id);
     clearSelection();
-    await refreshProfiles();
-    showToast('Đã xóa hồ sơ', 'info');
+    await Promise.all([refreshProfiles(), refreshTrash()]);
+    showToast(isEn ? 'Moved profile to Trash' : 'Đã chuyển hồ sơ vào Thùng rác', 'info');
   };
 
   const handleBulkStart = async (): Promise<void> => {
@@ -121,8 +148,11 @@ export function ProfilesPage(): React.JSX.Element {
     if (!window.electronAPI || selectedIds.length === 0) return;
     const count = await window.electronAPI.bulkDeleteProfiles(selectedIds);
     clearSelection();
-    await refreshProfiles();
-    showToast(`Đã xóa ${count} hồ sơ`, 'info');
+    await Promise.all([refreshProfiles(), refreshTrash()]);
+    showToast(
+      isEn ? `Moved ${count} profiles to Trash` : `Đã chuyển ${count} hồ sơ vào Thùng rác`,
+      'info',
+    );
   };
 
   const handleBulkAssignFolder = async (): Promise<void> => {
@@ -132,7 +162,7 @@ export function ProfilesPage(): React.JSX.Element {
       folderId: bulkFolderId || null,
     });
     await refreshProfiles();
-    showToast('Đã cập nhật thư mục hàng loạt', 'success');
+    showToast(isEn ? 'Updated folder' : 'Đã cập nhật thư mục hàng loạt', 'success');
   };
 
   const handleBulkCreateSubmit = async (): Promise<void> => {
@@ -167,7 +197,55 @@ export function ProfilesPage(): React.JSX.Element {
     setShowBulkCreate(false);
     setBulkProxiesText('');
     await refreshProfiles();
-    showToast(`Đã tạo hàng loạt ${created.length} hồ sơ`, 'success');
+    showToast(
+      isEn ? `Created ${created.length} profiles` : `Đã tạo hàng loạt ${created.length} hồ sơ`,
+      'success',
+    );
+  };
+
+  const handleCsvImportSubmit = async (): Promise<void> => {
+    if (!window.electronAPI || !csvText.trim()) return;
+    const created = await window.electronAPI.importProfilesCsv(csvText, csvFolderId || null);
+    setShowCsvModal(false);
+    setCsvText('');
+    await refreshProfiles();
+    showToast(
+      isEn
+        ? `Imported ${created.length} profiles from CSV`
+        : `Đã nhập ${created.length} hồ sơ từ CSV`,
+      'success',
+    );
+  };
+
+  const handleRunWarmup = async (): Promise<void> => {
+    if (!window.electronAPI || !warmupProfile) return;
+    const urls = warmupUrls
+      .split(/\r?\n/)
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (urls.length === 0) return;
+
+    setWarmingUp(true);
+    try {
+      const res = await window.electronAPI.warmupProfile(warmupProfile.id, {
+        urls,
+        minStaySec: Math.max(1, warmupMinSec),
+        maxStaySec: Math.max(warmupMinSec, warmupMaxSec),
+        scroll: warmupScroll,
+      });
+      await refreshProfiles();
+      setWarmupProfile(null);
+      showToast(
+        isEn
+          ? `Warm-up done: ${res.visited} visited, ${res.failed} failed`
+          : `Warm-up hoàn tất: đã truy cập ${res.visited} trang (${res.failed} lỗi)`,
+        'success',
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Warm-up failed', 'error');
+    } finally {
+      setWarmingUp(false);
+    }
   };
 
   const handleImportCookies = async (): Promise<void> => {
@@ -199,7 +277,11 @@ export function ProfilesPage(): React.JSX.Element {
           <p className="text-sm text-muted-foreground">{dict.profiles.subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowCsvModal(true)}>
+            <FileSpreadsheet className="h-4 w-4" />
+            {isEn ? 'Import CSV' : 'Nhập CSV'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowBulkCreate(true)}>
             <Layers className="h-4 w-4" />
             {dict.profiles.bulkCreate}
@@ -236,11 +318,11 @@ export function ProfilesPage(): React.JSX.Element {
           <option value="all">
             {dict.profiles.colStatus}: {dict.common.all}
           </option>
-          <option value="none">Không có</option>
-          <option value="ready">Sẵn sàng</option>
-          <option value="warming">Đang nuôi</option>
-          <option value="active">Hoạt động</option>
-          <option value="banned">Bị khóa</option>
+          <option value="none">None</option>
+          <option value="ready">Ready</option>
+          <option value="warming">Warming</option>
+          <option value="active">Active</option>
+          <option value="banned">Banned</option>
         </Select>
 
         {tags.length > 0 && (
@@ -261,15 +343,15 @@ export function ProfilesPage(): React.JSX.Element {
         )}
 
         <Select
-          className="w-40"
+          className="w-44"
           value={filter.sortBy ?? 'createdAt'}
           onChange={(e) =>
             setFilter({ sortBy: e.target.value as 'name' | 'createdAt' | 'lastRunAt' })
           }
         >
-          <option value="createdAt">Sắp xếp: Mới nhất</option>
-          <option value="name">Sắp xếp: Tên A-Z</option>
-          <option value="lastRunAt">Sắp xếp: Chạy gần nhất</option>
+          <option value="createdAt">{isEn ? 'Sort: Newest' : 'Sắp xếp: Mới nhất'}</option>
+          <option value="name">{isEn ? 'Sort: Name A-Z' : 'Sắp xếp: Tên A-Z'}</option>
+          <option value="lastRunAt">{isEn ? 'Sort: Last Run' : 'Sắp xếp: Chạy gần nhất'}</option>
         </Select>
       </Card>
 
@@ -293,7 +375,7 @@ export function ProfilesPage(): React.JSX.Element {
               value={bulkFolderId}
               onChange={(e) => setBulkFolderId(e.target.value)}
             >
-              <option value="">Không thư mục</option>
+              <option value="">{dict.common.none}</option>
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -319,7 +401,7 @@ export function ProfilesPage(): React.JSX.Element {
         </Card>
       ) : (
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[860px] text-left text-sm">
             <thead className="border-b border-border bg-secondary/40 text-xs text-muted-foreground">
               <tr>
                 <th className="w-10 px-4 py-3">
@@ -346,7 +428,7 @@ export function ProfilesPage(): React.JSX.Element {
 
                 return (
                   <tr key={profile.id} className="hover:bg-accent/40">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <input
                         type="checkbox"
                         checked={isChecked}
@@ -354,26 +436,26 @@ export function ProfilesPage(): React.JSX.Element {
                         className="rounded border-border bg-card"
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <div className="font-medium text-foreground">{profile.name}</div>
-                      <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
                         <span className="uppercase">{profile.platform}</span>
                         <span>•</span>
                         <span className="capitalize">
-                          {profile.browser === 'firefox' ? 'Firefox (Camoufox)' : 'Chrome'}
+                          {profile.browser === 'firefox' ? 'Camoufox' : 'Chrome'}
                         </span>
                         {folderName && (
                           <>
                             <span>•</span>
-                            <span className="text-primary">{folderName}</span>
+                            <span className="font-sans text-primary">{folderName}</span>
                           </>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         {isRunning ? (
-                          <Badge className="bg-emerald-500/20 text-emerald-400">
+                          <Badge className="bg-primary/15 text-primary">
                             {dict.common.running}
                           </Badge>
                         ) : (
@@ -384,7 +466,7 @@ export function ProfilesPage(): React.JSX.Element {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1">
                         {profile.tags.length > 0 ? (
                           profile.tags.map((tag) => (
@@ -397,16 +479,16 @@ export function ProfilesPage(): React.JSX.Element {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                       {profile.proxy.type === 'none'
                         ? dict.profiles.noProxy
                         : `${profile.proxy.type.toUpperCase()} ${profile.proxy.host}:${profile.proxy.port}`}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                       {formatDate(profile.lastRunAt, dict.profiles.neverRun)}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-1.5">
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="inline-flex items-center gap-1">
                         {isRunning ? (
                           <Button
                             size="sm"
@@ -422,6 +504,15 @@ export function ProfilesPage(): React.JSX.Element {
                             {dict.common.run}
                           </Button>
                         )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-amber-500 hover:text-amber-400"
+                          title="Profile Warm-up"
+                          onClick={() => setWarmupProfile(profile)}
+                        >
+                          <Flame className="h-4 w-4" />
+                        </Button>
                         <Button
                           size="icon"
                           variant="ghost"
@@ -473,16 +564,20 @@ export function ProfilesPage(): React.JSX.Element {
 
       {/* Bulk create modal */}
       {showBulkCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <Card className="w-full max-w-lg space-y-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-lg space-y-4 p-6 shadow-2xl">
             <h3 className="text-base font-semibold">{dict.profiles.bulkCreate}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Tên gốc</label>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {isEn ? 'Base Name' : 'Tên gốc'}
+                </label>
                 <Input value={bulkBaseName} onChange={(e) => setBulkBaseName(e.target.value)} />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Số lượng (1-200)</label>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {isEn ? 'Count (1-200)' : 'Số lượng (1-200)'}
+                </label>
                 <Input
                   type="number"
                   min={1}
@@ -492,7 +587,7 @@ export function ProfilesPage(): React.JSX.Element {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Nền tảng</label>
+                <label className="mb-1 block text-xs text-muted-foreground">Platform</label>
                 <Select
                   value={bulkPlatform}
                   onChange={(e) => setBulkPlatform(e.target.value as Platform)}
@@ -503,7 +598,7 @@ export function ProfilesPage(): React.JSX.Element {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Trình duyệt</label>
+                <label className="mb-1 block text-xs text-muted-foreground">Browser</label>
                 <Select
                   value={bulkBrowser}
                   onChange={(e) => setBulkBrowser(e.target.value as BrowserType)}
@@ -515,13 +610,16 @@ export function ProfilesPage(): React.JSX.Element {
             </div>
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">
-                Danh sách proxy (mỗi dòng 1 proxy dạng host:port:user:pass — tùy chọn)
+                {isEn
+                  ? 'Proxy list (one per line: host:port:user:pass — optional)'
+                  : 'Danh sách proxy (mỗi dòng 1 proxy dạng host:port:user:pass — tùy chọn)'}
               </label>
               <Textarea
                 rows={4}
                 value={bulkProxiesText}
                 onChange={(e) => setBulkProxiesText(e.target.value)}
                 placeholder="1.2.3.4:8080:user:pass"
+                className="font-mono text-xs"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -536,10 +634,158 @@ export function ProfilesPage(): React.JSX.Element {
         </div>
       )}
 
+      {/* CSV Import modal */}
+      {showCsvModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-xl space-y-4 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">
+                {isEn ? 'Import Profiles from CSV' : 'Nhập hồ sơ hàng loạt từ CSV'}
+              </h3>
+              <label className="cursor-pointer rounded-md border border-border bg-secondary px-3 py-1.5 text-xs font-medium hover:bg-accent">
+                {isEn ? 'Choose .csv file' : 'Chọn file .csv'}
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      void file.text().then((txt) => setCsvText(txt));
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isEn
+                ? 'Columns: name,proxy,tags,notes,platform,browser (tags separated by ;)'
+                : 'Các cột hỗ trợ: name,proxy,tags,notes,platform,browser (nhiều thẻ cách nhau bằng dấu ;)'}
+            </p>
+            <Textarea
+              rows={6}
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              placeholder={`name,proxy,tags,notes,platform,browser\nStore US 01,1.2.3.4:8080:usr:pwd,us;shop,main account,windows,chrome`}
+              className="font-mono text-xs"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <Select
+                className="w-48"
+                value={csvFolderId}
+                onChange={(e) => setCsvFolderId(e.target.value)}
+              >
+                <option value="">
+                  {dict.folders.title}: {dict.common.none}
+                </option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </Select>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setShowCsvModal(false)}>
+                  {dict.common.cancel}
+                </Button>
+                <Button
+                  disabled={csvPreviewCount === 0}
+                  onClick={() => void handleCsvImportSubmit()}
+                >
+                  <Upload className="h-4 w-4" />
+                  {isEn ? `Import (${csvPreviewCount})` : `Nhập (${csvPreviewCount})`}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Profile Warm-up modal */}
+      {warmupProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-lg space-y-4 p-6 shadow-2xl">
+            <div className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-amber-500" />
+              <h3 className="text-base font-semibold">Warm-up: {warmupProfile.name}</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isEn
+                ? 'Automatically visits everyday sites with human-like scrolling and pauses to build natural cookies.'
+                : 'Tự động truy cập các trang web phổ biến kèm cuộn trang và dừng ngẫu nhiên như người thật để nuôi cookie.'}
+            </p>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">
+                {isEn ? 'Target URLs (one per line)' : 'Danh sách URL (mỗi dòng 1 link)'}
+              </label>
+              <Textarea
+                rows={5}
+                value={warmupUrls}
+                onChange={(e) => setWarmupUrls(e.target.value)}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {isEn ? 'Min stay (sec)' : 'Dừng tối thiểu (giây)'}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={warmupMinSec}
+                  onChange={(e) => setWarmupMinSec(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  {isEn ? 'Max stay (sec)' : 'Dừng tối đa (giây)'}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={warmupMaxSec}
+                  onChange={(e) => setWarmupMaxSec(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={warmupScroll}
+                onChange={(e) => setWarmupScroll(e.target.checked)}
+              />
+              {isEn ? 'Simulate human mouse wheel scrolling' : 'Giả lập cuộn chuột tự nhiên'}
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" disabled={warmingUp} onClick={() => setWarmupProfile(null)}>
+                {dict.common.cancel}
+              </Button>
+              <Button disabled={warmingUp} onClick={() => void handleRunWarmup()}>
+                {warmingUp ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Flame className="h-4 w-4" />
+                )}
+                {warmingUp
+                  ? isEn
+                    ? 'Warming up...'
+                    : 'Đang chạy warm-up...'
+                  : isEn
+                    ? 'Start Warm-up'
+                    : 'Bắt đầu Warm-up'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Cookie import/export modal */}
       {cookieProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <Card className="w-full max-w-xl space-y-4 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+          <Card className="w-full max-w-xl space-y-4 p-6 shadow-2xl">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold">
                 {dict.profiles.cookies}: {cookieProfile.name}
@@ -552,7 +798,7 @@ export function ProfilesPage(): React.JSX.Element {
               rows={8}
               value={cookieInput}
               onChange={(e) => setCookieInput(e.target.value)}
-              placeholder='Dán JSON cookies [{"name":"...","value":"...","domain":".example.com"}] hoặc định dạng Netscape...'
+              placeholder='[{"name":"...","value":"...","domain":".example.com"}] or Netscape format...'
               className="font-mono text-xs"
             />
             <div className="flex flex-wrap items-center justify-between gap-2">

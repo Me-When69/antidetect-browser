@@ -18,6 +18,7 @@ import { buildFingerprintInitScript } from '../electron/services/fingerprint/inj
 import {
   checkIdentityConsistency,
   parseCookiesText,
+  parseProfilesCsv,
   parseQuickProxy,
   serializeCookiesNetscape,
 } from '@shared/validation';
@@ -222,6 +223,7 @@ describe('Step 6, 7 & 8: Fingerprint Consistency, Injector & Identity Checker', 
       startup: { urls: [], restoreTabs: false },
       createdAt: new Date().toISOString(),
       lastRunAt: null,
+      deletedAt: null,
     });
     expect(script).toContain('[native code]');
     expect(script).toContain('hardwareConcurrency');
@@ -266,5 +268,51 @@ describe('Step 10: Local REST API Server', () => {
       await apiServer.stop();
       dbCtx.sqlite.close();
     }
+  });
+});
+
+describe('Stealth Emerald Upgrade: Trash, CSV Import & Theme Settings', () => {
+  it('supports soft-delete to Trash, restore, permanent delete, and CSV import', () => {
+    const dir = createTempDir();
+    const dbCtx = createDatabase(path.join(dir, 'trash.db'));
+    const secrets = new SecretService(null);
+    const service = new ProfileService(dbCtx.db, secrets, path.join(dir, 'profiles'));
+
+    const csv = [
+      'name,proxy,tags,notes,platform,browser',
+      'Shop US 1,1.2.3.4:8080:u1:p1,us;shop,note1,windows,chrome',
+      'Mac QA 2,socks5://u2:p2@5.6.7.8:1080,qa,note2,macos,firefox',
+    ].join('\n');
+
+    const parsed = parseProfilesCsv(csv);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[1]?.platform).toBe('macos');
+    expect(parsed[1]?.browser).toBe('firefox');
+
+    const imported = service.importCsv(csv);
+    expect(imported).toHaveLength(2);
+    expect(service.list()).toHaveLength(2);
+
+    // Soft-delete moves to trash
+    service.delete(imported[0]!.id);
+    expect(service.list()).toHaveLength(1);
+    expect(service.listTrash()).toHaveLength(1);
+
+    // Restore brings it back
+    service.restore(imported[0]!.id);
+    expect(service.list()).toHaveLength(2);
+    expect(service.listTrash()).toHaveLength(0);
+
+    // Soft-delete again and empty trash
+    service.delete(imported[1]!.id);
+    expect(service.emptyTrash()).toBe(1);
+    expect(service.listTrash()).toHaveLength(0);
+
+    const settings = new SettingsService(dbCtx.db);
+    expect(settings.getSettings().theme).toBe('dark');
+    settings.updateSettings({ theme: 'light' });
+    expect(settings.getSettings().theme).toBe('light');
+
+    dbCtx.sqlite.close();
   });
 });

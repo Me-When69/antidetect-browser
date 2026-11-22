@@ -1,6 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { CookieItem, LaunchResult, Profile, ProfileRunStatusEvent } from '@shared/types';
+import type {
+  CookieItem,
+  LaunchResult,
+  Profile,
+  ProfileRunStatusEvent,
+  WarmupConfig,
+  WarmupResult,
+} from '@shared/types';
 import { parseCookiesText, serializeCookiesNetscape } from '@shared/validation';
 import type { BrowserDriver, ResolvedGeo } from './drivers/BrowserDriver';
 import { ChromeDriver } from './drivers/ChromeDriver';
@@ -249,5 +256,25 @@ export class ProfileLauncher {
       return serializeCookiesNetscape(cookies);
     }
     return JSON.stringify(cookies, null, 2);
+  }
+
+  async warmup(profileId: string, config: WarmupConfig): Promise<WarmupResult> {
+    const wasRunning = this.isRunning(profileId);
+    if (!wasRunning) {
+      await this.start(profileId);
+    }
+    const driver = this.runningDrivers.get(profileId);
+    const inst = driver?.getInstance(profileId);
+    if (!inst) {
+      throw new Error(`Không thể khởi chạy warm-up cho hồ sơ: ${profileId}`);
+    }
+    this.logger.info('launcher', `Running warm-up for ${profileId} (${config.urls.length} URLs)`);
+    try {
+      return await inst.runWarmup(config);
+    } finally {
+      if (!wasRunning) {
+        await this.stop(profileId);
+      }
+    }
   }
 }

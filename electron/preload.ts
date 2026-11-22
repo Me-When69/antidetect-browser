@@ -14,6 +14,12 @@ const electronApi: ElectronApi = {
   bulkDeleteProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_BULK_DELETE, ids),
   bulkUpdateProfiles: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_BULK_UPDATE, input),
   bulkCreateProfiles: (input) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_BULK_CREATE, input),
+  listTrashProfiles: () => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_LIST_TRASH),
+  restoreProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_RESTORE, id),
+  permanentDeleteProfile: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_PERMANENT_DELETE, id),
+  emptyTrash: () => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_EMPTY_TRASH),
+  importProfilesCsv: (rawCsv, folderId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROFILES_IMPORT_CSV, rawCsv, folderId),
 
   listFolders: () => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_LIST),
   createFolder: (name) => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_CREATE, name),
@@ -27,6 +33,8 @@ const electronApi: ElectronApi = {
   bulkStartProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_BULK_START, ids),
   bulkStopProfiles: (ids) => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_BULK_STOP, ids),
   getRunningProfileIds: () => ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_RUNNING_IDS),
+  warmupProfile: (profileId, config) =>
+    ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_WARMUP, profileId, config),
   onProfileRunStatus: (listener) => {
     const handler = (_event: IpcRendererEvent, payload: ProfileRunStatusEvent): void => {
       listener(payload);

@@ -19,7 +19,8 @@ A desktop application for managing multiple isolated browser profiles built for 
   - Deterministic per-profile Canvas & Audio noise seeds with native-looking `Function.prototype.toString` masking (`[native code]`).
   - Three WebRTC modes: `Replace` (hides local IP), `Disable`, and `Real`.
 - **Real-Time Identity Consistency Checker:** Scores profile consistency (0–100), flags mismatches (UA/OS, GPU/OS, Fonts/OS, WebRTC `Real` with proxy, Timezone/Language vs. exit IP), and provides one-click **Auto Fix**.
-- **Bulk Management & Cookies:** Bulk start, stop, folder assignment, and deletion; batch-create 1–200 profiles with pasted proxy lists; import/export cookies in **JSON** and **Netscape** formats.
+- **Stealth Emerald UI (Dark & Light Modes):** Operator-grade high-density layout with crisp hairline borders, inline Sidebar Folders, Dark/Light theme toggle, and a global **Command Palette (`Ctrl+K`)** for instant profile launching and navigation.
+- **Bulk Management, CSV Import, Warm-up & Trash:** Bulk start/stop/folder/delete, batch-create 1–200 profiles, **CSV Import**, automated **Profile Warm-up** (human-like scrolling and random pauses), **Soft-Delete Trash** with Restore / Empty Trash, and Cookie import/export (**JSON** & **Netscape**).
 - **Local REST API (`127.0.0.1`):** Automate profile lifecycle with Playwright or Puppeteer using an API key.
 - **i18n & Backup:** Built-in Vietnamese / English UI toggle, JSON backup/restore, and support log export.
 
@@ -48,9 +49,11 @@ npm run dev
 ```
 
 > **Note for first-time launch:** If Electron reports a native module ABI mismatch for `better-sqlite3` (when your system Node version differs from Electron's embedded Node), run:
+>
 > ```bash
 > npx @electron/rebuild -f -w better-sqlite3
 > ```
+>
 > Then run `npm run dev` again.
 
 ---
@@ -58,6 +61,7 @@ npm run dev
 ## Usage Guide
 
 ### 1. Create & Launch a Profile
+
 1. Click **+ New Profile** in the left sidebar.
 2. **Identity:** Enter a profile name (or click **Random**), assign a folder, status, and tags.
 3. **Environment:** Pick a platform (**Windows / macOS / Linux**) and browser (**Chrome** or **Firefox Camoufox**). A consistent device preset is generated automatically, or click **New Fingerprint** anytime.
@@ -68,15 +72,18 @@ npm run dev
 6. Click **Create** to save, or **Create & Run** to launch immediately.
 
 ### 2. Proxy Vault & Folders
+
 - Open **Proxies** to store shared proxies, test live IP/latency, and reuse them across profiles.
 - Open **Folders** to organize profiles by project or client and filter them quickly from **All Profiles**.
 
 ### 3. Bulk Operations & Cookies
+
 - On **All Profiles**, click **Bulk Create** to generate 1–200 profiles from a template and paste one proxy per line.
 - Select multiple rows to reveal the bulk toolbar (**Start Selected / Stop Selected / Assign Folder / Delete Selected**).
 - Click the **Cookie** icon on any profile row to import or export cookies in `JSON` or `Netscape` format.
 
 ### 4. Local REST API (Automation)
+
 1. Go to **Settings → Local REST API (127.0.0.1)**, enable the API, and copy your **API Key**.
 2. Full endpoint documentation is available in [docs/LOCAL_API.md](docs/LOCAL_API.md).
 3. Run the included Playwright example:
@@ -87,10 +94,12 @@ npm run dev
    ```
 
 ### 5. Firefox / Camoufox Driver
+
 - Select **Firefox (Camoufox)** when creating a profile.
 - If you have a standalone Camoufox binary, set its path under **Settings → Custom Browser Binaries**. Otherwise, it automatically falls back to Playwright's Firefox (`npx playwright-core install firefox`).
 
 ### 6. Backup, Restore & Support Logs
+
 - Go to **Settings → Backup & Support**:
   - **Export JSON Backup:** Save all profiles, folders, tags, and proxies to a `.json` file.
   - **Import JSON Backup:** Restore data on another machine.

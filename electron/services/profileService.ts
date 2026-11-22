@@ -23,7 +23,7 @@ import type {
   Tag,
   UpdateProfileInput,
 } from '@shared/types';
-import { parseQuickProxy } from '@shared/validation';
+import { parseProfilesCsv, parseQuickProxy } from '@shared/validation';
 import { generateConsistentIdentity } from './fingerprint/generator';
 import type { SecretService } from './secretService';
 
@@ -74,6 +74,7 @@ export class ProfileService {
       startup: JSON.parse(row.startupJson) as ProfileStartup,
       createdAt: row.createdAt,
       lastRunAt: row.lastRunAt,
+      deletedAt: row.deletedAt ?? null,
     };
   }
 
@@ -83,7 +84,7 @@ export class ProfileService {
 
   list(filter?: ProfileFilter): Profile[] {
     const rows = this.db.select().from(profilesTable).all();
-    let profiles = rows.map((r) => this.rowToProfile(r));
+    let profiles = rows.map((r) => this.rowToProfile(r)).filter((p) => p.deletedAt === null);
 
     if (filter) {
       if (filter.search && filter.search.trim()) {
@@ -169,6 +170,7 @@ export class ProfileService {
       id,
       createdAt,
       lastRunAt: null,
+      deletedAt: null,
     };
   }
 
@@ -221,7 +223,30 @@ export class ProfileService {
       .run();
   }
 
+  // Soft-delete: move to Trash so accidental deletes can be restored
   delete(id: string): void {
+    this.db
+      .update(profilesTable)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(eq(profilesTable.id, id))
+      .run();
+  }
+
+  listTrash(): Profile[] {
+    return this.db
+      .select()
+      .from(profilesTable)
+      .all()
+      .map((r) => this.rowToProfile(r))
+      .filter((p) => p.deletedAt !== null)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  }
+
+  restore(id: string): void {
+    this.db.update(profilesTable).set({ deletedAt: null }).where(eq(profilesTable.id, id)).run();
+  }
+
+  permanentDelete(id: string): void {
     this.db.delete(profilesTable).where(eq(profilesTable.id, id)).run();
     const dir = this.getProfileDir(id);
     if (fs.existsSync(dir)) {
@@ -231,6 +256,41 @@ export class ProfileService {
         // Ignore if directory is temporarily locked
       }
     }
+  }
+
+  emptyTrash(): number {
+    const trashed = this.listTrash();
+    for (const p of trashed) {
+      this.permanentDelete(p.id);
+    }
+    return trashed.length;
+  }
+
+  importCsv(rawCsv: string, folderId: string | null = null): Profile[] {
+    const rows = parseProfilesCsv(rawCsv);
+    const created: Profile[] = [];
+    for (const row of rows) {
+      const identity = generateConsistentIdentity(row.platform, row.browser);
+      const parsedProxy = row.proxyRaw ? parseQuickProxy(row.proxyRaw) : null;
+      const profile = this.create({
+        name: row.name,
+        folderId,
+        status: 'none',
+        tags: row.tags,
+        notes: row.notes,
+        platform: identity.platform,
+        osVersion: identity.osVersion,
+        browser: identity.browser,
+        browserVersion: identity.browserVersion,
+        userAgent: identity.userAgent,
+        proxy: parsedProxy ?? { type: 'none', host: '', port: 0, username: '', password: '' },
+        geo: { mode: 'auto', timezone: '', language: 'en-US', lat: null, lon: null },
+        fingerprint: identity.fingerprint,
+        startup: { urls: [], restoreTabs: false },
+      });
+      created.push(profile);
+    }
+    return created;
   }
 
   duplicate(id: string): Profile {
@@ -259,17 +319,11 @@ export class ProfileService {
 
   bulkDelete(ids: string[]): number {
     if (ids.length === 0) return 0;
-    this.db.delete(profilesTable).where(inArray(profilesTable.id, ids)).run();
-    for (const id of ids) {
-      const dir = this.getProfileDir(id);
-      if (fs.existsSync(dir)) {
-        try {
-          fs.rmSync(dir, { recursive: true, force: true });
-        } catch {
-          // Ignore locked dirs
-        }
-      }
-    }
+    this.db
+      .update(profilesTable)
+      .set({ deletedAt: new Date().toISOString() })
+      .where(inArray(profilesTable.id, ids))
+      .run();
     return ids.length;
   }
 

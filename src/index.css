@@ -2,43 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Stealth Emerald Design System
+ * Operator-grade density, crisp hairline borders, stillness, and one signature
+ * Emerald accent (#10b981 dark / #059669 light) with full Dark & Light modes.
+ */
 @layer base {
   :root,
   .dark {
-    --background: 220 29% 6%;
-    --foreground: 215 28% 93%;
+    --background: 216 16% 6%;
+    --foreground: 210 17% 92%;
 
-    --card: 221 27% 10%;
-    --card-foreground: 215 28% 93%;
+    --card: 214 14% 9%;
+    --card-foreground: 210 17% 92%;
 
-    --popover: 221 27% 10%;
-    --popover-foreground: 215 28% 93%;
+    --popover: 214 14% 9%;
+    --popover-foreground: 210 17% 92%;
 
-    --primary: 217 91% 56%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 160 100% 98%;
 
-    --secondary: 221 24% 15%;
-    --secondary-foreground: 215 25% 88%;
+    --secondary: 215 14% 13%;
+    --secondary-foreground: 210 15% 86%;
 
-    --muted: 221 24% 14%;
-    --muted-foreground: 217 15% 58%;
+    --muted: 215 13% 12%;
+    --muted-foreground: 215 12% 57%;
 
-    --accent: 221 25% 17%;
-    --accent-foreground: 215 28% 95%;
+    --accent: 215 14% 15%;
+    --accent-foreground: 210 17% 95%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 221 23% 17%;
-    --input: 221 23% 18%;
-    --ring: 217 91% 56%;
+    --border: 215 15% 17%;
+    --input: 215 15% 18%;
+    --ring: 160 84% 39%;
 
-    --sidebar: 221 29% 8%;
-    --sidebar-foreground: 217 18% 72%;
-    --sidebar-border: 221 24% 14%;
-    --sidebar-active: 217 91% 56%;
+    --sidebar: 216 15% 7.5%;
+    --sidebar-foreground: 214 13% 68%;
+    --sidebar-border: 215 15% 14%;
+    --sidebar-active: 160 84% 39%;
 
     --radius: 0.5rem;
+    color-scheme: dark;
+  }
+
+  .light {
+    --background: 150 14% 97%;
+    --foreground: 216 18% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 216 18% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 18% 11%;
+
+    --primary: 161 94% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 12% 93%;
+    --secondary-foreground: 216 16% 20%;
+
+    --muted: 150 10% 94%;
+    --muted-foreground: 215 12% 44%;
+
+    --accent: 155 18% 91%;
+    --accent-foreground: 216 18% 11%;
+
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 10% 87%;
+    --input: 150 10% 85%;
+    --ring: 161 94% 30%;
+
+    --sidebar: 150 16% 98.5%;
+    --sidebar-foreground: 215 14% 36%;
+    --sidebar-border: 150 10% 88%;
+    --sidebar-active: 161 94% 30%;
+
+    --radius: 0.5rem;
+    color-scheme: light;
   }
 
   * {
@@ -49,6 +92,7 @@
     @apply bg-background text-foreground;
     font-family:
       'Inter',
+      'Segoe UI Variable',
       'Segoe UI',
       system-ui,
       -apple-system,
@@ -66,10 +110,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(221 23% 22%);
+  background: hsl(var(--border));
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(221 23% 30%);
+  background: hsl(var(--muted-foreground) / 0.5);
 }

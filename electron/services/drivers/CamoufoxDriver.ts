@@ -4,6 +4,7 @@ import os from 'node:os';
 import { firefox } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
+import { runContextWarmup } from './warmupHelper';
 import type { BrowserDriver, DriverInstance, DriverLaunchOptions } from './BrowserDriver';
 
 function findCamoufoxBinary(customPath?: string): string | undefined {
@@ -158,6 +159,7 @@ export class CamoufoxDriver implements BrowserDriver {
           sameSite: c.sameSite,
         }));
       },
+      runWarmup: (config) => runContextWarmup(profile.id, context, config),
     };
 
     context.on('close', () => {

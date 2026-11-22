@@ -70,9 +70,10 @@ export interface Profile {
   startup: ProfileStartup;
   createdAt: string;
   lastRunAt: string | null;
+  deletedAt: string | null;
 }
 
-export type CreateProfileInput = Omit<Profile, 'id' | 'createdAt' | 'lastRunAt'>;
+export type CreateProfileInput = Omit<Profile, 'id' | 'createdAt' | 'lastRunAt' | 'deletedAt'>;
 export type UpdateProfileInput = Partial<CreateProfileInput> & { id: string };
 
 export interface Folder {
@@ -194,14 +195,38 @@ export interface CookieItem {
 }
 
 export type LocaleCode = 'vi' | 'en';
+export type ThemeMode = 'dark' | 'light';
 
 export interface AppSettings {
   locale: LocaleCode;
+  theme: ThemeMode;
   chromePath: string;
   camoufoxPath: string;
   localApiEnabled: boolean;
   localApiPort: number;
   localApiKey: string;
+}
+
+export interface WarmupConfig {
+  urls: string[];
+  minStaySec: number;
+  maxStaySec: number;
+  scroll: boolean;
+}
+
+export interface WarmupResult {
+  profileId: string;
+  visited: number;
+  failed: number;
+}
+
+export interface CsvProfileRow {
+  name: string;
+  proxyRaw: string;
+  tags: string[];
+  notes: string;
+  platform: Platform;
+  browser: BrowserType;
 }
 
 export interface LocalApiStatus {

@@ -21,6 +21,8 @@ import type {
   SavedProxy,
   Tag,
   UpdateProfileInput,
+  WarmupConfig,
+  WarmupResult,
 } from './types';
 
 export const IPC_CHANNELS = {
@@ -34,6 +36,11 @@ export const IPC_CHANNELS = {
   PROFILES_BULK_DELETE: 'profiles:bulkDelete',
   PROFILES_BULK_UPDATE: 'profiles:bulkUpdate',
   PROFILES_BULK_CREATE: 'profiles:bulkCreate',
+  PROFILES_LIST_TRASH: 'profiles:listTrash',
+  PROFILES_RESTORE: 'profiles:restore',
+  PROFILES_PERMANENT_DELETE: 'profiles:permanentDelete',
+  PROFILES_EMPTY_TRASH: 'profiles:emptyTrash',
+  PROFILES_IMPORT_CSV: 'profiles:importCsv',
 
   FOLDERS_LIST: 'folders:list',
   FOLDERS_CREATE: 'folders:create',
@@ -49,6 +56,7 @@ export const IPC_CHANNELS = {
   LAUNCHER_BULK_STOP: 'launcher:bulkStop',
   LAUNCHER_RUNNING_IDS: 'launcher:runningIds',
   LAUNCHER_STATUS_EVENT: 'launcher:statusEvent',
+  LAUNCHER_WARMUP: 'launcher:warmup',
 
   PROXIES_LIST: 'proxies:list',
   PROXIES_CREATE: 'proxies:create',
@@ -102,6 +110,11 @@ export interface ElectronApi {
   bulkDeleteProfiles: (ids: string[]) => Promise<number>;
   bulkUpdateProfiles: (input: BulkUpdateInput) => Promise<number>;
   bulkCreateProfiles: (input: BulkCreateInput) => Promise<Profile[]>;
+  listTrashProfiles: () => Promise<Profile[]>;
+  restoreProfile: (id: string) => Promise<void>;
+  permanentDeleteProfile: (id: string) => Promise<void>;
+  emptyTrash: () => Promise<number>;
+  importProfilesCsv: (rawCsv: string, folderId?: string | null) => Promise<Profile[]>;
 
   // Folders & Tags
   listFolders: () => Promise<Folder[]>;
@@ -118,6 +131,7 @@ export interface ElectronApi {
   bulkStopProfiles: (ids: string[]) => Promise<void>;
   getRunningProfileIds: () => Promise<string[]>;
   onProfileRunStatus: (listener: (event: ProfileRunStatusEvent) => void) => () => void;
+  warmupProfile: (profileId: string, config: WarmupConfig) => Promise<WarmupResult>;
 
   // Proxies
   listProxies: () => Promise<SavedProxy[]>;

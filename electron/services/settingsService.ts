@@ -2,10 +2,11 @@ import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { AppDatabase } from '../db';
 import { settingsTable } from '../db/schema';
-import type { AppSettings, LocaleCode } from '@shared/types';
+import type { AppSettings, LocaleCode, ThemeMode } from '@shared/types';
 
 const KEYS = {
   LOCALE: 'locale',
+  THEME: 'theme',
   CHROME_PATH: 'chromePath',
   CAMOUFOX_PATH: 'camoufoxPath',
   LOCAL_API_ENABLED: 'localApiEnabled',
@@ -41,6 +42,9 @@ export class SettingsService {
     if (!this.getRaw(KEYS.LOCALE)) {
       this.setRaw(KEYS.LOCALE, 'vi');
     }
+    if (!this.getRaw(KEYS.THEME)) {
+      this.setRaw(KEYS.THEME, 'dark');
+    }
     if (!this.getRaw(KEYS.LOCAL_API_ENABLED)) {
       this.setRaw(KEYS.LOCAL_API_ENABLED, 'true');
     }
@@ -55,9 +59,12 @@ export class SettingsService {
   getSettings(): AppSettings {
     const localeRaw = this.getRaw(KEYS.LOCALE);
     const locale: LocaleCode = localeRaw === 'en' ? 'en' : 'vi';
+    const themeRaw = this.getRaw(KEYS.THEME);
+    const theme: ThemeMode = themeRaw === 'light' ? 'light' : 'dark';
     const portNum = Number(this.getRaw(KEYS.LOCAL_API_PORT) ?? '36912');
     return {
       locale,
+      theme,
       chromePath: this.getRaw(KEYS.CHROME_PATH) ?? '',
       camoufoxPath: this.getRaw(KEYS.CAMOUFOX_PATH) ?? '',
       localApiEnabled: this.getRaw(KEYS.LOCAL_API_ENABLED) !== 'false',
@@ -68,6 +75,7 @@ export class SettingsService {
 
   updateSettings(patch: Partial<AppSettings>): AppSettings {
     if (patch.locale !== undefined) this.setRaw(KEYS.LOCALE, patch.locale);
+    if (patch.theme !== undefined) this.setRaw(KEYS.THEME, patch.theme);
     if (patch.chromePath !== undefined) this.setRaw(KEYS.CHROME_PATH, patch.chromePath.trim());
     if (patch.camoufoxPath !== undefined)
       this.setRaw(KEYS.CAMOUFOX_PATH, patch.camoufoxPath.trim());

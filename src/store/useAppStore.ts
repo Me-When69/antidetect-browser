@@ -9,9 +9,10 @@ import type {
   ProfileFilter,
   SavedProxy,
   Tag,
+  ThemeMode,
 } from '@shared/types';
 
-export type NavPageId = 'profiles' | 'folders' | 'proxies' | 'settings' | 'new-profile';
+export type NavPageId = 'profiles' | 'folders' | 'proxies' | 'trash' | 'settings' | 'new-profile';
 
 interface ToastMessage {
   id: number;
@@ -22,12 +23,15 @@ interface ToastMessage {
 interface AppState {
   activePage: NavPageId;
   editingProfileId: string | null;
+  commandPaletteOpen: boolean;
   appInfo: AppInfo | null;
   settings: AppSettings;
   apiStatus: LocalApiStatus | null;
   locale: LocaleCode;
+  theme: ThemeMode;
 
   profiles: Profile[];
+  trashProfiles: Profile[];
   folders: Folder[];
   tags: Tag[];
   proxies: SavedProxy[];
@@ -38,6 +42,7 @@ interface AppState {
   toast: ToastMessage | null;
 
   setActivePage: (page: NavPageId) => void;
+  setCommandPaletteOpen: (open: boolean) => void;
   openNewProfile: () => void;
   openEditProfile: (id: string) => void;
   setFilter: (patch: Partial<ProfileFilter>) => void;
@@ -50,15 +55,18 @@ interface AppState {
 
   bootstrap: () => Promise<void>;
   refreshProfiles: () => Promise<void>;
+  refreshTrash: () => Promise<void>;
   refreshFolders: () => Promise<void>;
   refreshTags: () => Promise<void>;
   refreshProxies: () => Promise<void>;
   refreshSettings: () => Promise<void>;
   setLocale: (locale: LocaleCode) => Promise<void>;
+  setTheme: (theme: ThemeMode) => Promise<void>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
   locale: 'vi',
+  theme: 'dark',
   chromePath: '',
   camoufoxPath: '',
   localApiEnabled: true,
@@ -71,12 +79,15 @@ let toastCounter = 1;
 export const useAppStore = create<AppState>((set, get) => ({
   activePage: 'profiles',
   editingProfileId: null,
+  commandPaletteOpen: false,
   appInfo: null,
   settings: DEFAULT_SETTINGS,
   apiStatus: null,
   locale: 'vi',
+  theme: 'dark',
 
   profiles: [],
+  trashProfiles: [],
   folders: [],
   tags: [],
   proxies: [],
@@ -94,6 +105,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   toast: null,
 
   setActivePage: (page) => set({ activePage: page }),
+  setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   openNewProfile: () => set({ activePage: 'new-profile', editingProfileId: null }),
   openEditProfile: (id) => set({ activePage: 'new-profile', editingProfileId: id }),
 
@@ -141,27 +153,39 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!api) return;
     set({ loading: true });
     try {
-      const [appInfo, settings, apiStatus, folders, tags, proxies, runningIds, profiles] =
-        await Promise.all([
-          api.getAppInfo(),
-          api.getSettings(),
-          api.getLocalApiStatus(),
-          api.listFolders(),
-          api.listTags(),
-          api.listProxies(),
-          api.getRunningProfileIds(),
-          api.listProfiles(get().filter),
-        ]);
-      set({
+      const [
         appInfo,
         settings,
-        locale: settings.locale,
         apiStatus,
         folders,
         tags,
         proxies,
         runningIds,
         profiles,
+        trashProfiles,
+      ] = await Promise.all([
+        api.getAppInfo(),
+        api.getSettings(),
+        api.getLocalApiStatus(),
+        api.listFolders(),
+        api.listTags(),
+        api.listProxies(),
+        api.getRunningProfileIds(),
+        api.listProfiles(get().filter),
+        api.listTrashProfiles(),
+      ]);
+      set({
+        appInfo,
+        settings,
+        locale: settings.locale,
+        theme: settings.theme,
+        apiStatus,
+        folders,
+        tags,
+        proxies,
+        runningIds,
+        profiles,
+        trashProfiles,
       });
     } catch (err) {
       get().showToast(err instanceof Error ? err.message : 'Lỗi tải dữ liệu', 'error');
@@ -175,6 +199,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!api) return;
     const profiles = await api.listProfiles(get().filter);
     set({ profiles });
+  },
+
+  refreshTrash: async () => {
+    const api = window.electronAPI;
+    if (!api) return;
+    const trashProfiles = await api.listTrashProfiles();
+    set({ trashProfiles });
   },
 
   refreshFolders: async () => {
@@ -202,7 +233,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const api = window.electronAPI;
     if (!api) return;
     const [settings, apiStatus] = await Promise.all([api.getSettings(), api.getLocalApiStatus()]);
-    set({ settings, locale: settings.locale, apiStatus });
+    set({ settings, locale: settings.locale, theme: settings.theme, apiStatus });
   },
 
   setLocale: async (locale) => {
@@ -210,6 +241,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const api = window.electronAPI;
     if (api) {
       const settings = await api.updateSettings({ locale });
+      set({ settings });
+    }
+  },
+
+  setTheme: async (theme) => {
+    set({ theme });
+    const api = window.electronAPI;
+    if (api) {
+      const settings = await api.updateSettings({ theme });
       set({ settings });
     }
   },

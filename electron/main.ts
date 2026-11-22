@@ -14,6 +14,7 @@ import type {
   ProfileFilter,
   ProfileProxy,
   UpdateProfileInput,
+  WarmupConfig,
 } from '@shared/types';
 import { createDatabase, type DbContext } from './db';
 import { SecretService } from './services/secretService';
@@ -145,6 +146,16 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.PROFILES_BULK_CREATE, (_e, input: BulkCreateInput) =>
     profileService.bulkCreate(input),
   );
+  ipcMain.handle(IPC_CHANNELS.PROFILES_LIST_TRASH, () => profileService.listTrash());
+  ipcMain.handle(IPC_CHANNELS.PROFILES_RESTORE, (_e, id: string) => profileService.restore(id));
+  ipcMain.handle(IPC_CHANNELS.PROFILES_PERMANENT_DELETE, async (_e, id: string) => {
+    await profileLauncher.stop(id);
+    profileService.permanentDelete(id);
+  });
+  ipcMain.handle(IPC_CHANNELS.PROFILES_EMPTY_TRASH, () => profileService.emptyTrash());
+  ipcMain.handle(IPC_CHANNELS.PROFILES_IMPORT_CSV, (_e, rawCsv: string, folderId?: string | null) =>
+    profileService.importCsv(rawCsv, folderId ?? null),
+  );
 
   // Folders & Tags
   ipcMain.handle(IPC_CHANNELS.FOLDERS_LIST, () => profileService.listFolders());
@@ -168,6 +179,9 @@ function registerIpcHandlers(): void {
     profileLauncher.bulkStop(ids),
   );
   ipcMain.handle(IPC_CHANNELS.LAUNCHER_RUNNING_IDS, () => profileLauncher.getRunningIds());
+  ipcMain.handle(IPC_CHANNELS.LAUNCHER_WARMUP, (_e, profileId: string, config: WarmupConfig) =>
+    profileLauncher.warmup(profileId, config),
+  );
 
   // Proxies
   ipcMain.handle(IPC_CHANNELS.PROXIES_LIST, () => proxyService.list());
