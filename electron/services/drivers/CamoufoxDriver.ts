@@ -108,7 +108,7 @@ export class CamoufoxDriver implements BrowserDriver {
       },
     });
 
-    await context.addInitScript(buildFingerprintInitScript(profile));
+    await context.addInitScript(buildFingerprintInitScript(profile, resolvedGeo));
 
     const urls = profile.startup.urls.map((u) => u.trim()).filter(Boolean);
     if (urls.length > 0) {

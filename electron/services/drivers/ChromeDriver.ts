@@ -96,12 +96,9 @@ async function applyCdpOverrides(
     }
     if (geo.language) {
       await cdp.send('Emulation.setLocaleOverride', { locale: geo.language }).catch(() => {});
-      const baseLang = geo.language.split('-')[0] ?? 'en';
-      const acceptLang =
-        geo.language === baseLang ? geo.language : `${geo.language},${baseLang};q=0.9`;
       await cdp
         .send('Network.setExtraHTTPHeaders', {
-          headers: { 'Accept-Language': acceptLang },
+          headers: { 'Accept-Language': geo.acceptLanguage },
         })
         .catch(() => {});
     }
@@ -110,7 +107,7 @@ async function applyCdpOverrides(
         .send('Emulation.setGeolocationOverride', {
           latitude: geo.lat,
           longitude: geo.lon,
-          accuracy: 50,
+          accuracy: geo.accuracy ?? 50,
         })
         .catch(() => {});
     }
@@ -161,11 +158,7 @@ export class ChromeDriver implements BrowserDriver {
       args.push('--enforce-webrtc-ip-permission-check');
     }
 
-    const baseLang = (resolvedGeo.language || 'en-US').split('-')[0] ?? 'en';
-    const acceptLang =
-      resolvedGeo.language && resolvedGeo.language !== baseLang
-        ? `${resolvedGeo.language},${baseLang};q=0.9`
-        : resolvedGeo.language || 'en-US,en;q=0.9';
+    const acceptLang = resolvedGeo.acceptLanguage || 'en-US,en;q=0.9';
 
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: false,
@@ -176,7 +169,11 @@ export class ChromeDriver implements BrowserDriver {
       timezoneId: resolvedGeo.timezone || undefined,
       geolocation:
         resolvedGeo.lat !== null && resolvedGeo.lon !== null
-          ? { latitude: resolvedGeo.lat, longitude: resolvedGeo.lon }
+          ? {
+              latitude: resolvedGeo.lat,
+              longitude: resolvedGeo.lon,
+              accuracy: resolvedGeo.accuracy ?? 50,
+            }
           : undefined,
       permissions: resolvedGeo.lat !== null && resolvedGeo.lon !== null ? ['geolocation'] : [],
       extraHTTPHeaders: {
@@ -187,7 +184,12 @@ export class ChromeDriver implements BrowserDriver {
       ignoreDefaultArgs: ['--enable-automation'],
     });
 
-    await context.addInitScript(buildFingerprintInitScript(profile));
+    await context.setExtraHTTPHeaders({ 'Accept-Language': acceptLang });
+    if (resolvedGeo.lat !== null && resolvedGeo.lon !== null) {
+      await context.grantPermissions(['geolocation']).catch(() => {});
+    }
+
+    await context.addInitScript(buildFingerprintInitScript(profile, resolvedGeo));
 
     // Apply CDP overrides to existing and new pages
     context.on('page', (page) => {

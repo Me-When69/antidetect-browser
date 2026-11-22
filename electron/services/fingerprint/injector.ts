@@ -1,4 +1,5 @@
 import type { Platform, Profile } from '@shared/types';
+import type { ResolvedGeo } from '../drivers/BrowserDriver';
 
 function getNavigatorPlatform(platform: Platform): string {
   switch (platform) {
@@ -22,7 +23,7 @@ function getUaPlatformName(platform: Platform): string {
   }
 }
 
-export function buildFingerprintInitScript(profile: Profile): string {
+export function buildFingerprintInitScript(profile: Profile, resolvedGeo?: ResolvedGeo): string {
   const majorVersion = profile.browserVersion.split('.')[0] ?? '131';
   const navPlatform = getNavigatorPlatform(profile.platform);
   const uaPlatform = getUaPlatformName(profile.platform);
@@ -41,7 +42,8 @@ export function buildFingerprintInitScript(profile: Profile): string {
     audioNoiseSeed: profile.fingerprint.audioNoiseSeed,
     fonts: profile.fingerprint.fonts,
     webrtc: profile.fingerprint.webrtc,
-    language: profile.geo.language || 'en-US',
+    language: resolvedGeo?.language || profile.geo.language || 'en-US',
+    timezone: resolvedGeo?.timezone || profile.geo.timezone || '',
   };
 
   return `(() => {
@@ -99,6 +101,15 @@ export function buildFingerprintInitScript(profile: Profile): string {
       const langs = cfg.language === baseLang ? [cfg.language] : [cfg.language, baseLang];
       defineGetter(Navigator.prototype, 'language', () => cfg.language);
       defineGetter(Navigator.prototype, 'languages', () => Object.freeze([...langs]));
+    }
+
+    // Ensure Intl.DateTimeFormat().resolvedOptions().timeZone matches across main frame & iframes
+    if (cfg.timezone && typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+      const origResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+      Intl.DateTimeFormat.prototype.resolvedOptions = maskAsNative(function resolvedOptions() {
+        const opts = origResolvedOptions.call(this);
+        return Object.assign({}, opts, { timeZone: cfg.timezone });
+      }, 'resolvedOptions');
     }
 
     // Client Hints (navigator.userAgentData)
