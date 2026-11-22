@@ -6,11 +6,7 @@ import {
   ProxyService,
   type ProxyHttpFetcher,
 } from '../../electron/services/proxyService';
-import {
-  MOCK_IPAPI_VN,
-  MOCK_IPWHO_DE_IPV6,
-  SAMPLE_HTTP_PROXY,
-} from '../fixtures/mockData';
+import { MOCK_IPAPI_VN, MOCK_IPWHO_DE_IPV6, SAMPLE_HTTP_PROXY } from '../fixtures/mockData';
 
 afterEach(() => {
   vi.useRealTimers();

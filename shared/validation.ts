@@ -110,6 +110,14 @@ export function parseQuickProxyDetailed(
     };
   }
 
+  // Reject unknown URL schemes (e.g. ftp://)
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) && !/^(https?|socks5):\/\//i.test(trimmed)) {
+    return {
+      ok: false,
+      error: 'Giao thức proxy không được hỗ trợ (chỉ hỗ trợ http, https, socks5)',
+    };
+  }
+
   // URL format: scheme://[user:pass@]([ipv6]|host):port
   const urlMatch =
     /^(https?|socks5):\/\/(?:([^:@\s]+):([^@\s]*)@)?(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/i.exec(
@@ -132,6 +140,28 @@ export function parseQuickProxyDetailed(
         port,
         username: decodeURIComponent(urlMatch[2] ?? ''),
         password: decodeURIComponent(urlMatch[3] ?? ''),
+      },
+    };
+  }
+
+  // Auth without scheme: user:pass@([ipv6]|host):port
+  const authNoSchemeMatch = /^([^:@\s]+):([^@\s]*)@(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/.exec(
+    trimmed,
+  );
+  if (authNoSchemeMatch) {
+    const host = (authNoSchemeMatch[3] ?? authNoSchemeMatch[4] ?? '').trim();
+    const port = Number(authNoSchemeMatch[5]);
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return { ok: false, error: 'Host hoặc port proxy không hợp lệ' };
+    }
+    return {
+      ok: true,
+      proxy: {
+        type: defaultType,
+        host,
+        port,
+        username: decodeURIComponent(authNoSchemeMatch[1] ?? ''),
+        password: decodeURIComponent(authNoSchemeMatch[2] ?? ''),
       },
     };
   }

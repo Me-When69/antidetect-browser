@@ -6,7 +6,9 @@
   </head>
   <body>
     <pre id="out">Collecting...</pre>
-    <iframe id="probe-iframe" srcdoc="<!doctype html><html><body><script>
+    <iframe
+      id="probe-iframe"
+      srcdoc="<!doctype html><html><body><script>
       window.__iframeReport = {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         language: navigator.language,
@@ -15,7 +17,8 @@
         hardwareConcurrency: navigator.hardwareConcurrency,
         webdriver: navigator.webdriver
       };
-    </script></body></html>"></iframe>
+    </script></body></html>"
+    ></iframe>
 
     <script>
       (async () => {
