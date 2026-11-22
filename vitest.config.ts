@@ -13,5 +13,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    exclude: ['node_modules', 'dist', 'dist-electron', 'tests/e2e/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json-summary'],
+      include: ['electron/services/**/*.ts'],
+      exclude: ['electron/services/drivers/**'],
+    },
   },
 });

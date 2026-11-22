@@ -44,7 +44,9 @@ let launcher: ProfileLauncher | null = null;
 let localApi: LocalApiServer | null = null;
 
 function resolveDataDir(): string {
-  // Keep data/ inside project root during dev, or userData when packaged
+  if (process.env['ANTIDETECT_DATA_DIR']) {
+    return process.env['ANTIDETECT_DATA_DIR'];
+  }
   return app.isPackaged
     ? path.join(app.getPath('userData'), 'data')
     : path.join(process.env.APP_ROOT!, 'data');

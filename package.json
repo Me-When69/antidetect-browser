@@ -15,7 +15,11 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "vitest run tests/unit",
+    "test:coverage": "vitest run tests/unit --coverage",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test && npm run test:integration && npm run test:e2e",
     "postinstall": "node -e \"console.log('Antidetect: skipping Playwright browser download (using system Chrome/Edge)')\""
   },
   "dependencies": {
@@ -39,11 +43,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
+    "@playwright/test": "1.65.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.15.19",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.4.1",
+    "@vitest/coverage-v8": "3.2.7",
     "autoprefixer": "^10.4.21",
     "drizzle-kit": "^0.31.11",
     "electron": "^36.3.1",
