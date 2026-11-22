@@ -19,6 +19,8 @@ export default defineConfig({
             },
           },
           build: {
+            sourcemap: false,
+            minify: 'esbuild',
             rollupOptions: {
               external: [
                 'better-sqlite3',
@@ -43,6 +45,8 @@ export default defineConfig({
             },
           },
           build: {
+            sourcemap: false,
+            minify: 'esbuild',
             rollupOptions: {
               output: {
                 format: 'cjs',
@@ -55,6 +59,30 @@ export default defineConfig({
       renderer: {},
     }),
   ],
+  build: {
+    sourcemap: false,
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor-react';
+          }
+          if (
+            id.includes('node_modules/zod/') ||
+            id.includes('node_modules/react-hook-form/') ||
+            id.includes('node_modules/@hookform/')
+          ) {
+            return 'vendor-forms';
+          }
+          if (id.includes('node_modules/lucide-react/')) {
+            return 'vendor-icons';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

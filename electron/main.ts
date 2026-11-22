@@ -7,6 +7,10 @@ if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
   process.env['PLAYWRIGHT_BROWSERS_PATH'] = path.join(app.getPath('userData'), 'browsers');
 }
 
+// Disable unused Electron Chromium features to save RAM & startup time
+app.commandLine.appendSwitch('disable-features', 'SpellCheck,MediaRouter,CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-background-networking');
+
 import { IPC_CHANNELS, type AppInfo } from '@shared/ipc';
 import type {
   AppSettings,
@@ -113,7 +117,10 @@ function initServices(): {
       }
     },
   );
-  bridgeManager.cleanupOrphanProcesses();
+  // Defer non-critical orphan process scan until after window is created
+  setImmediate(() => {
+    bridgeManager.cleanupOrphanProcesses();
+  });
 
   const profileService = new ProfileService(dbCtx.db, secrets, profilesDir);
   const proxyService = new ProxyService(dbCtx.db, secrets, undefined, bridgeManager);
@@ -142,8 +149,10 @@ function initServices(): {
 
   const settings = settingsService.getSettings();
   if (settings.localApiEnabled) {
-    void apiServer.start(settings.localApiPort).catch((err) => {
-      logger.error('main', `Could not start Local API: ${String(err)}`);
+    setImmediate(() => {
+      void apiServer.start(settings.localApiPort).catch((err) => {
+        logger.error('main', `Could not start Local API: ${String(err)}`);
+      });
     });
   }
 
@@ -442,13 +451,19 @@ function createWindow(): void {
     backgroundColor: '#0E1116',
     title: 'Facet',
     icon: iconPath,
+    show: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      spellcheck: false,
     },
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
   });
 
   if (VITE_DEV_SERVER_URL) {

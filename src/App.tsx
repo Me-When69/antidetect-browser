@@ -1,16 +1,39 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
-import { CommandPalette } from '@/components/CommandPalette';
 import { ProfilesPage } from '@/pages/ProfilesPage';
-import { ProfileFormPage } from '@/pages/ProfileFormPage';
-import { FoldersPage } from '@/pages/FoldersPage';
-import { ProxiesPage } from '@/pages/ProxiesPage';
-import { TrashPage } from '@/pages/TrashPage';
-import { SettingsPage } from '@/pages/SettingsPage';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import { cn } from '@/lib/utils';
+
+const CommandPalette = lazy(() =>
+  import('@/components/CommandPalette').then((m) => ({ default: m.CommandPalette })),
+);
+const ProfileFormPage = lazy(() =>
+  import('@/pages/ProfileFormPage').then((m) => ({ default: m.ProfileFormPage })),
+);
+const FoldersPage = lazy(() =>
+  import('@/pages/FoldersPage').then((m) => ({ default: m.FoldersPage })),
+);
+const ProxiesPage = lazy(() =>
+  import('@/pages/ProxiesPage').then((m) => ({ default: m.ProxiesPage })),
+);
+const TrashPage = lazy(() =>
+  import('@/pages/TrashPage').then((m) => ({ default: m.TrashPage })),
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+
+function PageSkeleton(): React.JSX.Element {
+  return (
+    <div className="space-y-4 animate-pulse" aria-busy="true">
+      <div className="h-7 w-48 rounded-md bg-secondary" />
+      <div className="h-24 w-full rounded-xl bg-card border border-border" />
+      <div className="h-64 w-full rounded-xl bg-card border border-border" />
+    </div>
+  );
+}
 
 export function App(): React.JSX.Element {
   const {
@@ -85,11 +108,13 @@ export function App(): React.JSX.Element {
 
         <main className="relative flex-1 overflow-y-auto p-6">
           {activePage === 'profiles' && <ProfilesPage />}
-          {activePage === 'new-profile' && <ProfileFormPage />}
-          {activePage === 'folders' && <FoldersPage />}
-          {activePage === 'proxies' && <ProxiesPage />}
-          {activePage === 'trash' && <TrashPage />}
-          {activePage === 'settings' && <SettingsPage />}
+          <Suspense fallback={<PageSkeleton />}>
+            {activePage === 'new-profile' && <ProfileFormPage />}
+            {activePage === 'folders' && <FoldersPage />}
+            {activePage === 'proxies' && <ProxiesPage />}
+            {activePage === 'trash' && <TrashPage />}
+            {activePage === 'settings' && <SettingsPage />}
+          </Suspense>
 
           {toast && (
             <div
@@ -108,7 +133,9 @@ export function App(): React.JSX.Element {
         </main>
       </div>
 
-      <CommandPalette />
+      <Suspense fallback={null}>
+        <CommandPalette />
+      </Suspense>
     </div>
   );
 }

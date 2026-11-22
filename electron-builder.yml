@@ -1,5 +1,9 @@
 appId: dev.facet.browser
 productName: Facet
+asar: true
+electronLanguages:
+  - en-US
+  - vi
 directories:
   output: release
   buildResources: build
@@ -7,6 +11,14 @@ files:
   - dist/**
   - dist-electron/**
   - package.json
+  - '!**/*.map'
+  - '!**/*.d.ts'
+  - '!**/README*'
+  - '!**/CHANGELOG*'
+  - '!**/LICENSE*'
+  - '!**/test/**'
+  - '!**/tests/**'
+  - '!**/docs/**'
 asarUnpack:
   - node_modules/better-sqlite3/**
   - node_modules/playwright-core/**
