@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC_CHANNELS, type ElectronApi } from '@shared/ipc';
-import type { BrowserInstallProgressEvent, ProfileRunStatusEvent } from '@shared/types';
+import type {
+  BrowserInstallProgressEvent,
+  ProfileRunStatusEvent,
+  ProxyCoreDownloadProgress,
+} from '@shared/types';
 
 const electronApi: ElectronApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_INFO),
@@ -82,6 +86,18 @@ const electronApi: ElectronApi = {
     ipcRenderer.on(IPC_CHANNELS.BROWSER_INSTALL_PROGRESS, handler);
     return () => {
       ipcRenderer.removeListener(IPC_CHANNELS.BROWSER_INSTALL_PROGRESS, handler);
+    };
+  },
+
+  listProxyCores: () => ipcRenderer.invoke(IPC_CHANNELS.PROXY_CORES_LIST),
+  downloadProxyCore: (core) => ipcRenderer.invoke(IPC_CHANNELS.PROXY_CORES_DOWNLOAD, core),
+  onProxyCoreDownloadProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, payload: ProxyCoreDownloadProgress): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC_CHANNELS.PROXY_CORES_PROGRESS, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.PROXY_CORES_PROGRESS, handler);
     };
   },
 };

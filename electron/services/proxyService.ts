@@ -10,6 +10,7 @@ import { SocksProxyAgent } from 'socks-proxy-agent';
 import type { AppDatabase } from '../db';
 import { proxiesTable } from '../db/schema';
 import type {
+  BrowserType,
   CreateSavedProxyInput,
   Ipv6Policy,
   ProfileProxy,
@@ -20,6 +21,7 @@ import type {
 import { inferLanguageFromCountry } from '@shared/validation';
 import { resolveBrowserExecutable } from './browserPath';
 import { formatHostForUrl } from './proxyParser';
+import { buildBrowserProxyArgs, type ProxyBridgeManager } from './proxyBridge';
 import type { SecretService } from './secretService';
 
 export interface NormalizedIpInfo {
@@ -170,11 +172,15 @@ function buildAgent(proxy: ProfileProxy): http.Agent | undefined {
       ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`
       : '';
   const formattedHost = formatHostForUrl(proxy.host);
-  const url = `${proxy.type}://${auth}${formattedHost}:${proxy.port}`;
-  if (proxy.type === 'socks5') {
-    return new SocksProxyAgent(url);
+  if (
+    proxy.type === 'socks4' ||
+    proxy.type === 'socks4a' ||
+    proxy.type === 'socks5' ||
+    proxy.type === 'socks5h'
+  ) {
+    return new SocksProxyAgent(`${proxy.type}://${auth}${formattedHost}:${proxy.port}`);
   }
-  return new HttpsProxyAgent(url);
+  return new HttpsProxyAgent(`${proxy.type}://${auth}${formattedHost}:${proxy.port}`);
 }
 
 export function detectIpVersion(ip: string): 4 | 6 | undefined {
@@ -261,15 +267,18 @@ export class ProxyService {
   private activeTunnels = new Map<string, string>();
   private checkCache = new Map<string, CacheEntry>();
   private fetcher: ProxyHttpFetcher;
+  private bridgeManager: ProxyBridgeManager | null;
 
   constructor(
     db: AppDatabase,
     secrets: SecretService,
     fetcher: ProxyHttpFetcher = defaultProxyFetcher,
+    bridgeManager: ProxyBridgeManager | null = null,
   ) {
     this.db = db;
     this.secrets = secrets;
     this.fetcher = fetcher;
+    this.bridgeManager = bridgeManager;
   }
 
   clearCheckCache(): void {
@@ -354,24 +363,45 @@ export class ProxyService {
     return `${proxy.type}://${auth}${formatHostForUrl(proxy.host)}:${proxy.port}`;
   }
 
-  async openTunnelForProfile(profileId: string, proxy: ProfileProxy): Promise<string | null> {
+  async openTunnelForProfile(
+    profileId: string,
+    proxy: ProfileProxy,
+    browserKind: BrowserType = 'chrome',
+  ): Promise<{ server: string; username?: string; password?: string } | null> {
     if (proxy.type === 'none' || !proxy.host || !proxy.port) {
       return null;
     }
 
     await this.closeTunnelForProfile(profileId);
+    const decision = buildBrowserProxyArgs(proxy, browserKind);
+
+    if (!decision.viaBridge && decision.directServerUrl) {
+      return {
+        server: decision.directServerUrl,
+        ...(decision.directUsername ? { username: decision.directUsername } : {}),
+        ...(decision.directPassword ? { password: decision.directPassword } : {}),
+      };
+    }
+
+    if (this.bridgeManager) {
+      const handle = await this.bridgeManager.startBridge(proxy, profileId);
+      return { server: `${handle.type}://${handle.host}:${handle.port}` };
+    }
 
     const upstream = this.buildUpstreamUrl(proxy);
     if (proxy.username || proxy.password) {
       const localUrl = await proxyChain.anonymizeProxy(upstream);
       this.activeTunnels.set(profileId, localUrl);
-      return localUrl;
+      return { server: localUrl };
     }
 
-    return upstream;
+    return { server: upstream };
   }
 
   async closeTunnelForProfile(profileId: string): Promise<void> {
+    if (this.bridgeManager) {
+      await this.bridgeManager.stopBridge(profileId);
+    }
     const localUrl = this.activeTunnels.get(profileId);
     if (localUrl) {
       this.activeTunnels.delete(profileId);
@@ -384,6 +414,9 @@ export class ProxyService {
   }
 
   async closeAllTunnels(): Promise<void> {
+    if (this.bridgeManager) {
+      await this.bridgeManager.stopAll();
+    }
     const ids = Array.from(this.activeTunnels.keys());
     for (const id of ids) {
       await this.closeTunnelForProfile(id);
@@ -399,124 +432,177 @@ export class ProxyService {
       }
     }
 
+    const decision = buildBrowserProxyArgs(proxy, 'chrome');
+    let effectiveProxy = proxy;
+    const tempBridgeId = `check-${crypto.randomUUID()}`;
+    let startedTempBridge = false;
+
+    if (decision.viaBridge && this.bridgeManager && this.fetcher === defaultProxyFetcher) {
+      try {
+        const handle = await this.bridgeManager.startBridge(proxy, tempBridgeId);
+        startedTempBridge = true;
+        effectiveProxy = {
+          type: handle.type,
+          host: handle.host,
+          port: handle.port,
+          username: '',
+          password: '',
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          ip: '',
+          protocolUsed: proxy.type,
+          viaBridge: true,
+          dnsLeakRisk: decision.dnsLeakRisk,
+          country: '',
+          countryCode: '',
+          city: '',
+          timezone: '',
+          lat: null,
+          lon: null,
+          language: 'en-US',
+          latencyMs: 0,
+          error: classifyProxyError(err),
+        };
+      }
+    }
+
     let lastError = 'Không thể kết nối tới proxy';
     let partialResult: ProxyCheckResult | null = null;
     const overallStart = Date.now();
 
-    for (const provider of IP_PROVIDERS) {
-      const attemptStart = Date.now();
-      try {
-        const response = await this.fetcher(provider.url, proxy, CHECK_TIMEOUT_MS);
-        if (response.statusCode === 407) {
-          return {
-            ok: false,
-            ip: '',
-            country: '',
-            countryCode: '',
-            city: '',
-            timezone: '',
-            lat: null,
-            lon: null,
-            language: 'en-US',
-            latencyMs: Date.now() - attemptStart,
-            error: classifyProxyError(null, 407),
-          };
-        }
-
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          lastError = classifyProxyError(
-            new Error(`HTTP ${response.statusCode}`),
-            response.statusCode,
-          );
-          continue;
-        }
-
-        const parsedJson = JSON.parse(response.body) as Record<string, unknown>;
-        const normalized = provider.parse(parsedJson);
-        if (!normalized) {
-          lastError = `API ${provider.name} trả về dữ liệu không hợp lệ hoặc bị giới hạn`;
-          continue;
-        }
-
-        const ipVersion = detectIpVersion(normalized.ip);
-        if (!ipVersion) {
-          lastError = `API ${provider.name} trả về địa chỉ IP không hợp lệ`;
-          continue;
-        }
-
-        const result: ProxyCheckResult = {
-          ok: true,
-          ip: normalized.ip,
-          ipVersion,
-          country: normalized.country,
-          countryCode: normalized.countryCode,
-          city: normalized.city,
-          timezone: normalized.timezone,
-          lat: normalized.lat,
-          lon: normalized.lon,
-          language: inferLanguageFromCountry(normalized.countryCode),
-          latencyMs: Date.now() - attemptStart,
-        };
-
-        // If IPv6 (or any IP) is missing timezone from this API, keep as partial and try next API
-        if (!normalized.timezone.trim()) {
-          if (!partialResult) {
-            partialResult = result;
+    try {
+      for (const provider of IP_PROVIDERS) {
+        const attemptStart = Date.now();
+        try {
+          const response = await this.fetcher(provider.url, effectiveProxy, CHECK_TIMEOUT_MS);
+          if (response.statusCode === 407) {
+            return {
+              ok: false,
+              ip: '',
+              protocolUsed: proxy.type,
+              viaBridge: decision.viaBridge,
+              dnsLeakRisk: decision.dnsLeakRisk,
+              country: '',
+              countryCode: '',
+              city: '',
+              timezone: '',
+              lat: null,
+              lon: null,
+              language: 'en-US',
+              latencyMs: Date.now() - attemptStart,
+              error: classifyProxyError(null, 407),
+            };
           }
-          continue;
-        }
 
-        this.checkCache.set(cacheKey, {
-          expiresAt: Date.now() + CACHE_TTL_MS,
-          result,
-        });
-        return result;
-      } catch (err) {
-        const classified = classifyProxyError(err);
-        lastError = classified;
-        const rawCode =
-          typeof err === 'object' && err !== null && 'code' in err
-            ? String((err as { code?: unknown }).code ?? '')
-            : '';
-        if (rawCode === 'ECONNREFUSED' || rawCode === 'ENOTFOUND') {
-          return {
-            ok: false,
-            ip: '',
-            country: '',
-            countryCode: '',
-            city: '',
-            timezone: '',
-            lat: null,
-            lon: null,
-            language: 'en-US',
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            lastError = classifyProxyError(
+              new Error(`HTTP ${response.statusCode}`),
+              response.statusCode,
+            );
+            continue;
+          }
+
+          const parsedJson = JSON.parse(response.body) as Record<string, unknown>;
+          const normalized = provider.parse(parsedJson);
+          if (!normalized) {
+            lastError = `API ${provider.name} trả về dữ liệu không hợp lệ hoặc bị giới hạn`;
+            continue;
+          }
+
+          const ipVersion = detectIpVersion(normalized.ip);
+          if (!ipVersion) {
+            lastError = `API ${provider.name} trả về địa chỉ IP không hợp lệ`;
+            continue;
+          }
+
+          const result: ProxyCheckResult = {
+            ok: true,
+            ip: normalized.ip,
+            ipVersion,
+            protocolUsed: proxy.type,
+            viaBridge: decision.viaBridge,
+            dnsLeakRisk: decision.dnsLeakRisk,
+            country: normalized.country,
+            countryCode: normalized.countryCode,
+            city: normalized.city,
+            timezone: normalized.timezone,
+            lat: normalized.lat,
+            lon: normalized.lon,
+            language: inferLanguageFromCountry(normalized.countryCode),
             latencyMs: Date.now() - attemptStart,
-            error: classified,
           };
+
+          if (!normalized.timezone.trim()) {
+            if (!partialResult) {
+              partialResult = result;
+            }
+            continue;
+          }
+
+          this.checkCache.set(cacheKey, {
+            expiresAt: Date.now() + CACHE_TTL_MS,
+            result,
+          });
+          return result;
+        } catch (err) {
+          const classified = classifyProxyError(err);
+          lastError = classified;
+          const rawCode =
+            typeof err === 'object' && err !== null && 'code' in err
+              ? String((err as { code?: unknown }).code ?? '')
+              : '';
+          if (rawCode === 'ECONNREFUSED' || rawCode === 'ENOTFOUND') {
+            return {
+              ok: false,
+              ip: '',
+              protocolUsed: proxy.type,
+              viaBridge: decision.viaBridge,
+              dnsLeakRisk: decision.dnsLeakRisk,
+              country: '',
+              countryCode: '',
+              city: '',
+              timezone: '',
+              lat: null,
+              lon: null,
+              language: 'en-US',
+              latencyMs: Date.now() - attemptStart,
+              error: classified,
+            };
+          }
         }
       }
-    }
 
-    if (partialResult) {
-      this.checkCache.set(cacheKey, {
-        expiresAt: Date.now() + CACHE_TTL_MS,
-        result: partialResult,
-      });
-      return partialResult;
-    }
+      if (partialResult) {
+        this.checkCache.set(cacheKey, {
+          expiresAt: Date.now() + CACHE_TTL_MS,
+          result: partialResult,
+        });
+        return partialResult;
+      }
 
-    return {
-      ok: false,
-      ip: '',
-      country: '',
-      countryCode: '',
-      city: '',
-      timezone: '',
-      lat: null,
-      lon: null,
-      language: 'en-US',
-      latencyMs: Date.now() - overallStart,
-      error: lastError,
-    };
+      return {
+        ok: false,
+        ip: '',
+        protocolUsed: proxy.type,
+        viaBridge: decision.viaBridge,
+        dnsLeakRisk: decision.dnsLeakRisk,
+        country: '',
+        countryCode: '',
+        city: '',
+        timezone: '',
+        lat: null,
+        lon: null,
+        language: 'en-US',
+        latencyMs: Date.now() - overallStart,
+        error: lastError,
+      };
+    } finally {
+      if (startedTempBridge && this.bridgeManager) {
+        await this.bridgeManager.stopBridge(tempBridgeId);
+      }
+    }
   }
 
   async checkProxyLeak(

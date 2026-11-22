@@ -22,6 +22,8 @@ import type {
   ProfileProxy,
   ProfileRunStatusEvent,
   ProxyCheckResult,
+  ProxyCoreDownloadProgress,
+  ProxyCoreInfo,
   ProxyLeakCheckResult,
   SavedProxy,
   Tag,
@@ -89,6 +91,10 @@ export const IPC_CHANNELS = {
   BROWSER_LIST_INSTALLED: 'browser:listInstalled',
   BROWSER_INSTALL_CHROMIUM: 'browser:installChromium',
   BROWSER_INSTALL_PROGRESS: 'browser:installProgress',
+
+  PROXY_CORES_LIST: 'proxyCores:list',
+  PROXY_CORES_DOWNLOAD: 'proxyCores:download',
+  PROXY_CORES_PROGRESS: 'proxyCores:progress',
 } as const;
 
 export interface AppInfo {
@@ -184,6 +190,11 @@ export interface ElectronApi {
     browser?: 'chromium' | 'firefox',
   ) => Promise<{ ok: boolean; error?: string }>;
   onBrowserInstallProgress: (listener: (event: BrowserInstallProgressEvent) => void) => () => void;
+
+  // Proxy External Cores (sing-box / xray)
+  listProxyCores: () => Promise<ProxyCoreInfo[]>;
+  downloadProxyCore: (core: 'sing-box' | 'xray') => Promise<{ ok: boolean; error?: string }>;
+  onProxyCoreDownloadProgress: (listener: (event: ProxyCoreDownloadProgress) => void) => () => void;
 }
 
 export type { CookieItem };

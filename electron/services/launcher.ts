@@ -212,13 +212,19 @@ export class ProfileLauncher {
       };
     }
 
-    const proxyServerUrl = await this.proxyService.openTunnelForProfile(profileId, profile.proxy);
+    const proxyConn = await this.proxyService.openTunnelForProfile(
+      profileId,
+      profile.proxy,
+      profile.browser,
+    );
 
     try {
       const instance = await driver.launch({
         profile: geoResolution.updatedProfile,
         userDataDir,
-        proxyServerUrl,
+        proxyServerUrl: proxyConn?.server ?? null,
+        proxyUsername: proxyConn?.username,
+        proxyPassword: proxyConn?.password,
         resolvedGeo: geoResolution.geo,
         customExecutablePath:
           profile.browser === 'firefox' ? settings.camoufoxPath : settings.chromePath,

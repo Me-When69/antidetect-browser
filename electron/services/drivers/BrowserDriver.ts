@@ -13,6 +13,8 @@ export interface DriverLaunchOptions {
   profile: Profile;
   userDataDir: string;
   proxyServerUrl: string | null;
+  proxyUsername?: string;
+  proxyPassword?: string;
   resolvedGeo: ResolvedGeo;
   customExecutablePath?: string;
   onUnexpectedClose: (profileId: string) => void;

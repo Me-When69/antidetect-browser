@@ -164,7 +164,13 @@ export class ChromeDriver implements BrowserDriver {
       extraHTTPHeaders: {
         'Accept-Language': acceptLang,
       },
-      proxy: proxyServerUrl ? { server: proxyServerUrl } : undefined,
+      proxy: proxyServerUrl
+        ? {
+            server: proxyServerUrl,
+            ...(options.proxyUsername ? { username: options.proxyUsername } : {}),
+            ...(options.proxyPassword ? { password: options.proxyPassword } : {}),
+          }
+        : undefined,
       args,
       ignoreDefaultArgs: ['--enable-automation'],
     });

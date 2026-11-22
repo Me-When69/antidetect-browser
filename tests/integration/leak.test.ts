@@ -86,11 +86,13 @@ describe('Integration: Kiểm tra rò rỉ Proxy, WebRTC & lỗi Proxy cục b�
 
     try {
       // 1. Open local tunnel & verify Chrome routes traffic through proxy
-      const tunnelUrl = await proxyService.openTunnelForProfile(profile.id, profile.proxy);
+      const tunnelConn = await proxyService.openTunnelForProfile(profile.id, profile.proxy);
       const inst = await driver.launch({
         profile,
         userDataDir: path.join(root, 'u1'),
-        proxyServerUrl: tunnelUrl,
+        proxyServerUrl: tunnelConn?.server ?? null,
+        proxyUsername: tunnelConn?.username,
+        proxyPassword: tunnelConn?.password,
         resolvedGeo: {
           timezone: 'UTC',
           language: 'en-US',

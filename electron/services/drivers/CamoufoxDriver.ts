@@ -74,7 +74,13 @@ export class CamoufoxDriver implements BrowserDriver {
         resolvedGeo.lat !== null && resolvedGeo.lon !== null
           ? { latitude: resolvedGeo.lat, longitude: resolvedGeo.lon }
           : undefined,
-      proxy: proxyServerUrl ? { server: proxyServerUrl } : undefined,
+      proxy: proxyServerUrl
+        ? {
+            server: proxyServerUrl,
+            ...(options.proxyUsername ? { username: options.proxyUsername } : {}),
+            ...(options.proxyPassword ? { password: options.proxyPassword } : {}),
+          }
+        : undefined,
       firefoxUserPrefs,
       env: {
         ...process.env,

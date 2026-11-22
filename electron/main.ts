@@ -36,6 +36,8 @@ import { ProfileLauncher } from './services/launcher';
 import { LocalApiServer } from './services/localApi';
 import { listInstalledBrowsers, resolveBrowserExecutable } from './services/browserPath';
 import { BrowserInstaller } from './services/browserInstaller';
+import { ProxyCoreManager } from './services/proxyCoreManager';
+import { ProxyBridgeManager } from './services/proxyBridge';
 import { generateConsistentIdentity, listDevicePresets } from './services/fingerprint/generator';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,6 +63,7 @@ function resolveDataDir(): string {
 function initServices(): {
   dataDir: string;
   logger: AppLogger;
+  coreManager: ProxyCoreManager;
   profileService: ProfileService;
   proxyService: ProxyService;
   settingsService: SettingsService;
@@ -80,8 +83,29 @@ function initServices(): {
   dbCtx = createDatabase(dbPath);
   const secrets = new SecretService(safeStorage);
   const logger = new AppLogger(logsDir);
+  const coreManager = new ProxyCoreManager(path.join(app.getPath('userData'), 'cores'), logger);
+  let profileLauncherRef: ProfileLauncher | null = null;
+  const bridgeManager = new ProxyBridgeManager(
+    logger,
+    coreManager,
+    path.join(app.getPath('userData'), 'bridge-pids.json'),
+    (profileId, reason) => {
+      if (profileLauncherRef) {
+        void profileLauncherRef.stop(profileId);
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.LAUNCHER_STATUS_EVENT, {
+          profileId,
+          running: false,
+          error: reason,
+        });
+      }
+    },
+  );
+  bridgeManager.cleanupOrphanProcesses();
+
   const profileService = new ProfileService(dbCtx.db, secrets, profilesDir);
-  const proxyService = new ProxyService(dbCtx.db, secrets);
+  const proxyService = new ProxyService(dbCtx.db, secrets, undefined, bridgeManager);
   const settingsService = new SettingsService(dbCtx.db);
   const profileLauncher = new ProfileLauncher(
     profileService,
@@ -89,6 +113,7 @@ function initServices(): {
     settingsService,
     logger,
   );
+  profileLauncherRef = profileLauncher;
   const apiServer = new LocalApiServer(profileService, profileLauncher, settingsService, logger);
 
   launcher = profileLauncher;
@@ -112,6 +137,7 @@ function initServices(): {
   return {
     dataDir,
     logger,
+    coreManager,
     profileService,
     proxyService,
     settingsService,
@@ -124,6 +150,7 @@ function registerIpcHandlers(): void {
   const {
     dataDir,
     logger,
+    coreManager,
     profileService,
     proxyService,
     settingsService,
@@ -307,6 +334,16 @@ function registerIpcHandlers(): void {
         }
       });
     },
+  );
+
+  // External proxy cores (sing-box / xray)
+  ipcMain.handle(IPC_CHANNELS.PROXY_CORES_LIST, () => coreManager.listCores());
+  ipcMain.handle(IPC_CHANNELS.PROXY_CORES_DOWNLOAD, (_e, core: 'sing-box' | 'xray') =>
+    coreManager.downloadCore(core, (payload) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.PROXY_CORES_PROGRESS, payload);
+      }
+    }),
   );
 }
 
