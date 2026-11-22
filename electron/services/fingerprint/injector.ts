@@ -32,16 +32,41 @@ function getUaPlatformName(platform: Platform): string {
 }
 
 export function buildFingerprintInitScript(profile: Profile, resolvedGeo?: ResolvedGeo): string {
-  const majorVersion = profile.browserVersion.split('.')[0] ?? '131';
+  const majorVersion = profile.browserVersion.split('.')[0] ?? '136';
   const navPlatform = getNavigatorPlatform(profile.platform);
   const uaPlatform = getUaPlatformName(profile.platform);
+  const isMobile =
+    profile.fingerprint.mobile ?? (profile.platform === 'android' || profile.platform === 'ios');
+  const isIos = profile.platform === 'ios';
+  const exposeClientHints = !isIos && profile.browser !== 'firefox';
+  const defaultPlatformVersion =
+    profile.platform === 'windows'
+      ? profile.osVersion.includes('11')
+        ? '15.0.0'
+        : '10.0.0'
+      : profile.platform === 'macos'
+        ? '14.5.0'
+        : profile.platform === 'android'
+          ? '14.0.0'
+          : '6.5.0';
+  const defaultArchitecture =
+    profile.platform === 'macos' || profile.platform === 'android' ? 'arm' : 'x86';
 
   const config = {
     platform: navPlatform,
     uaPlatform,
     osVersion: profile.osVersion,
+    browser: profile.browser,
     browserVersion: profile.browserVersion,
     majorVersion,
+    isMobile,
+    isIos,
+    exposeClientHints,
+    maxTouchPoints: profile.fingerprint.maxTouchPoints ?? (isMobile ? 5 : 0),
+    model: profile.fingerprint.model ?? '',
+    architecture: profile.fingerprint.architecture || defaultArchitecture,
+    bitness: profile.fingerprint.bitness || '64',
+    platformVersion: profile.fingerprint.platformVersion || defaultPlatformVersion,
     cores: profile.fingerprint.hardware.cores,
     memory: profile.fingerprint.hardware.memory,
     screen: profile.fingerprint.screen,
@@ -121,41 +146,105 @@ export function buildFingerprintInitScript(profile: Profile, resolvedGeo?: Resol
     }
 
     // Client Hints (navigator.userAgentData)
-    const brands = [
-      { brand: 'Google Chrome', version: cfg.majorVersion },
-      { brand: 'Chromium', version: cfg.majorVersion },
-      { brand: 'Not_A Brand', version: '24' },
-    ];
-    const uaData = {
-      brands,
-      mobile: false,
-      platform: cfg.uaPlatform,
-      getHighEntropyValues: maskAsNative(async (hints) => {
-        const result = {
-          brands,
-          mobile: false,
-          platform: cfg.uaPlatform,
-        };
-        if (Array.isArray(hints)) {
-          if (hints.includes('platformVersion')) result.platformVersion = cfg.osVersion.includes('11') ? '15.0.0' : '10.0.0';
-          if (hints.includes('architecture')) result.architecture = cfg.uaPlatform === 'macOS' ? 'arm' : 'x86';
-          if (hints.includes('bitness')) result.bitness = '64';
-          if (hints.includes('uaFullVersion')) result.uaFullVersion = cfg.browserVersion;
-          if (hints.includes('fullVersionList')) {
-            result.fullVersionList = brands.map((b) => ({ brand: b.brand, version: cfg.browserVersion }));
+    if (!cfg.exposeClientHints) {
+      defineGetter(Navigator.prototype, 'userAgentData', () => undefined);
+    } else {
+      const brands = [
+        { brand: 'Google Chrome', version: cfg.majorVersion },
+        { brand: 'Chromium', version: cfg.majorVersion },
+        { brand: 'Not_A Brand', version: '24' },
+      ];
+      const uaData = {
+        brands,
+        mobile: cfg.isMobile,
+        platform: cfg.uaPlatform,
+        getHighEntropyValues: maskAsNative(async (hints) => {
+          const result = {
+            brands,
+            mobile: cfg.isMobile,
+            platform: cfg.uaPlatform,
+          };
+          if (Array.isArray(hints)) {
+            if (hints.includes('platformVersion')) result.platformVersion = cfg.platformVersion;
+            if (hints.includes('architecture')) result.architecture = cfg.architecture;
+            if (hints.includes('bitness')) result.bitness = cfg.bitness;
+            if (hints.includes('model')) result.model = cfg.model;
+            if (hints.includes('uaFullVersion')) result.uaFullVersion = cfg.browserVersion;
+            if (hints.includes('fullVersionList')) {
+              result.fullVersionList = brands.map((b) => ({
+                brand: b.brand,
+                version: b.brand === 'Not_A Brand' ? '24.0.0.0' : cfg.browserVersion,
+              }));
+            }
           }
+          return result;
+        }, 'getHighEntropyValues'),
+        toJSON: maskAsNative(
+          () => ({ brands, mobile: cfg.isMobile, platform: cfg.uaPlatform }),
+          'toJSON',
+        ),
+      };
+      defineGetter(Navigator.prototype, 'userAgentData', () => uaData);
+    }
+
+    // Touch & Mobile overrides
+    defineGetter(Navigator.prototype, 'maxTouchPoints', () => cfg.maxTouchPoints);
+    if (cfg.isMobile) {
+      try {
+        if (!('ontouchstart' in window)) {
+          Object.defineProperty(window, 'ontouchstart', {
+            value: null,
+            writable: true,
+            configurable: true,
+          });
         }
-        return result;
-      }, 'getHighEntropyValues'),
-      toJSON: maskAsNative(() => ({ brands, mobile: false, platform: cfg.uaPlatform }), 'toJSON'),
-    };
-    defineGetter(Navigator.prototype, 'userAgentData', () => uaData);
+      } catch {}
+      defineGetter(window, 'orientation', () => 0);
+      if (typeof ScreenOrientation !== 'undefined' && screen.orientation) {
+        const isLandscape = cfg.screen.width > cfg.screen.height;
+        defineGetter(ScreenOrientation.prototype, 'type', () =>
+          isLandscape ? 'landscape-primary' : 'portrait-primary',
+        );
+        defineGetter(ScreenOrientation.prototype, 'angle', () => (isLandscape ? 90 : 0));
+      }
+      // Hide desktop-only plugins on mobile
+      defineGetter(Navigator.prototype, 'plugins', () => {
+        const empty = [];
+        empty.item = () => null;
+        empty.namedItem = () => null;
+        empty.refresh = () => {};
+        return empty;
+      });
+      // MatchMedia coarse pointer / no hover for mobile devices
+      if (typeof window.matchMedia === 'function') {
+        const origMatchMedia = window.matchMedia.bind(window);
+        window.matchMedia = maskAsNative(function matchMedia(query) {
+          const mql = origMatchMedia(query);
+          const q = String(query).toLowerCase().replace(/\\s+/g, ' ').trim();
+          let forced = null;
+          if (q.includes('pointer: coarse') || q.includes('any-pointer: coarse')) forced = true;
+          else if (q.includes('pointer: fine') || q.includes('any-pointer: fine')) forced = false;
+          else if (q.includes('hover: none') || q.includes('any-hover: none')) forced = true;
+          else if (q.includes('hover: hover') || q.includes('any-hover: hover')) forced = false;
+          if (forced === null) return mql;
+          return new Proxy(mql, {
+            get(target, prop) {
+              if (prop === 'matches') return forced;
+              const val = target[prop];
+              return typeof val === 'function' ? val.bind(target) : val;
+            },
+          });
+        }, 'matchMedia');
+      }
+    }
 
     // Screen & DPR overrides
     defineGetter(Screen.prototype, 'width', () => cfg.screen.width);
     defineGetter(Screen.prototype, 'height', () => cfg.screen.height);
     defineGetter(Screen.prototype, 'availWidth', () => cfg.screen.width);
-    defineGetter(Screen.prototype, 'availHeight', () => Math.max(200, cfg.screen.height - 40));
+    defineGetter(Screen.prototype, 'availHeight', () =>
+      cfg.isMobile ? cfg.screen.height : Math.max(200, cfg.screen.height - 40),
+    );
     defineGetter(Screen.prototype, 'colorDepth', () => 24);
     defineGetter(Screen.prototype, 'pixelDepth', () => 24);
     defineGetter(window, 'devicePixelRatio', () => cfg.screen.dpr);

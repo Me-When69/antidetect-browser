@@ -26,6 +26,7 @@ import type {
 } from '@shared/types';
 import { parseProfilesCsv, parseQuickProxy } from '@shared/validation';
 import { generateConsistentIdentity } from './fingerprint/generator';
+import { applyDevice, getDeviceById, normalizeBrowserVersion } from './deviceCatalog';
 import type { SecretService } from './secretService';
 
 type ProfileRow = typeof profilesTable.$inferSelect;
@@ -361,19 +362,50 @@ export class ProfileService {
 
   bulkUpdate(input: BulkUpdateInput): number {
     let count = 0;
+    const device = input.deviceId ? getDeviceById(input.deviceId) : null;
     for (const id of input.ids) {
       const existing = this.getById(id);
       if (!existing) continue;
       const nextTags = input.addTags
         ? Array.from(new Set([...existing.tags, ...input.addTags]))
         : existing.tags;
-      this.update({
-        id,
-        folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
-        status: input.status ?? existing.status,
-        tags: nextTags,
-        proxy: input.proxy ?? existing.proxy,
-      });
+
+      const targetVersion = input.browserVersion
+        ? normalizeBrowserVersion(input.browserVersion)
+        : existing.browserVersion;
+
+      if (device) {
+        const applied = applyDevice(existing, device, targetVersion);
+        this.update({
+          ...applied,
+          id,
+          folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
+          status: input.status ?? existing.status,
+          tags: nextTags,
+          proxy: input.proxy ?? existing.proxy,
+        });
+      } else {
+        let nextUa = existing.userAgent;
+        if (input.browserVersion && existing.platform !== 'ios' && nextUa !== 'auto') {
+          if (existing.browser === 'firefox') {
+            const major = targetVersion.split('.')[0] ?? '136';
+            nextUa = nextUa
+              .replace(/rv:\d+\.\d+/i, `rv:${major}.0`)
+              .replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`);
+          } else {
+            nextUa = nextUa.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${targetVersion}`);
+          }
+        }
+        this.update({
+          id,
+          folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
+          status: input.status ?? existing.status,
+          tags: nextTags,
+          proxy: input.proxy ?? existing.proxy,
+          browserVersion: targetVersion,
+          userAgent: nextUa,
+        });
+      }
       count += 1;
     }
     return count;

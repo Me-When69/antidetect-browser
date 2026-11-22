@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
-import type { CookieItem } from '@shared/types';
+import type { CookieItem, Platform, Profile } from '@shared/types';
 import { resolveBrowserExecutable } from '../browserPath';
 import { CHROME_NO_AUTOUPDATE_ARGS } from '../browserManager';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
@@ -56,9 +56,40 @@ function fetchCdpWsEndpoint(port: number): Promise<string> {
   });
 }
 
+function getCdpNavPlatform(platform: Platform): string {
+  switch (platform) {
+    case 'windows':
+      return 'Win32';
+    case 'macos':
+      return 'MacIntel';
+    case 'linux':
+      return 'Linux x86_64';
+    case 'android':
+      return 'Linux armv8l';
+    case 'ios':
+      return 'iPhone';
+  }
+}
+
+function getCdpUaPlatform(platform: Platform): string {
+  switch (platform) {
+    case 'windows':
+      return 'Windows';
+    case 'macos':
+      return 'macOS';
+    case 'linux':
+      return 'Linux';
+    case 'android':
+      return 'Android';
+    case 'ios':
+      return 'iOS';
+  }
+}
+
 async function applyCdpOverrides(
   context: BrowserContext,
   page: Page,
+  profile: Profile,
   geo: ResolvedGeo,
 ): Promise<void> {
   try {
@@ -80,6 +111,100 @@ async function applyCdpOverrides(
           latitude: geo.lat,
           longitude: geo.lon,
           accuracy: geo.accuracy ?? 50,
+        })
+        .catch(() => {});
+    }
+
+    const isMobile =
+      profile.fingerprint.mobile ?? (profile.platform === 'android' || profile.platform === 'ios');
+    const isIos = profile.platform === 'ios';
+
+    // User-Agent & Client Hints override via CDP (also propagates to Workers and HTTP headers)
+    if (profile.userAgent && profile.userAgent !== 'auto') {
+      const major = profile.browserVersion.split('.')[0] ?? '136';
+      const fullVersion = profile.browserVersion;
+      const defaultArch =
+        profile.platform === 'macos' || profile.platform === 'android' ? 'arm' : 'x86';
+      const defaultPlatformVersion =
+        profile.platform === 'windows'
+          ? profile.osVersion.includes('11')
+            ? '15.0.0'
+            : '10.0.0'
+          : profile.platform === 'macos'
+            ? '14.5.0'
+            : profile.platform === 'android'
+              ? '14.0.0'
+              : '6.5.0';
+
+      if (isIos) {
+        // NEVER send Chrome userAgentMetadata for iOS
+        await cdp
+          .send('Emulation.setUserAgentOverride', {
+            userAgent: profile.userAgent,
+            acceptLanguage: geo.acceptLanguage || 'en-US,en;q=0.9',
+            platform: 'iPhone',
+          })
+          .catch(() => {});
+      } else {
+        await cdp
+          .send('Emulation.setUserAgentOverride', {
+            userAgent: profile.userAgent,
+            acceptLanguage: geo.acceptLanguage || 'en-US,en;q=0.9',
+            platform: getCdpNavPlatform(profile.platform),
+            userAgentMetadata: {
+              brands: [
+                { brand: 'Google Chrome', version: major },
+                { brand: 'Chromium', version: major },
+                { brand: 'Not_A Brand', version: '24' },
+              ],
+              fullVersionList: [
+                { brand: 'Google Chrome', version: fullVersion },
+                { brand: 'Chromium', version: fullVersion },
+                { brand: 'Not_A Brand', version: '24.0.0.0' },
+              ],
+              fullVersion,
+              platform: getCdpUaPlatform(profile.platform),
+              platformVersion: profile.fingerprint.platformVersion || defaultPlatformVersion,
+              architecture: profile.fingerprint.architecture || defaultArch,
+              model: profile.fingerprint.model ?? '',
+              mobile: isMobile,
+              bitness: profile.fingerprint.bitness || '64',
+            },
+          })
+          .catch(() => {});
+      }
+    }
+
+    // Mobile device metrics & touch emulation (Android / iOS)
+    if (isMobile) {
+      const width = profile.fingerprint.screen.width;
+      const height = profile.fingerprint.screen.height;
+      const dpr = profile.fingerprint.screen.dpr || 3;
+      const maxTouchPoints = profile.fingerprint.maxTouchPoints ?? 5;
+      await cdp
+        .send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: dpr,
+          mobile: true,
+          screenWidth: width,
+          screenHeight: height,
+          screenOrientation: {
+            type: width > height ? 'landscapePrimary' : 'portraitPrimary',
+            angle: width > height ? 90 : 0,
+          },
+        })
+        .catch(() => {});
+      await cdp
+        .send('Emulation.setTouchEmulationEnabled', {
+          enabled: true,
+          maxTouchPoints,
+        })
+        .catch(() => {});
+      await cdp
+        .send('Emulation.setEmitTouchEventsForMouse', {
+          enabled: true,
+          configuration: 'mobile',
         })
         .catch(() => {});
     }
@@ -145,13 +270,20 @@ export class ChromeDriver implements BrowserDriver {
     }
 
     const acceptLang = resolvedGeo.acceptLanguage || 'en-US,en;q=0.9';
+    const isMobile =
+      profile.fingerprint.mobile ?? (profile.platform === 'android' || profile.platform === 'ios');
 
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: false,
       executablePath: executablePath || undefined,
       channel: executablePath ? undefined : 'chrome',
       userAgent: profile.userAgent !== 'auto' ? profile.userAgent : undefined,
-      viewport: null,
+      viewport: isMobile
+        ? { width: profile.fingerprint.screen.width, height: profile.fingerprint.screen.height }
+        : null,
+      deviceScaleFactor: isMobile ? profile.fingerprint.screen.dpr || 3 : undefined,
+      isMobile: isMobile ? true : undefined,
+      hasTouch: isMobile ? true : undefined,
       locale: resolvedGeo.language || 'en-US',
       timezoneId: resolvedGeo.timezone || undefined,
       geolocation:
@@ -186,10 +318,10 @@ export class ChromeDriver implements BrowserDriver {
 
     // Apply CDP overrides to existing and new pages
     context.on('page', (page) => {
-      void applyCdpOverrides(context, page, resolvedGeo);
+      void applyCdpOverrides(context, page, profile, resolvedGeo);
     });
     for (const page of context.pages()) {
-      await applyCdpOverrides(context, page, resolvedGeo);
+      await applyCdpOverrides(context, page, profile, resolvedGeo);
     }
 
     // Open startup URLs

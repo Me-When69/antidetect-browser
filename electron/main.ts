@@ -36,6 +36,14 @@ import { ProfileLauncher } from './services/launcher';
 import { LocalApiServer } from './services/localApi';
 import { listInstalledBrowsers, resolveBrowserExecutable } from './services/browserPath';
 import { BrowserInstaller } from './services/browserInstaller';
+import { BrowserManager, previewBulkVersionUpdate } from './services/browserManager';
+import {
+  applyDevice,
+  getDeviceById,
+  getEmulationConfidence,
+  listDevices,
+  pickWeightedDevice,
+} from './services/deviceCatalog';
 import { ProxyCoreManager } from './services/proxyCoreManager';
 import { ProxyBridgeManager } from './services/proxyBridge';
 import { generateConsistentIdentity, listDevicePresets } from './services/fingerprint/generator';
@@ -64,6 +72,7 @@ function initServices(): {
   dataDir: string;
   logger: AppLogger;
   coreManager: ProxyCoreManager;
+  browserManager: BrowserManager;
   profileService: ProfileService;
   proxyService: ProxyService;
   settingsService: SettingsService;
@@ -107,11 +116,15 @@ function initServices(): {
   const profileService = new ProfileService(dbCtx.db, secrets, profilesDir);
   const proxyService = new ProxyService(dbCtx.db, secrets, undefined, bridgeManager);
   const settingsService = new SettingsService(dbCtx.db);
+  const browserManager = new BrowserManager(path.join(app.getPath('userData'), 'browsers'), logger);
   const profileLauncher = new ProfileLauncher(
     profileService,
     proxyService,
     settingsService,
     logger,
+    undefined,
+    undefined,
+    browserManager,
   );
   profileLauncherRef = profileLauncher;
   const apiServer = new LocalApiServer(profileService, profileLauncher, settingsService, logger);
@@ -138,6 +151,7 @@ function initServices(): {
     dataDir,
     logger,
     coreManager,
+    browserManager,
     profileService,
     proxyService,
     settingsService,
@@ -151,6 +165,7 @@ function registerIpcHandlers(): void {
     dataDir,
     logger,
     coreManager,
+    browserManager,
     profileService,
     proxyService,
     settingsService,
@@ -344,6 +359,63 @@ function registerIpcHandlers(): void {
         mainWindow.webContents.send(IPC_CHANNELS.PROXY_CORES_PROGRESS, payload);
       }
     }),
+  );
+
+  // Emulated devices catalog
+  ipcMain.handle(IPC_CHANNELS.DEVICES_LIST, (_e, platform?: Platform) => listDevices(platform));
+  ipcMain.handle(IPC_CHANNELS.DEVICES_PICK_RANDOM, (_e, platform: Platform, seed?: number) =>
+    pickWeightedDevice(platform, seed),
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.DEVICES_APPLY,
+    (_e, baseProfile: CreateProfileInput, deviceId: string, realBrowserVersion: string) => {
+      const device = getDeviceById(deviceId);
+      if (!device) {
+        throw new Error(`Không tìm thấy thiết bị giả lập: ${deviceId}`);
+      }
+      return applyDevice(baseProfile, device, realBrowserVersion);
+    },
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.DEVICES_CONFIDENCE,
+    (_e, targetPlatform: Platform, browser?: BrowserType) =>
+      getEmulationConfidence(targetPlatform, process.platform, browser),
+  );
+
+  // Multi-version Browser Manager
+  ipcMain.handle(IPC_CHANNELS.BROWSERS_LIST_MANAGED, () => {
+    const settings = settingsService.getSettings();
+    const profiles = profileService.list();
+    return browserManager.listInstalledVersions(
+      profiles,
+      settings.chromePath,
+      settings.camoufoxPath,
+    );
+  });
+  ipcMain.handle(IPC_CHANNELS.BROWSERS_FETCH_AVAILABLE, () =>
+    browserManager.fetchAvailableChromeVersions(),
+  );
+  ipcMain.handle(IPC_CHANNELS.BROWSERS_DOWNLOAD_VERSION, (_e, version: string) =>
+    browserManager.downloadChromeVersion(version, (payload) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.BROWSERS_DOWNLOAD_PROGRESS, payload);
+      }
+    }),
+  );
+  ipcMain.handle(IPC_CHANNELS.BROWSERS_CANCEL_DOWNLOAD, (_e, version: string) =>
+    browserManager.cancelDownload(version),
+  );
+  ipcMain.handle(IPC_CHANNELS.BROWSERS_DELETE_VERSION, (_e, version: string) =>
+    browserManager.deleteChromeVersion(version),
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.PROFILES_PREVIEW_BULK_VERSION,
+    (_e, profileIds: string[], targetVersion: string) => {
+      const selected = profileIds
+        .map((id) => profileService.getById(id))
+        .filter((p): p is NonNullable<typeof p> => p !== null);
+      return previewBulkVersionUpdate(selected, targetVersion);
+    },
   );
 }
 

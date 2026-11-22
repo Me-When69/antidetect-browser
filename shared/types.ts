@@ -296,6 +296,8 @@ export interface ProfileRunStatusEvent {
 
 export interface LaunchOptions {
   useFallbackGeo?: boolean;
+  allowDowngrade?: boolean;
+  strictVersionCheck?: boolean;
 }
 
 export interface LaunchResult {
@@ -304,9 +306,26 @@ export interface LaunchResult {
   wsEndpoint: string;
   proxyCheckFailed?: boolean;
   browserNotFound?: boolean;
-  errorCode?: 'BROWSER_NOT_INSTALLED' | 'PROXY_CHECK_FAILED';
+  downgradeDetected?: boolean;
+  downgradeInfo?: {
+    lastVersion: string;
+    targetVersion: string;
+  };
+  consistencyErrors?: IdentityCheckWarning[];
+  errorCode?:
+    | 'BROWSER_NOT_INSTALLED'
+    | 'PROXY_CHECK_FAILED'
+    | 'VERSION_DOWNGRADE'
+    | 'CONSISTENCY_ERROR';
   missingBrowser?: 'chromium' | 'firefox';
   error?: string;
+}
+
+export interface EmulationConfidence {
+  level: 'high' | 'medium' | 'low';
+  label: 'Cao' | 'Trung bình' | 'Thấp';
+  reason: string;
+  osMismatch: boolean;
 }
 
 export interface BrowserCheckResult {

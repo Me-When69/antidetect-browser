@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC_CHANNELS, type ElectronApi } from '@shared/ipc';
 import type {
+  BrowserDownloadProgress,
   BrowserInstallProgressEvent,
   ProfileRunStatusEvent,
   ProxyCoreDownloadProgress,
@@ -100,6 +101,34 @@ const electronApi: ElectronApi = {
       ipcRenderer.removeListener(IPC_CHANNELS.PROXY_CORES_PROGRESS, handler);
     };
   },
+
+  listEmulatedDevices: (platform) => ipcRenderer.invoke(IPC_CHANNELS.DEVICES_LIST, platform),
+  pickRandomDevice: (platform, seed) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_PICK_RANDOM, platform, seed),
+  applyEmulatedDevice: (baseProfile, deviceId, realBrowserVersion) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_APPLY, baseProfile, deviceId, realBrowserVersion),
+  getEmulationConfidence: (targetPlatform, browser) =>
+    ipcRenderer.invoke(IPC_CHANNELS.DEVICES_CONFIDENCE, targetPlatform, browser),
+
+  listManagedBrowsers: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSERS_LIST_MANAGED),
+  fetchAvailableChromeVersions: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSERS_FETCH_AVAILABLE),
+  downloadChromeVersion: (version) =>
+    ipcRenderer.invoke(IPC_CHANNELS.BROWSERS_DOWNLOAD_VERSION, version),
+  cancelChromeDownload: (version) =>
+    ipcRenderer.invoke(IPC_CHANNELS.BROWSERS_CANCEL_DOWNLOAD, version),
+  deleteChromeVersion: (version) =>
+    ipcRenderer.invoke(IPC_CHANNELS.BROWSERS_DELETE_VERSION, version),
+  onBrowserDownloadProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, payload: BrowserDownloadProgress): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC_CHANNELS.BROWSERS_DOWNLOAD_PROGRESS, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.BROWSERS_DOWNLOAD_PROGRESS, handler);
+    };
+  },
+  previewBulkVersionUpdate: (profileIds, targetVersion) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROFILES_PREVIEW_BULK_VERSION, profileIds, targetVersion),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

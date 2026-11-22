@@ -9,9 +9,19 @@ import type {
   WarmupConfig,
   WarmupResult,
 } from '@shared/types';
-import { parseCookiesText, serializeCookiesNetscape } from '@shared/validation';
+import {
+  checkIdentityConsistency,
+  parseCookiesText,
+  serializeCookiesNetscape,
+} from '@shared/validation';
 import { buildAcceptLanguage, deriveGeo } from './geoService';
 import { ensureBrowserInstalled } from './browserPath';
+import {
+  detectExecutableVersion,
+  isVersionDowngrade,
+  type BrowserManager,
+} from './browserManager';
+import { normalizeBrowserVersion } from './deviceCatalog';
 import type { BrowserDriver, ResolvedGeo } from './drivers/BrowserDriver';
 import { ChromeDriver } from './drivers/ChromeDriver';
 import { CamoufoxDriver } from './drivers/CamoufoxDriver';
@@ -29,6 +39,7 @@ export class ProfileLauncher {
   private logger: AppLogger;
   private chromeDriver: BrowserDriver;
   private camoufoxDriver: BrowserDriver;
+  private browserManager?: BrowserManager;
   private runningDrivers = new Map<string, BrowserDriver>();
   private listeners = new Set<StatusListener>();
 
@@ -39,6 +50,7 @@ export class ProfileLauncher {
     logger: AppLogger,
     chromeDriver: BrowserDriver = new ChromeDriver(),
     camoufoxDriver: BrowserDriver = new CamoufoxDriver(),
+    browserManager?: BrowserManager,
   ) {
     this.profileService = profileService;
     this.proxyService = proxyService;
@@ -46,6 +58,7 @@ export class ProfileLauncher {
     this.logger = logger;
     this.chromeDriver = chromeDriver;
     this.camoufoxDriver = camoufoxDriver;
+    this.browserManager = browserManager;
   }
 
   onStatusChange(listener: StatusListener): () => void {
@@ -172,8 +185,18 @@ export class ProfileLauncher {
     );
 
     const targetBrowser = profile.browser === 'firefox' ? 'firefox' : 'chromium';
+    const managedChromeExe =
+      targetBrowser === 'chromium' && this.browserManager && profile.browserVersion
+        ? this.browserManager.getExecutableForChromeVersion(profile.browserVersion)
+        : null;
+
+    const preferredCustomPath =
+      targetBrowser === 'firefox'
+        ? settings.camoufoxPath
+        : managedChromeExe || settings.chromePath;
+
     const browserCheck = ensureBrowserInstalled(targetBrowser, {
-      customPath: targetBrowser === 'firefox' ? settings.camoufoxPath : settings.chromePath,
+      customPath: preferredCustomPath,
     });
 
     if (!browserCheck.installed) {
@@ -192,9 +215,57 @@ export class ProfileLauncher {
       };
     }
 
+    const detectedRealVersion = await detectExecutableVersion(browserCheck.executablePath);
+    const effectiveVersion = detectedRealVersion
+      ? normalizeBrowserVersion(detectedRealVersion)
+      : normalizeBrowserVersion(profile.browserVersion);
+
+    // Warn on browser downgrade to protect userDataDir from schema corruption
+    if (
+      profile.lastBrowserVersion &&
+      isVersionDowngrade(profile.lastBrowserVersion, effectiveVersion) &&
+      !options?.allowDowngrade
+    ) {
+      this.logger.warn(
+        'launcher',
+        `Blocked downgrade for ${profile.name}: ${profile.lastBrowserVersion} -> ${effectiveVersion}`,
+      );
+      return {
+        profileId,
+        running: false,
+        wsEndpoint: '',
+        downgradeDetected: true,
+        errorCode: 'VERSION_DOWNGRADE',
+        downgradeInfo: {
+          lastVersion: profile.lastBrowserVersion,
+          targetVersion: effectiveVersion,
+        },
+        error: `Hồ sơ "${profile.name}" từng chạy bằng phiên bản ${profile.lastBrowserVersion}, hạ xuống ${effectiveVersion} có thể làm hỏng dữ liệu trình duyệt (cookies/IndexedDB). Hãy nhân bản hồ sơ sang thư mục mới hoặc xác nhận tiếp tục.`,
+      };
+    }
+
+    // Optional strict consistency check (blocks on critical mismatches)
+    if (options?.strictVersionCheck) {
+      const check = checkIdentityConsistency(profile, null, {
+        realEngineVersion: effectiveVersion,
+        browser: profile.browser,
+      });
+      const criticalErrors = check.warnings.filter((w) => w.severity === 'error');
+      if (criticalErrors.length > 0) {
+        return {
+          profileId,
+          running: false,
+          wsEndpoint: '',
+          errorCode: 'CONSISTENCY_ERROR',
+          consistencyErrors: criticalErrors,
+          error: criticalErrors[0]?.message ?? 'Hồ sơ có xung đột tính nhất quán.',
+        };
+      }
+    }
+
     this.logger.info(
       'launcher',
-      `Resolved browser for ${profile.name}: ${browserCheck.label} (${browserCheck.executablePath})`,
+      `Resolved browser for ${profile.name}: ${browserCheck.label} v${effectiveVersion} (${browserCheck.executablePath})`,
     );
 
     const geoResolution = await this.resolveGeo(profile, Boolean(options?.useFallbackGeo));
@@ -212,6 +283,28 @@ export class ProfileLauncher {
       };
     }
 
+    // Enforce Design Principle 1: runtime UA & Client Hints version always equals real running engine version
+    let launchProfile = geoResolution.updatedProfile;
+    if (detectedRealVersion && launchProfile.platform !== 'ios') {
+      const alignedVersion = normalizeBrowserVersion(detectedRealVersion);
+      let alignedUa = launchProfile.userAgent;
+      if (alignedUa !== 'auto') {
+        if (launchProfile.browser === 'firefox') {
+          const major = alignedVersion.split('.')[0] ?? '136';
+          alignedUa = alignedUa
+            .replace(/rv:\d+\.\d+/i, `rv:${major}.0`)
+            .replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`);
+        } else {
+          alignedUa = alignedUa.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${alignedVersion}`);
+        }
+      }
+      launchProfile = {
+        ...launchProfile,
+        browserVersion: alignedVersion,
+        userAgent: alignedUa,
+      };
+    }
+
     const proxyConn = await this.proxyService.openTunnelForProfile(
       profileId,
       profile.proxy,
@@ -220,14 +313,13 @@ export class ProfileLauncher {
 
     try {
       const instance = await driver.launch({
-        profile: geoResolution.updatedProfile,
+        profile: launchProfile,
         userDataDir,
         proxyServerUrl: proxyConn?.server ?? null,
         proxyUsername: proxyConn?.username,
         proxyPassword: proxyConn?.password,
         resolvedGeo: geoResolution.geo,
-        customExecutablePath:
-          profile.browser === 'firefox' ? settings.camoufoxPath : settings.chromePath,
+        customExecutablePath: preferredCustomPath,
         onUnexpectedClose: (closedId) => {
           this.runningDrivers.delete(closedId);
           void this.proxyService.closeTunnelForProfile(closedId);
@@ -237,7 +329,7 @@ export class ProfileLauncher {
       });
 
       this.runningDrivers.set(profileId, driver);
-      this.profileService.touchLastRun(profileId);
+      this.profileService.touchLastRun(profileId, effectiveVersion);
 
       // Apply any staged cookies imported while offline
       const stagedPath = this.getStagedCookiesPath(profileId);

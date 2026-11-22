@@ -432,11 +432,30 @@ const OS_UA_MARKERS: Record<Platform, RegExp> = {
 const MAC_ONLY_FONTS = new Set(['San Francisco', 'Helvetica Neue', 'Apple Color Emoji', 'Menlo']);
 const WIN_ONLY_FONTS = new Set(['Segoe UI', 'Calibri', 'Consolas', 'Cambria']);
 
+export interface ConsistencyCheckOptions {
+  realEngineVersion?: string;
+  browser?: BrowserType;
+}
+
+function extractMajorFromUa(ua: string, browser: BrowserType): string | null {
+  if (browser === 'firefox') {
+    const m = ua.match(/Firefox\/(\d+)/i);
+    return m?.[1] ?? null;
+  }
+  const m = ua.match(/Chrome\/(\d+)/i);
+  return m?.[1] ?? null;
+}
+
 export function checkIdentityConsistency(
-  profile: Pick<CreateProfileInput, 'platform' | 'userAgent' | 'proxy' | 'geo' | 'fingerprint'>,
+  profile: Pick<CreateProfileInput, 'platform' | 'userAgent' | 'proxy' | 'geo' | 'fingerprint'> & {
+    browser?: BrowserType;
+    browserVersion?: string;
+  },
   proxyCheck?: ProxyCheckResult | null,
+  options?: ConsistencyCheckOptions,
 ): IdentityCheckResult {
   const warnings: IdentityCheckWarning[] = [];
+  const effectiveBrowser: BrowserType = options?.browser ?? profile.browser ?? 'chrome';
 
   // 1. OS vs User-Agent
   if (profile.userAgent !== 'auto' && !OS_UA_MARKERS[profile.platform].test(profile.userAgent)) {
@@ -444,26 +463,119 @@ export function checkIdentityConsistency(
       code: 'UA_OS_MISMATCH',
       severity: 'error',
       message: `User-Agent không khớp với nền tảng ${profile.platform.toUpperCase()}.`,
-      suggestion: 'Đặt User-Agent về tự động hoặc sinh lại dấu vân tay khớp hệ điều hành.',
+      suggestion: 'Đặt User-Agent về tự động hoặc chọn lại thiết bị khớp hệ điều hành.',
+    });
+  }
+
+  // 1b. Real Engine Version vs UA / profile.browserVersion
+  if (
+    options?.realEngineVersion &&
+    profile.platform !== 'ios' &&
+    profile.userAgent !== 'auto'
+  ) {
+    const realMajor = options.realEngineVersion.trim().match(/^(\d+)/)?.[1] ?? null;
+    const uaMajor = extractMajorFromUa(profile.userAgent, effectiveBrowser);
+    if (realMajor && uaMajor && realMajor !== uaMajor) {
+      warnings.push({
+        code: 'UA_ENGINE_VERSION_MISMATCH',
+        severity: 'error',
+        message: `Phiên bản trong User-Agent (${uaMajor}) khác với phiên bản nhân trình duyệt thật đang chạy (${realMajor}).`,
+        suggestion:
+          'Không giả mạo số phiên bản khác nhân thật. Hãy bấm Tự động sửa hoặc tải đúng phiên bản trình duyệt tương ứng.',
+      });
+    }
+  }
+
+  // 1c. iOS must never carry Chrome Client Hints / Chrome UA
+  if (profile.platform === 'ios' && /Chrome\/\d+/i.test(profile.userAgent)) {
+    warnings.push({
+      code: 'IOS_CHROME_UA_MISMATCH',
+      severity: 'error',
+      message: 'Hồ sơ iOS không được dùng User-Agent Chrome desktop hoặc Chrome Client Hints.',
+      suggestion: 'Chọn lại thiết bị iPhone từ danh mục để dùng Safari Mobile UA chuẩn.',
     });
   }
 
   // 2. OS vs GPU WebGL
   const renderer = profile.fingerprint.webgl.renderer.toLowerCase();
-  if (profile.platform === 'windows' && (renderer.includes('apple') || renderer.includes('mesa'))) {
+  if (
+    profile.platform === 'windows' &&
+    (renderer.includes('apple') ||
+      renderer.includes('mesa') ||
+      renderer.includes('adreno') ||
+      renderer.includes('mali') ||
+      renderer.includes('xclipse'))
+  ) {
     warnings.push({
       code: 'GPU_OS_MISMATCH',
       severity: 'error',
-      message: 'GPU WebGL kiểu Apple/Mesa không tự nhiên trên Windows.',
-      suggestion: 'Chọn lại preset Windows (NVIDIA, Intel UHD hoặc AMD Radeon).',
+      message: 'GPU WebGL kiểu Apple/Mesa/Mobile không tự nhiên trên Windows.',
+      suggestion: 'Chọn lại thiết bị Windows (NVIDIA, Intel UHD hoặc AMD Radeon).',
     });
   }
-  if (profile.platform === 'macos' && renderer.includes('direct3d')) {
+  if (
+    profile.platform === 'macos' &&
+    (renderer.includes('direct3d') ||
+      renderer.includes('adreno') ||
+      renderer.includes('mali') ||
+      renderer.includes('xclipse'))
+  ) {
     warnings.push({
       code: 'GPU_OS_MISMATCH',
       severity: 'error',
-      message: 'GPU WebGL chứa Direct3D không tồn tại trên macOS.',
-      suggestion: 'Chọn lại preset macOS (Apple M1/M2/M3 hoặc AMD/Intel Metal).',
+      message: 'GPU WebGL chứa Direct3D hoặc GPU di động không tồn tại trên macOS.',
+      suggestion: 'Chọn lại thiết bị macOS (Apple M1/M2/M3 hoặc AMD/Intel Metal).',
+    });
+  }
+  if (
+    profile.platform === 'linux' &&
+    (renderer.includes('direct3d') || renderer.includes('apple'))
+  ) {
+    warnings.push({
+      code: 'GPU_OS_MISMATCH',
+      severity: 'error',
+      message: 'GPU WebGL Direct3D/Apple không tồn tại trên Linux.',
+      suggestion: 'Chọn lại thiết bị Linux (Mesa Intel/AMD hoặc NVIDIA).',
+    });
+  }
+  if (
+    profile.platform === 'android' &&
+    renderer &&
+    !/(adreno|mali|xclipse|powervr)/i.test(renderer)
+  ) {
+    warnings.push({
+      code: 'GPU_OS_MISMATCH',
+      severity: 'error',
+      message: 'GPU WebGL trên Android phải là GPU di động (Adreno, Mali, Xclipse hoặc PowerVR).',
+      suggestion: 'Chọn lại thiết bị Android từ danh mục để đồng bộ GPU.',
+    });
+  }
+  if (profile.platform === 'ios' && renderer && !renderer.includes('apple')) {
+    warnings.push({
+      code: 'GPU_OS_MISMATCH',
+      severity: 'error',
+      message: 'GPU WebGL trên iOS phải là Apple GPU.',
+      suggestion: 'Chọn lại thiết bị iPhone từ danh mục để đồng bộ GPU.',
+    });
+  }
+
+  // 2b. Mobile / Touch consistency
+  const isMobilePlatform = profile.platform === 'android' || profile.platform === 'ios';
+  if (isMobilePlatform) {
+    if (profile.fingerprint.mobile === false || (profile.fingerprint.maxTouchPoints ?? 5) < 1) {
+      warnings.push({
+        code: 'MOBILE_TOUCH_MISMATCH',
+        severity: 'warning',
+        message: 'Hồ sơ di động cần bật chế độ mobile và số điểm chạm (maxTouchPoints >= 1).',
+        suggestion: 'Áp dụng lại preset thiết bị di động để đồng bộ touch và viewport.',
+      });
+    }
+  } else if (profile.fingerprint.mobile === true) {
+    warnings.push({
+      code: 'DESKTOP_MOBILE_MISMATCH',
+      severity: 'warning',
+      message: 'Hồ sơ máy tính để bàn đang bật cờ mobile.',
+      suggestion: 'Áp dụng lại preset thiết bị desktop.',
     });
   }
 
@@ -478,14 +590,26 @@ export function checkIdentityConsistency(
         suggestion: 'Loại bỏ font macOS và giữ bộ font chuẩn Windows.',
       });
     }
-  } else if (profile.platform === 'macos') {
+  } else if (profile.platform === 'macos' || profile.platform === 'ios') {
     const hasWinFont = profile.fingerprint.fonts.some((f) => WIN_ONLY_FONTS.has(f));
     if (hasWinFont) {
       warnings.push({
         code: 'FONT_OS_MISMATCH',
         severity: 'warning',
-        message: 'Danh sách font chứa font đặc trưng của Windows trên hồ sơ macOS.',
-        suggestion: 'Loại bỏ font Windows và giữ bộ font chuẩn macOS.',
+        message: `Danh sách font chứa font đặc trưng của Windows trên hồ sơ ${profile.platform.toUpperCase()}.`,
+        suggestion: 'Loại bỏ font Windows và giữ bộ font chuẩn Apple.',
+      });
+    }
+  } else if (profile.platform === 'android') {
+    const hasDesktopFont = profile.fingerprint.fonts.some(
+      (f) => WIN_ONLY_FONTS.has(f) || MAC_ONLY_FONTS.has(f),
+    );
+    if (hasDesktopFont) {
+      warnings.push({
+        code: 'FONT_OS_MISMATCH',
+        severity: 'warning',
+        message: 'Danh sách font chứa font Windows/macOS trên hồ sơ Android.',
+        suggestion: 'Sử dụng bộ font chuẩn Android (Roboto, Noto Sans, Droid Sans).',
       });
     }
   }

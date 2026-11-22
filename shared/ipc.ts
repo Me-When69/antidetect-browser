@@ -2,19 +2,24 @@ import type {
   AppSettings,
   BackupPayload,
   BrowserCheckResult,
+  BrowserDownloadProgress,
   BrowserInstallProgressEvent,
   BrowserInventoryItem,
   BrowserType,
   BulkCreateInput,
   BulkUpdateInput,
+  BulkVersionPreviewItem,
   CookieItem,
   CreateProfileInput,
   CreateSavedProxyInput,
   DevicePreset,
+  EmulatedDevice,
+  EmulationConfidence,
   Folder,
   LaunchOptions,
   LaunchResult,
   LocalApiStatus,
+  ManagedBrowserVersion,
   Platform,
   Profile,
   ProfileFilter,
@@ -95,6 +100,19 @@ export const IPC_CHANNELS = {
   PROXY_CORES_LIST: 'proxyCores:list',
   PROXY_CORES_DOWNLOAD: 'proxyCores:download',
   PROXY_CORES_PROGRESS: 'proxyCores:progress',
+
+  DEVICES_LIST: 'devices:list',
+  DEVICES_PICK_RANDOM: 'devices:pickRandom',
+  DEVICES_APPLY: 'devices:apply',
+  DEVICES_CONFIDENCE: 'devices:confidence',
+
+  BROWSERS_LIST_MANAGED: 'browsers:listManaged',
+  BROWSERS_FETCH_AVAILABLE: 'browsers:fetchAvailable',
+  BROWSERS_DOWNLOAD_VERSION: 'browsers:downloadVersion',
+  BROWSERS_CANCEL_DOWNLOAD: 'browsers:cancelDownload',
+  BROWSERS_DELETE_VERSION: 'browsers:deleteVersion',
+  BROWSERS_DOWNLOAD_PROGRESS: 'browsers:downloadProgress',
+  PROFILES_PREVIEW_BULK_VERSION: 'profiles:previewBulkVersion',
 } as const;
 
 export interface AppInfo {
@@ -195,6 +213,31 @@ export interface ElectronApi {
   listProxyCores: () => Promise<ProxyCoreInfo[]>;
   downloadProxyCore: (core: 'sing-box' | 'xray') => Promise<{ ok: boolean; error?: string }>;
   onProxyCoreDownloadProgress: (listener: (event: ProxyCoreDownloadProgress) => void) => () => void;
+
+  // Emulated Devices Catalog
+  listEmulatedDevices: (platform?: Platform) => Promise<EmulatedDevice[]>;
+  pickRandomDevice: (platform: Platform, seed?: number) => Promise<EmulatedDevice>;
+  applyEmulatedDevice: (
+    baseProfile: CreateProfileInput,
+    deviceId: string,
+    realBrowserVersion: string,
+  ) => Promise<CreateProfileInput>;
+  getEmulationConfidence: (
+    targetPlatform: Platform,
+    browser?: BrowserType,
+  ) => Promise<EmulationConfidence>;
+
+  // Multi-version Browser Manager
+  listManagedBrowsers: () => Promise<ManagedBrowserVersion[]>;
+  fetchAvailableChromeVersions: () => Promise<ManagedBrowserVersion[]>;
+  downloadChromeVersion: (version: string) => Promise<{ ok: boolean; error?: string }>;
+  cancelChromeDownload: (version: string) => Promise<boolean>;
+  deleteChromeVersion: (version: string) => Promise<{ ok: boolean; error?: string }>;
+  onBrowserDownloadProgress: (listener: (event: BrowserDownloadProgress) => void) => () => void;
+  previewBulkVersionUpdate: (
+    profileIds: string[],
+    targetVersion: string,
+  ) => Promise<BulkVersionPreviewItem[]>;
 }
 
 export type { CookieItem };
