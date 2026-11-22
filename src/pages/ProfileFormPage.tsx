@@ -750,9 +750,23 @@ export function ProfileFormPage(): React.JSX.Element {
                 </label>
                 <Select {...form.register('proxy.type')}>
                   <option value="none">Không dùng Proxy</option>
-                  <option value="http">HTTP</option>
-                  <option value="https">HTTPS</option>
-                  <option value="socks5">SOCKS5</option>
+                  <optgroup label="Cơ bản">
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                    <option value="socks4">SOCKS4</option>
+                    <option value="socks5">SOCKS5</option>
+                  </optgroup>
+                  <optgroup label="Nâng cao">
+                    <option value="socks4a">SOCKS4a (DNS qua proxy)</option>
+                    <option value="socks5h">SOCKS5h (DNS qua proxy)</option>
+                    <option value="ssh">SSH Tunnel</option>
+                  </optgroup>
+                  <optgroup label="Lõi ngoài (sing-box)">
+                    <option value="shadowsocks">Shadowsocks (ss://)</option>
+                    <option value="vmess">VMess (vmess://)</option>
+                    <option value="vless">VLESS (vless://)</option>
+                    <option value="trojan">Trojan (trojan://)</option>
+                  </optgroup>
                 </Select>
               </div>
               <div>
@@ -792,7 +806,257 @@ export function ProfileFormPage(): React.JSX.Element {
                   <option value="proxy-only">Chỉ cho phép IPv6 qua proxy (proxy-only)</option>
                 </Select>
               </div>
+
+              {/* Dynamic protocol-specific fields */}
+              {watched.proxy?.type === 'ssh' && (
+                <div className="sm:col-span-3">
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    SSH Private Key (tùy chọn — thay cho mật khẩu)
+                  </label>
+                  <Textarea
+                    rows={3}
+                    {...form.register('proxy.privateKey')}
+                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                    className="font-mono text-xs"
+                  />
+                </div>
+              )}
+
+              {watched.proxy?.type === 'shadowsocks' && (
+                <div className="sm:col-span-3">
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    Shadowsocks Cipher
+                  </label>
+                  <Select
+                    value={watched.proxy?.extra?.['cipher'] ?? 'aes-256-gcm'}
+                    onChange={(e) =>
+                      form.setValue('proxy.extra', {
+                        ...(form.getValues('proxy.extra') ?? {}),
+                        cipher: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="aes-256-gcm">aes-256-gcm</option>
+                    <option value="aes-128-gcm">aes-128-gcm</option>
+                    <option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
+                    <option value="2022-blake3-aes-256-gcm">2022-blake3-aes-256-gcm</option>
+                  </Select>
+                </div>
+              )}
+
+              {(watched.proxy?.type === 'vmess' || watched.proxy?.type === 'vless') && (
+                <>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs text-muted-foreground">UUID</label>
+                    <Input
+                      value={watched.proxy?.extra?.['uuid'] ?? ''}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          uuid: e.target.value,
+                        })
+                      }
+                      placeholder="11111111-2222-3333-4444-555555555555"
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Network</label>
+                    <Select
+                      value={watched.proxy?.extra?.['network'] ?? 'tcp'}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          network: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="tcp">TCP</option>
+                      <option value="ws">WebSocket (ws)</option>
+                      <option value="grpc">gRPC</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">TLS</label>
+                    <Select
+                      value={watched.proxy?.extra?.['tls'] ?? 'none'}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          tls: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="none">None</option>
+                      <option value="tls">TLS</option>
+                      <option value="reality">Reality</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">SNI</label>
+                    <Input
+                      value={watched.proxy?.extra?.['sni'] ?? ''}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          sni: e.target.value,
+                        })
+                      }
+                      placeholder="example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Path</label>
+                    <Input
+                      value={watched.proxy?.extra?.['path'] ?? ''}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          path: e.target.value,
+                        })
+                      }
+                      placeholder="/ws"
+                    />
+                  </div>
+                </>
+              )}
+
+              {watched.proxy?.type === 'trojan' && (
+                <>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs text-muted-foreground">SNI</label>
+                    <Input
+                      value={watched.proxy?.extra?.['sni'] ?? ''}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          sni: e.target.value,
+                        })
+                      }
+                      placeholder="trojan.example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">Path</label>
+                    <Input
+                      value={watched.proxy?.extra?.['path'] ?? ''}
+                      onChange={(e) =>
+                        form.setValue('proxy.extra', {
+                          ...(form.getValues('proxy.extra') ?? {}),
+                          path: e.target.value,
+                        })
+                      }
+                      placeholder="/ws"
+                    />
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Multi-hop Proxy Chain editor (up to 3 total hops = primary + 2 chain hops) */}
+            {watched.proxy?.type !== 'none' && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-foreground">
+                    Chuỗi proxy (Chain — tối đa 3 chặng)
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={(watched.proxy?.chain?.length ?? 0) >= 2}
+                    onClick={() => {
+                      const current = form.getValues('proxy.chain') ?? [];
+                      if (current.length >= 2) return;
+                      form.setValue('proxy.chain', [
+                        ...current,
+                        { type: 'socks5', host: '', port: 1080, username: '', password: '' },
+                      ]);
+                    }}
+                  >
+                    + Thêm chặng
+                  </Button>
+                </div>
+
+                {(watched.proxy?.chain ?? []).map((hop, idx) => (
+                  <div
+                    key={idx}
+                    className="grid items-center gap-2 rounded-lg border border-border bg-secondary/30 p-2.5 sm:grid-cols-[110px_1fr_80px_auto]"
+                  >
+                    <Select
+                      value={hop.type}
+                      onChange={(e) => {
+                        const list = [...(form.getValues('proxy.chain') ?? [])];
+                        list[idx] = {
+                          ...list[idx]!,
+                          type: e.target.value as CreateProfileInput['proxy']['type'],
+                        };
+                        form.setValue('proxy.chain', list);
+                      }}
+                    >
+                      <option value="socks5">SOCKS5</option>
+                      <option value="socks5h">SOCKS5h</option>
+                      <option value="http">HTTP</option>
+                      <option value="shadowsocks">Shadowsocks</option>
+                      <option value="vless">VLESS</option>
+                    </Select>
+                    <Input
+                      value={hop.host}
+                      onChange={(e) => {
+                        const list = [...(form.getValues('proxy.chain') ?? [])];
+                        list[idx] = { ...list[idx]!, host: e.target.value };
+                        form.setValue('proxy.chain', list);
+                      }}
+                      placeholder={`Host chặng ${idx + 2}`}
+                    />
+                    <Input
+                      type="number"
+                      value={hop.port}
+                      onChange={(e) => {
+                        const list = [...(form.getValues('proxy.chain') ?? [])];
+                        list[idx] = { ...list[idx]!, port: Number(e.target.value) };
+                        form.setValue('proxy.chain', list);
+                      }}
+                      placeholder="Port"
+                    />
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={async () => {
+                          if (!window.electronAPI) return;
+                          const targetHop = form.getValues('proxy.chain')?.[idx];
+                          if (!targetHop) return;
+                          const r = await window.electronAPI.checkProxy(targetHop);
+                          showToast(
+                            r.ok
+                              ? `Chặng ${idx + 2} OK: ${r.ip} (${r.latencyMs}ms)`
+                              : `Chặng ${idx + 2} lỗi: ${r.error ?? 'Unknown'}`,
+                            r.ok ? 'success' : 'error',
+                          );
+                        }}
+                      >
+                        Test
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => {
+                          const list = [...(form.getValues('proxy.chain') ?? [])];
+                          list.splice(idx, 1);
+                          form.setValue('proxy.chain', list);
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           {/* 5. Fingerprint */}
@@ -940,7 +1204,7 @@ export function ProfileFormPage(): React.JSX.Element {
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-muted-foreground">IP đầu ra</span>
                         <span className="flex items-center gap-1.5">
-                          <span className="max-w-[140px] truncate font-mono text-emerald-400">
+                          <span className="max-w-[120px] truncate font-mono text-emerald-400">
                             {proxyCheck.ip}
                           </span>
                           {proxyCheck.ipVersion && (
@@ -948,8 +1212,25 @@ export function ProfileFormPage(): React.JSX.Element {
                               IPv{proxyCheck.ipVersion}
                             </Badge>
                           )}
+                          {proxyCheck.viaBridge !== undefined && (
+                            <Badge
+                              variant="secondary"
+                              className="px-1.5 py-0 text-[10px]"
+                            >
+                              {proxyCheck.viaBridge ? 'qua bridge' : 'trực tiếp'}
+                            </Badge>
+                          )}
                         </span>
                       </div>
+                      {proxyCheck.dnsLeakRisk && (
+                        <div className="flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                          <span>
+                            Giao thức {proxyCheck.protocolUsed?.toUpperCase()} có thể rò DNS cục bộ.
+                            Nên dùng SOCKS5h, SSH hoặc sing-box để phân giải DNS qua proxy.
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Quốc gia</span>
                         <span>

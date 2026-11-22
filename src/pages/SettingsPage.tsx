@@ -18,7 +18,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
-import type { BackupPayload, BrowserInventoryItem, LocaleCode } from '@shared/types';
+import type {
+  BackupPayload,
+  BrowserInventoryItem,
+  LocaleCode,
+  ProxyCoreInfo,
+} from '@shared/types';
 
 function downloadTextFile(filename: string, content: string, mime = 'application/json'): void {
   const blob = new Blob([content], { type: mime });
@@ -53,10 +58,41 @@ export function SettingsPage(): React.JSX.Element {
   const [installingTarget, setInstallingTarget] = useState<'chromium' | 'firefox' | null>(null);
   const [installPercent, setInstallPercent] = useState<number>(0);
 
+  const [proxyCores, setProxyCores] = useState<ProxyCoreInfo[]>([]);
+  const [downloadingCore, setDownloadingCore] = useState<'sing-box' | 'xray' | null>(null);
+  const [corePercent, setCorePercent] = useState<number>(0);
+
   const loadBrowsers = async (): Promise<void> => {
     if (!window.electronAPI) return;
-    const list = await window.electronAPI.listInstalledBrowsers();
+    const [list, cores] = await Promise.all([
+      window.electronAPI.listInstalledBrowsers(),
+      window.electronAPI.listProxyCores(),
+    ]);
     setBrowsers(list);
+    setProxyCores(cores);
+  };
+
+  const handleDownloadCore = async (core: 'sing-box' | 'xray'): Promise<void> => {
+    if (!window.electronAPI) return;
+    setDownloadingCore(core);
+    setCorePercent(0);
+    const unsubscribe = window.electronAPI.onProxyCoreDownloadProgress((ev) => {
+      if (ev.core === core && typeof ev.percent === 'number') {
+        setCorePercent(ev.percent);
+      }
+    });
+    try {
+      const res = await window.electronAPI.downloadProxyCore(core);
+      if (res.ok) {
+        showToast(`Đã tải lõi ${core} thành công`, 'success');
+        await loadBrowsers();
+      } else {
+        showToast(res.error ?? `Tải ${core} thất bại`, 'error');
+      }
+    } finally {
+      unsubscribe();
+      setDownloadingCore(null);
+    }
   };
 
   useEffect(() => {
@@ -239,6 +275,71 @@ export function SettingsPage(): React.JSX.Element {
                         : 'Tải về'}
                   </Button>
                 )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* External Proxy Cores (sing-box / xray) */}
+      <Card className="space-y-4 p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Server className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">Lõi proxy (sing-box / xray)</h3>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => void loadBrowsers()}>
+            <RefreshCw className="h-3.5 w-3.5" />
+            Làm mới
+          </Button>
+        </div>
+
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {proxyCores.map((core) => {
+            const isDownloading = downloadingCore === core.name;
+            return (
+              <div
+                key={core.name}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs"
+              >
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">{core.name}</span>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {core.version}
+                    </Badge>
+                    <Badge
+                      className={
+                        core.installed
+                          ? 'bg-emerald-500/15 text-emerald-400'
+                          : 'bg-amber-500/15 text-amber-400'
+                      }
+                    >
+                      {core.installed ? 'Đã cài' : 'Chưa cài'}
+                    </Badge>
+                  </div>
+                  <p className="truncate font-mono text-[11px] text-muted-foreground">
+                    {core.executablePath}
+                  </p>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant={core.installed ? 'outline' : 'default'}
+                  disabled={downloadingCore !== null}
+                  onClick={() => void handleDownloadCore(core.name)}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  {isDownloading
+                    ? `Đang tải (${corePercent}%)...`
+                    : core.installed
+                      ? 'Cập nhật'
+                      : 'Tải về'}
+                </Button>
               </div>
             );
           })}
