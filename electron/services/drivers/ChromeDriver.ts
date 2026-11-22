@@ -336,6 +336,9 @@ export class ChromeDriver implements BrowserDriver {
       '--disable-blink-features=AutomationControlled',
       '--no-first-run',
       '--no-default-browser-check',
+      '--metrics-recording-only',
+      '--disable-breakpad',
+      '--disable-domain-reliability',
       ...CHROME_NO_AUTOUPDATE_ARGS,
       `--window-size=${winCfg.width},${winCfg.height}`,
     ];

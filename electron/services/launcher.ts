@@ -392,16 +392,26 @@ export class ProfileLauncher {
     this.emitStatus({ profileId, running: false });
   }
 
-  async bulkStart(profileIds: string[]): Promise<LaunchResult[]> {
+  async bulkStart(profileIds: string[], concurrency = 3): Promise<LaunchResult[]> {
     const results: LaunchResult[] = [];
-    for (const id of profileIds) {
-      try {
-        results.push(await this.start(id));
-      } catch (err) {
-        this.logger.warn(
-          'launcher',
-          `Bulk start skipped ${id}: ${err instanceof Error ? err.message : String(err)}`,
-        );
+    const batchSize = Math.max(1, Math.min(5, concurrency));
+    for (let i = 0; i < profileIds.length; i += batchSize) {
+      const batch = profileIds.slice(i, i + batchSize);
+      const batchResults = await Promise.all(
+        batch.map(async (id) => {
+          try {
+            return await this.start(id);
+          } catch (err) {
+            this.logger.warn(
+              'launcher',
+              `Bulk start skipped ${id}: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            return null;
+          }
+        }),
+      );
+      for (const r of batchResults) {
+        if (r) results.push(r);
       }
     }
     return results;

@@ -54,6 +54,7 @@ export const IPC_CHANNELS = {
   PROFILES_PERMANENT_DELETE: 'profiles:permanentDelete',
   PROFILES_EMPTY_TRASH: 'profiles:emptyTrash',
   PROFILES_IMPORT_CSV: 'profiles:importCsv',
+  PROFILES_CLEAN_CACHE: 'profiles:cleanCache',
 
   FOLDERS_LIST: 'folders:list',
   FOLDERS_CREATE: 'folders:create',
@@ -155,6 +156,7 @@ export interface ElectronApi {
   permanentDeleteProfile: (id: string) => Promise<void>;
   emptyTrash: () => Promise<number>;
   importProfilesCsv: (rawCsv: string, folderId?: string | null) => Promise<Profile[]>;
+  cleanProfileCache: (id: string) => Promise<{ freedBytes: number }>;
 
   // Folders & Tags
   listFolders: () => Promise<Folder[]>;

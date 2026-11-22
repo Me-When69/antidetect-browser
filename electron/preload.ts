@@ -25,6 +25,7 @@ const electronApi: ElectronApi = {
   emptyTrash: () => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_EMPTY_TRASH),
   importProfilesCsv: (rawCsv, folderId) =>
     ipcRenderer.invoke(IPC_CHANNELS.PROFILES_IMPORT_CSV, rawCsv, folderId),
+  cleanProfileCache: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROFILES_CLEAN_CACHE, id),
 
   listFolders: () => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_LIST),
   createFolder: (name) => ipcRenderer.invoke(IPC_CHANNELS.FOLDERS_CREATE, name),

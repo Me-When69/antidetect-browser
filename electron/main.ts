@@ -228,6 +228,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.PROFILES_IMPORT_CSV, (_e, rawCsv: string, folderId?: string | null) =>
     profileService.importCsv(rawCsv, folderId ?? null),
   );
+  ipcMain.handle(IPC_CHANNELS.PROFILES_CLEAN_CACHE, (_e, id: string) =>
+    profileService.cleanProfileCache(id),
+  );
 
   // Folders & Tags
   ipcMain.handle(IPC_CHANNELS.FOLDERS_LIST, () => profileService.listFolders());

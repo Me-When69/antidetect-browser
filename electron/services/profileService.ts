@@ -150,6 +150,48 @@ export class ProfileService {
     return path.join(this.profilesRootDir, profileId);
   }
 
+  /**
+   * Safely remove only recreatable browser cache directories for a profile
+   * (never touches cookies, localStorage, IndexedDB, or profile config).
+   */
+  cleanProfileCache(profileId: string): { freedBytes: number } {
+    const dir = this.getProfileDir(profileId);
+    if (!fs.existsSync(dir)) return { freedBytes: 0 };
+
+    const calcSize = (p: string): number => {
+      if (!fs.existsSync(p)) return 0;
+      const stat = fs.statSync(p);
+      if (!stat.isDirectory()) return stat.size;
+      let sum = 0;
+      for (const e of fs.readdirSync(p, { withFileTypes: true })) {
+        sum += calcSize(path.join(p, e.name));
+      }
+      return sum;
+    };
+
+    const cacheDirs = [
+      path.join(dir, 'Default', 'Cache'),
+      path.join(dir, 'Default', 'Code Cache'),
+      path.join(dir, 'Default', 'GPUCache'),
+      path.join(dir, 'GrShaderCache'),
+      path.join(dir, 'ShaderCache'),
+      path.join(dir, 'static-cache'),
+      path.join(dir, 'firefox-profile', 'cache2'),
+    ];
+
+    let freedBytes = 0;
+    for (const target of cacheDirs) {
+      if (!fs.existsSync(target)) continue;
+      try {
+        freedBytes += calcSize(target);
+        fs.rmSync(target, { recursive: true, force: true });
+      } catch {
+        // Ignore locked cache files if browser is open
+      }
+    }
+    return { freedBytes };
+  }
+
   list(filter?: ProfileFilter): Profile[] {
     const conditions: SQL[] = [isNull(profilesTable.deletedAt)];
 

@@ -123,12 +123,33 @@ function httpsGetJson(url: string): Promise<Record<string, unknown>> {
   });
 }
 
+const exeVersionCache = new Map<string, string>();
+
 export function detectExecutableVersion(exePath: string): Promise<string> {
   return new Promise((resolve) => {
     if (!exePath || !fs.existsSync(exePath)) {
       resolve('');
       return;
     }
+    let cacheKey = exePath;
+    try {
+      cacheKey = `${exePath}:${fs.statSync(exePath).mtimeMs}`;
+      const cached = exeVersionCache.get(cacheKey);
+      if (cached !== undefined) {
+        resolve(cached);
+        return;
+      }
+    } catch {
+      // Ignore stat errors
+    }
+
+    const finish = (ver: string): void => {
+      if (ver) {
+        exeVersionCache.set(cacheKey, ver);
+      }
+      resolve(ver);
+    };
+
     if (process.platform === 'win32') {
       // Read PE FileVersion cleanly via PowerShell without spawning a Chrome GUI window
       execFile(
@@ -141,7 +162,7 @@ export function detectExecutableVersion(exePath: string): Promise<string> {
         { timeout: 4000 },
         (err, stdout) => {
           const v = !err ? stdout.trim() : '';
-          resolve(/^\d+\.\d+/.test(v) ? v : '');
+          finish(/^\d+\.\d+/.test(v) ? v : '');
         },
       );
       return;
@@ -152,7 +173,7 @@ export function detectExecutableVersion(exePath: string): Promise<string> {
         return;
       }
       const m = /(\d+\.\d+\.\d+\.\d+|\d+\.\d+)/.exec(stdout);
-      resolve(m?.[1] ?? '');
+      finish(m?.[1] ?? '');
     });
   });
 }
