@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   AlertTriangle,
   Cookie,
@@ -532,7 +533,24 @@ export function ProfilesPage(): React.JSX.Element {
     showToast(`Đã xuất cookie dạng ${format.toUpperCase()}`, 'success');
   };
 
-  const folderMap = new Map(folders.map((f) => [f.id, f.name]));
+  const folderMap = useMemo(() => new Map(folders.map((f) => [f.id, f.name])), [folders]);
+  const runningSet = useMemo(() => new Set(runningIds), [runningIds]);
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const startingSet = useMemo(() => new Set(startingIds), [startingIds]);
+
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: displayedProfiles.length,
+    getScrollElement: () => tableScrollRef.current,
+    estimateSize: () => 56,
+    overscan: 8,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualRows.length > 0 ? (virtualRows[0]?.start ?? 0) : 0;
+  const paddingBottom =
+    virtualRows.length > 0
+      ? rowVirtualizer.getTotalSize() - (virtualRows[virtualRows.length - 1]?.end ?? 0)
+      : 0;
 
   return (
     <div className="space-y-4">
@@ -848,9 +866,10 @@ export function ProfilesPage(): React.JSX.Element {
           <p className="mt-1 text-sm text-muted-foreground">{dict.profiles.emptyDesc}</p>
         </Card>
       ) : (
-        <Card className="overflow-x-auto">
+        <Card className="overflow-hidden">
+          <div ref={tableScrollRef} className="max-h-[calc(100vh-290px)] overflow-auto">
           <table className="w-full min-w-[1020px] text-left text-sm">
-            <thead className="border-b border-border bg-secondary/40 text-xs text-muted-foreground">
+            <thead className="sticky top-0 z-10 border-b border-border bg-secondary/95 text-xs text-muted-foreground backdrop-blur-sm">
               <tr>
                 <th className="w-10 px-4 py-3">
                   <input
@@ -872,9 +891,16 @@ export function ProfilesPage(): React.JSX.Element {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {displayedProfiles.map((profile) => {
-                const isRunning = runningIds.includes(profile.id);
-                const isChecked = selectedIds.includes(profile.id);
+              {paddingTop > 0 && (
+                <tr aria-hidden="true">
+                  <td colSpan={10} style={{ height: `${paddingTop}px`, padding: 0 }} />
+                </tr>
+              )}
+              {virtualRows.map((vRow) => {
+                const profile = displayedProfiles[vRow.index]!;
+                const isRunning = runningSet.has(profile.id);
+                const isChecked = selectedSet.has(profile.id);
+                const isStarting = startingSet.has(profile.id);
                 const folderName = profile.folderId ? folderMap.get(profile.folderId) : null;
 
                 return (
@@ -983,15 +1009,15 @@ export function ProfilesPage(): React.JSX.Element {
                         ) : (
                           <Button
                             size="sm"
-                            disabled={startingIds.includes(profile.id)}
+                            disabled={isStarting}
                             onClick={() => void handleStart(profile.id)}
                           >
-                            {startingIds.includes(profile.id) ? (
+                            {isStarting ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Play className="h-3.5 w-3.5" />
                             )}
-                            {startingIds.includes(profile.id)
+                            {isStarting
                               ? isEn
                                 ? 'Starting...'
                                 : 'Đang mở...'
@@ -1051,8 +1077,14 @@ export function ProfilesPage(): React.JSX.Element {
                   </tr>
                 );
               })}
+              {paddingBottom > 0 && (
+                <tr aria-hidden="true">
+                  <td colSpan={10} style={{ height: `${paddingBottom}px`, padding: 0 }} />
+                </tr>
+              )}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
 

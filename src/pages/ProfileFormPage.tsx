@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -332,6 +332,8 @@ export function ProfileFormPage(): React.JSX.Element {
     };
   }, [watched.platform, watched.browser]);
 
+  const deferredWatched = useDeferredValue(watched);
+
   const identityReport = useMemo(() => {
     const current = form.getValues();
     const matchedInstalled = managedBrowsers.find(
@@ -346,7 +348,7 @@ export function ProfileFormPage(): React.JSX.Element {
       browser: current.browser,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watched, proxyCheck, managedBrowsers]);
+  }, [deferredWatched, proxyCheck, managedBrowsers]);
 
   const handleCheckProxy = async (): Promise<void> => {
     if (!window.electronAPI) return;

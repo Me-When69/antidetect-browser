@@ -71,13 +71,28 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     void bootstrap();
     if (!window.electronAPI) return;
+    const pending = new Map<string, { running: boolean; error?: string }>();
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const flush = (): void => {
+      flushTimer = null;
+      for (const [profileId, ev] of pending.entries()) {
+        setRunningStatus(profileId, ev.running);
+        if (ev.error) {
+          showToast(ev.error, 'error');
+        }
+      }
+      pending.clear();
+    };
+
     const unsubscribe = window.electronAPI.onProfileRunStatus((event) => {
-      setRunningStatus(event.profileId, event.running);
-      if (event.error) {
-        showToast(event.error, 'error');
+      pending.set(event.profileId, { running: event.running, error: event.error });
+      if (!flushTimer) {
+        flushTimer = setTimeout(flush, 120);
       }
     });
     return () => {
+      if (flushTimer) clearTimeout(flushTimer);
       unsubscribe();
     };
   }, [bootstrap, setRunningStatus, showToast]);
