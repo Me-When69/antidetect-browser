@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import http from 'node:http';
 import https from 'node:https';
+import net from 'node:net';
+import { chromium } from 'playwright-core';
 import { eq } from 'drizzle-orm';
 import * as proxyChain from 'proxy-chain';
 import { HttpsProxyAgent } from 'https-proxy-agent';
@@ -9,11 +11,14 @@ import type { AppDatabase } from '../db';
 import { proxiesTable } from '../db/schema';
 import type {
   CreateSavedProxyInput,
+  Ipv6Policy,
   ProfileProxy,
   ProxyCheckResult,
+  ProxyLeakCheckResult,
   SavedProxy,
 } from '@shared/types';
 import { inferLanguageFromCountry } from '@shared/validation';
+import { formatHostForUrl } from './proxyParser';
 import type { SecretService } from './secretService';
 
 export interface NormalizedIpInfo {
@@ -163,11 +168,47 @@ function buildAgent(proxy: ProfileProxy): http.Agent | undefined {
     proxy.username || proxy.password
       ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`
       : '';
-  const url = `${proxy.type}://${auth}${proxy.host}:${proxy.port}`;
+  const formattedHost = formatHostForUrl(proxy.host);
+  const url = `${proxy.type}://${auth}${formattedHost}:${proxy.port}`;
   if (proxy.type === 'socks5') {
     return new SocksProxyAgent(url);
   }
   return new HttpsProxyAgent(url);
+}
+
+export function detectIpVersion(ip: string): 4 | 6 | undefined {
+  const v = net.isIP(ip.trim());
+  return v === 4 ? 4 : v === 6 ? 6 : undefined;
+}
+
+export function evaluateIpv6Leak(
+  ipv4: string,
+  ipv6: string,
+  expectedProxyIp?: string,
+): ProxyLeakCheckResult {
+  const cleanV4 = ipv4.trim();
+  const cleanV6 = ipv6.trim();
+  const expected = (expectedProxyIp ?? '').trim().toLowerCase();
+
+  if (cleanV6 && net.isIP(cleanV6) === 6) {
+    const normalizedV6 = cleanV6.toLowerCase();
+    if (!expected || normalizedV6 !== expected) {
+      return {
+        ok: true,
+        ipv4: cleanV4,
+        ipv6: cleanV6,
+        leaked: true,
+        warning: `Phát hiện rò rỉ IPv6 (${cleanV6}) khác với IP đầu ra của proxy${expected ? ` (${expectedProxyIp})` : ''}. Nên bật chính sách IPv6 = Chặn (block).`,
+      };
+    }
+  }
+
+  return {
+    ok: true,
+    ipv4: cleanV4,
+    ipv6: cleanV6,
+    leaked: false,
+  };
 }
 
 const defaultProxyFetcher: ProxyHttpFetcher = (targetUrl, proxy, timeoutMs) => {
@@ -309,7 +350,7 @@ export class ProxyService {
       proxy.username || proxy.password
         ? `${encodeURIComponent(proxy.username)}:${encodeURIComponent(proxy.password)}@`
         : '';
-    return `${proxy.type}://${auth}${proxy.host}:${proxy.port}`;
+    return `${proxy.type}://${auth}${formatHostForUrl(proxy.host)}:${proxy.port}`;
   }
 
   async openTunnelForProfile(profileId: string, proxy: ProfileProxy): Promise<string | null> {
@@ -358,6 +399,7 @@ export class ProxyService {
     }
 
     let lastError = 'Không thể kết nối tới proxy';
+    let partialResult: ProxyCheckResult | null = null;
     const overallStart = Date.now();
 
     for (const provider of IP_PROVIDERS) {
@@ -365,7 +407,6 @@ export class ProxyService {
       try {
         const response = await this.fetcher(provider.url, proxy, CHECK_TIMEOUT_MS);
         if (response.statusCode === 407) {
-          // Proxy auth error fails fast — no need to retry other APIs
           return {
             ok: false,
             ip: '',
@@ -396,9 +437,16 @@ export class ProxyService {
           continue;
         }
 
+        const ipVersion = detectIpVersion(normalized.ip);
+        if (!ipVersion) {
+          lastError = `API ${provider.name} trả về địa chỉ IP không hợp lệ`;
+          continue;
+        }
+
         const result: ProxyCheckResult = {
           ok: true,
           ip: normalized.ip,
+          ipVersion,
           country: normalized.country,
           countryCode: normalized.countryCode,
           city: normalized.city,
@@ -409,6 +457,14 @@ export class ProxyService {
           latencyMs: Date.now() - attemptStart,
         };
 
+        // If IPv6 (or any IP) is missing timezone from this API, keep as partial and try next API
+        if (!normalized.timezone.trim()) {
+          if (!partialResult) {
+            partialResult = result;
+          }
+          continue;
+        }
+
         this.checkCache.set(cacheKey, {
           expiresAt: Date.now() + CACHE_TTL_MS,
           result,
@@ -417,7 +473,6 @@ export class ProxyService {
       } catch (err) {
         const classified = classifyProxyError(err);
         lastError = classified;
-        // Connection-level proxy failures fail fast without hammering fallback APIs
         const rawCode =
           typeof err === 'object' && err !== null && 'code' in err
             ? String((err as { code?: unknown }).code ?? '')
@@ -440,6 +495,14 @@ export class ProxyService {
       }
     }
 
+    if (partialResult) {
+      this.checkCache.set(cacheKey, {
+        expiresAt: Date.now() + CACHE_TTL_MS,
+        result: partialResult,
+      });
+      return partialResult;
+    }
+
     return {
       ok: false,
       ip: '',
@@ -453,5 +516,75 @@ export class ProxyService {
       latencyMs: Date.now() - overallStart,
       error: lastError,
     };
+  }
+
+  async checkProxyLeak(
+    proxy: ProfileProxy,
+    expectedProxyIp?: string,
+    ipv6Policy: Ipv6Policy = 'block',
+  ): Promise<ProxyLeakCheckResult> {
+    let tempTunnel: string | null = null;
+    try {
+      let proxyServer: string | undefined;
+      if (proxy.type !== 'none' && proxy.host && proxy.port > 0) {
+        const upstream = this.buildUpstreamUrl(proxy);
+        if (proxy.username || proxy.password) {
+          tempTunnel = await proxyChain.anonymizeProxy(upstream);
+          proxyServer = tempTunnel;
+        } else {
+          proxyServer = upstream;
+        }
+      }
+
+      const proxyHostIsIpv6 = net.isIP(proxy.host.trim().replace(/^\[|\]$/g, '')) === 6;
+      const args: string[] = ['--force-webrtc-ip-handling-policy=disable_non_proxied_udp'];
+      if (ipv6Policy === 'block' && !proxyHostIsIpv6) {
+        args.push('--disable-ipv6');
+      }
+
+      const browser = await chromium.launch({
+        headless: true,
+        proxy: proxyServer ? { server: proxyServer } : undefined,
+        args,
+      });
+
+      try {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+
+        const probe = async (url: string): Promise<string> => {
+          try {
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10_000 });
+            const text = (await page.textContent('body')) ?? '';
+            const parsed = JSON.parse(text) as { ip?: string };
+            return typeof parsed.ip === 'string' ? parsed.ip : '';
+          } catch {
+            return '';
+          }
+        };
+
+        const ipv4 = await probe('https://api4.ipify.org?format=json');
+        const ipv6 = await probe('https://api6.ipify.org?format=json');
+        return evaluateIpv6Leak(ipv4, ipv6, expectedProxyIp);
+      } finally {
+        await browser.close();
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        ipv4: '',
+        ipv6: '',
+        leaked: false,
+        error: classifyProxyError(err),
+      };
+    } finally {
+      if (tempTunnel) {
+        try {
+          await proxyChain.closeAnonymizedProxy(tempTunnel, true);
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+    }
   }
 }

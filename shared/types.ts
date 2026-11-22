@@ -3,6 +3,7 @@ export type BrowserType = 'chrome' | 'firefox';
 export type ProxyType = 'none' | 'http' | 'https' | 'socks5';
 export type GeoMode = 'auto' | 'manual';
 export type WebRtcMode = 'replace' | 'disable' | 'real';
+export type Ipv6Policy = 'block' | 'proxy-only';
 export type ProfileStatus = 'none' | 'active' | 'banned' | 'warming' | 'ready';
 
 export interface ProfileProxy {
@@ -65,6 +66,7 @@ export interface Profile {
   browserVersion: string;
   userAgent: string;
   proxy: ProfileProxy;
+  ipv6Policy: Ipv6Policy;
   geo: ProfileGeo;
   fingerprint: ProfileFingerprint;
   startup: ProfileStartup;
@@ -106,6 +108,7 @@ export type CreateSavedProxyInput = Omit<SavedProxy, 'id' | 'createdAt'>;
 export interface ProxyCheckResult {
   ok: boolean;
   ip: string;
+  ipVersion?: 4 | 6;
   country: string;
   countryCode: string;
   city: string;
@@ -114,6 +117,15 @@ export interface ProxyCheckResult {
   lon: number | null;
   language: string;
   latencyMs: number;
+  error?: string;
+}
+
+export interface ProxyLeakCheckResult {
+  ok: boolean;
+  ipv4: string;
+  ipv6: string;
+  leaked: boolean;
+  warning?: string;
   error?: string;
 }
 

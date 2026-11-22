@@ -19,6 +19,7 @@ import type {
   ProfileProxy,
   ProfileRunStatusEvent,
   ProxyCheckResult,
+  ProxyLeakCheckResult,
   SavedProxy,
   Tag,
   UpdateProfileInput,
@@ -64,6 +65,7 @@ export const IPC_CHANNELS = {
   PROXIES_UPDATE: 'proxies:update',
   PROXIES_DELETE: 'proxies:delete',
   PROXIES_CHECK: 'proxies:check',
+  PROXIES_CHECK_LEAK: 'proxies:checkLeak',
 
   FINGERPRINT_GENERATE: 'fingerprint:generate',
   FINGERPRINT_PRESETS: 'fingerprint:presets',
@@ -140,6 +142,11 @@ export interface ElectronApi {
   updateProxy: (id: string, input: Partial<CreateSavedProxyInput>) => Promise<SavedProxy>;
   deleteProxy: (id: string) => Promise<void>;
   checkProxy: (proxy: ProfileProxy) => Promise<ProxyCheckResult>;
+  checkProxyLeak: (
+    proxy: ProfileProxy,
+    expectedProxyIp?: string,
+    ipv6Policy?: 'block' | 'proxy-only',
+  ) => Promise<ProxyLeakCheckResult>;
 
   // Fingerprint
   generateFingerprint: (platform: Platform, browser: BrowserType) => Promise<GeneratedIdentity>;

@@ -121,6 +121,7 @@ export class LocalApiServer {
             username: '',
             password: '',
           },
+          ipv6Policy: partial.ipv6Policy ?? 'block',
           geo: partial.geo ?? {
             mode: 'auto',
             timezone: '',

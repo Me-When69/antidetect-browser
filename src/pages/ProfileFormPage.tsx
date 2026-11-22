@@ -36,10 +36,16 @@ import { useAppStore } from '@/store/useAppStore';
 import {
   checkIdentityConsistency,
   inferLanguageFromCountry,
-  parseQuickProxy,
+  parseQuickProxyDetailed,
   profileFormSchema,
 } from '@shared/validation';
-import type { BrowserType, CreateProfileInput, Platform, ProxyCheckResult } from '@shared/types';
+import type {
+  BrowserType,
+  CreateProfileInput,
+  Platform,
+  ProxyCheckResult,
+  ProxyLeakCheckResult,
+} from '@shared/types';
 
 type SectionId =
   'identity' | 'environment' | 'geo' | 'proxy' | 'fingerprint' | 'startup' | 'advanced';
@@ -57,6 +63,7 @@ const DEFAULT_VALUES: CreateProfileInput = {
   userAgent:
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6778.204 Safari/537.36',
   proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
+  ipv6Policy: 'block',
   geo: { mode: 'auto', timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN', lat: null, lon: null },
   fingerprint: {
     screen: { width: 1920, height: 1080, dpr: 1 },
@@ -97,6 +104,8 @@ export function ProfileFormPage(): React.JSX.Element {
   const [quickProxyText, setQuickProxyText] = useState('');
   const [checkingProxy, setCheckingProxy] = useState(false);
   const [proxyCheck, setProxyCheck] = useState<ProxyCheckResult | null>(null);
+  const [checkingLeak, setCheckingLeak] = useState(false);
+  const [leakResult, setLeakResult] = useState<ProxyLeakCheckResult | null>(null);
   const [autoMatchedGeo, setAutoMatchedGeo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -140,6 +149,7 @@ export function ProfileFormPage(): React.JSX.Element {
             browserVersion: existing.browserVersion,
             userAgent: existing.userAgent,
             proxy: existing.proxy,
+            ipv6Policy: existing.ipv6Policy ?? 'block',
             geo: existing.geo,
             fingerprint: existing.fingerprint,
             startup: existing.startup,
@@ -211,14 +221,27 @@ export function ProfileFormPage(): React.JSX.Element {
     showToast('Đã tự động đồng bộ cấu hình nhất quán', 'success');
   };
 
+  const handleCheckLeak = async (): Promise<void> => {
+    if (!window.electronAPI) return;
+    setCheckingLeak(true);
+    try {
+      const proxy = form.getValues('proxy');
+      const ipv6Policy = form.getValues('ipv6Policy');
+      const res = await window.electronAPI.checkProxyLeak(proxy, proxyCheck?.ip, ipv6Policy);
+      setLeakResult(res);
+    } finally {
+      setCheckingLeak(false);
+    }
+  };
+
   const handleQuickProxyApply = (): void => {
-    const parsed = parseQuickProxy(quickProxyText, 'http');
-    if (!parsed) {
-      showToast('Không nhận diện được định dạng proxy', 'error');
+    const parsed = parseQuickProxyDetailed(quickProxyText, 'http');
+    if (!parsed.ok) {
+      showToast(parsed.error, 'error');
       return;
     }
-    form.setValue('proxy', parsed);
-    if (parsed.type !== 'none') {
+    form.setValue('proxy', parsed.proxy);
+    if (parsed.proxy.type !== 'none') {
       form.setValue('fingerprint.webrtc', 'replace');
     }
     showToast('Đã áp dụng proxy', 'success');
@@ -760,6 +783,15 @@ export function ProfileFormPage(): React.JSX.Element {
                 </label>
                 <Input type="password" {...form.register('proxy.password')} />
               </div>
+              <div className="sm:col-span-3">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  Chính sách IPv6 (ipv6Policy)
+                </label>
+                <Select {...form.register('ipv6Policy')}>
+                  <option value="block">Chặn IPv6 trực tiếp — Mặc định (block)</option>
+                  <option value="proxy-only">Chỉ cho phép IPv6 qua proxy (proxy-only)</option>
+                </Select>
+              </div>
             </div>
           </Card>
 
@@ -905,9 +937,18 @@ export function ProfileFormPage(): React.JSX.Element {
                 <div className="mt-3 space-y-1.5 border-t border-border pt-2.5">
                   {proxyCheck.ok ? (
                     <>
-                      <div className="flex justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-muted-foreground">IP đầu ra</span>
-                        <span className="font-mono text-emerald-400">{proxyCheck.ip}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="max-w-[140px] truncate font-mono text-emerald-400">
+                            {proxyCheck.ip}
+                          </span>
+                          {proxyCheck.ipVersion && (
+                            <Badge variant="outline" className="px-1.5 py-0 font-mono text-[10px]">
+                              IPv{proxyCheck.ipVersion}
+                            </Badge>
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Quốc gia</span>
@@ -949,6 +990,49 @@ export function ProfileFormPage(): React.JSX.Element {
                   )}
                 </div>
               )}
+
+              <div className="mt-2.5 border-t border-border pt-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={checkingLeak}
+                  onClick={() => void handleCheckLeak()}
+                >
+                  {checkingLeak ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ShieldAlert className="h-3.5 w-3.5" />
+                  )}
+                  {checkingLeak ? 'Đang kiểm tra rò rỉ...' : 'Kiểm tra rò rỉ IPv6'}
+                </Button>
+
+                {leakResult && (
+                  <div className="mt-2 space-y-1">
+                    {leakResult.ok ? (
+                      <>
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">Browser IPv4</span>
+                          <span className="font-mono">{leakResult.ipv4 || '—'}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">Browser IPv6</span>
+                          <span className="font-mono">{leakResult.ipv6 || 'Không có'}</span>
+                        </div>
+                        {leakResult.leaked && leakResult.warning && (
+                          <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                            <span>{leakResult.warning}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-destructive">{leakResult.error}</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Warnings list */}

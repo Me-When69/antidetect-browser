@@ -202,6 +202,7 @@ export function ProfilesPage(): React.JSX.Element {
         browserVersion: identity.browserVersion,
         userAgent: identity.userAgent,
         proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
+        ipv6Policy: 'block',
         geo: { mode: 'auto', timezone: '', language: 'en-US', lat: null, lon: null },
         fingerprint: identity.fingerprint,
         startup: { urls: [], restoreTabs: false },
@@ -799,9 +800,7 @@ export function ProfilesPage(): React.JSX.Element {
       {fallbackPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
           <Card className="w-full max-w-md space-y-4 p-6 shadow-2xl">
-            <h3 className="text-base font-semibold text-destructive">
-              Không thể kiểm tra proxy
-            </h3>
+            <h3 className="text-base font-semibold text-destructive">Không thể kiểm tra proxy</h3>
             <p className="text-sm text-muted-foreground">{fallbackPrompt.error}</p>
             <p className="text-xs text-muted-foreground">
               Trình duyệt chưa được mở để tránh lộ múi giờ/vị trí không khớp. Bạn có muốn mở bằng

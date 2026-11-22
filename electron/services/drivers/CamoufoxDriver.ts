@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import os from 'node:os';
 import { firefox } from 'playwright-core';
@@ -79,10 +80,16 @@ export class CamoufoxDriver implements BrowserDriver {
       'webrtc:ipv4': profile.fingerprint.webrtc === 'replace' ? '0.0.0.0' : undefined,
     };
 
+    const proxyHostIsIpv6 =
+      profile.proxy.type !== 'none' &&
+      net.isIP(profile.proxy.host.trim().replace(/^\[|\]$/g, '')) === 6;
+    const shouldBlockIpv6 = (profile.ipv6Policy ?? 'block') === 'block' && !proxyHostIsIpv6;
+
     const firefoxUserPrefs: Record<string, string | number | boolean> = {
       'media.peerconnection.enabled': profile.fingerprint.webrtc !== 'disable',
       'media.peerconnection.ice.default_address_only': profile.fingerprint.webrtc === 'replace',
       'media.peerconnection.ice.no_host': profile.fingerprint.webrtc === 'replace',
+      'network.dns.disableIPv6': shouldBlockIpv6,
       'intl.accept_languages': resolvedGeo.language || 'en-US, en',
     };
 

@@ -50,6 +50,8 @@ const electronApi: ElectronApi = {
   updateProxy: (id, input) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_UPDATE, id, input),
   deleteProxy: (id) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_DELETE, id),
   checkProxy: (proxy) => ipcRenderer.invoke(IPC_CHANNELS.PROXIES_CHECK, proxy),
+  checkProxyLeak: (proxy, expectedProxyIp, ipv6Policy) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROXIES_CHECK_LEAK, proxy, expectedProxyIp, ipv6Policy),
 
   generateFingerprint: (platform, browser) =>
     ipcRenderer.invoke(IPC_CHANNELS.FINGERPRINT_GENERATE, platform, browser),

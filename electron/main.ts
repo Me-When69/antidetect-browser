@@ -10,6 +10,7 @@ import type {
   BulkUpdateInput,
   CreateProfileInput,
   CreateSavedProxyInput,
+  Ipv6Policy,
   LaunchOptions,
   Platform,
   ProfileFilter,
@@ -198,6 +199,11 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.PROXIES_DELETE, (_e, id: string) => proxyService.delete(id));
   ipcMain.handle(IPC_CHANNELS.PROXIES_CHECK, (_e, proxy: ProfileProxy) =>
     proxyService.checkProxy(proxy),
+  );
+  ipcMain.handle(
+    IPC_CHANNELS.PROXIES_CHECK_LEAK,
+    (_e, proxy: ProfileProxy, expectedProxyIp?: string, ipv6Policy?: Ipv6Policy) =>
+      proxyService.checkProxyLeak(proxy, expectedProxyIp, ipv6Policy ?? 'block'),
   );
 
   // Fingerprint

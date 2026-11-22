@@ -38,6 +38,7 @@ export const profilesTable = sqliteTable('profiles', {
   browserVersion: text('browser_version').notNull().default('131.0.6778.204'),
   userAgent: text('user_agent').notNull().default('auto'),
   proxyJson: text('proxy_json').notNull(),
+  ipv6Policy: text('ipv6_policy').notNull().default('block'),
   geoJson: text('geo_json').notNull(),
   fingerprintJson: text('fingerprint_json').notNull(),
   startupJson: text('startup_json').notNull(),

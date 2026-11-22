@@ -61,6 +61,7 @@ export const profileFormSchema = z
     browserVersion: z.string().min(1),
     userAgent: z.string().min(1),
     proxy: profileProxySchema,
+    ipv6Policy: z.enum(['block', 'proxy-only']),
     geo: profileGeoSchema,
     fingerprint: profileFingerprintSchema,
     startup: z.object({
@@ -87,31 +88,71 @@ export const profileFormSchema = z
     }
   });
 
-export function parseQuickProxy(
+export function parseQuickProxyDetailed(
   raw: string,
   defaultType: Exclude<ProxyType, 'none'> = 'http',
-): ProfileProxy | null {
+): { ok: true; proxy: ProfileProxy } | { ok: false; error: string } {
   const trimmed = raw.trim();
   if (!trimmed) {
-    return null;
+    return { ok: false, error: 'Chuỗi proxy trống' };
   }
 
-  // URL format: http://user:pass@host:port or socks5://host:port
-  const urlMatch = /^(https?|socks5):\/\/(?:([^:@]+):([^@]*)@)?([^:/]+):(\d+)$/i.exec(trimmed);
+  // Detect unbracketed IPv6
+  const withoutScheme = trimmed.replace(/^(https?|socks5):\/\//i, '');
+  const hostCandidate = withoutScheme.includes('@')
+    ? (withoutScheme.split('@').pop() ?? '')
+    : withoutScheme;
+  if (!hostCandidate.startsWith('[') && hostCandidate.includes('::')) {
+    return {
+      ok: false,
+      error:
+        'Địa chỉ IPv6 phải đặt trong ngoặc vuông, ví dụ: [::1]:8080 hoặc http://user:pass@[2001:db8::1]:8080',
+    };
+  }
+
+  // URL format: scheme://[user:pass@]([ipv6]|host):port
+  const urlMatch =
+    /^(https?|socks5):\/\/(?:([^:@\s]+):([^@\s]*)@)?(?:\[([^\]]+)\]|([^:/\s]+)):(\d+)$/i.exec(
+      trimmed,
+    );
   if (urlMatch) {
     const typeRaw = urlMatch[1]?.toLowerCase() ?? defaultType;
     const type: Exclude<ProxyType, 'none'> =
       typeRaw === 'https' || typeRaw === 'socks5' ? typeRaw : 'http';
-    const port = Number(urlMatch[5]);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) {
-      return null;
+    const host = (urlMatch[4] ?? urlMatch[5] ?? '').trim();
+    const port = Number(urlMatch[6]);
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return { ok: false, error: 'Host hoặc port proxy không hợp lệ' };
     }
     return {
-      type,
-      host: urlMatch[4] ?? '',
-      port,
-      username: decodeURIComponent(urlMatch[2] ?? ''),
-      password: decodeURIComponent(urlMatch[3] ?? ''),
+      ok: true,
+      proxy: {
+        type,
+        host,
+        port,
+        username: decodeURIComponent(urlMatch[2] ?? ''),
+        password: decodeURIComponent(urlMatch[3] ?? ''),
+      },
+    };
+  }
+
+  // Bracketed IPv6 without scheme: [::1]:8080 or [::1]:8080:user:pass
+  const bracketMatch = /^\[([^\]]+)\]:(\d+)(?::([^:]*):(.*))?$/.exec(trimmed);
+  if (bracketMatch) {
+    const host = (bracketMatch[1] ?? '').trim();
+    const port = Number(bracketMatch[2]);
+    if (!host.includes(':') || !Number.isInteger(port) || port < 1 || port > 65535) {
+      return { ok: false, error: 'Địa chỉ IPv6 hoặc port không hợp lệ' };
+    }
+    return {
+      ok: true,
+      proxy: {
+        type: defaultType,
+        host,
+        port,
+        username: bracketMatch[3] ?? '',
+        password: bracketMatch[4] ?? '',
+      },
     };
   }
 
@@ -121,20 +162,34 @@ export function parseQuickProxy(
     const host = parts[0]?.trim() ?? '';
     const port = Number(parts[1]?.trim() ?? '0');
     if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
-      return null;
+      return {
+        ok: false,
+        error: 'Định dạng proxy không hợp lệ (dùng host:port:user:pass hoặc URL)',
+      };
     }
     const username = parts.length >= 4 ? (parts[2] ?? '') : '';
     const password = parts.length >= 4 ? parts.slice(3).join(':') : '';
     return {
-      type: defaultType,
-      host,
-      port,
-      username,
-      password,
+      ok: true,
+      proxy: {
+        type: defaultType,
+        host,
+        port,
+        username,
+        password,
+      },
     };
   }
 
-  return null;
+  return { ok: false, error: 'Định dạng proxy không hợp lệ' };
+}
+
+export function parseQuickProxy(
+  raw: string,
+  defaultType: Exclude<ProxyType, 'none'> = 'http',
+): ProfileProxy | null {
+  const res = parseQuickProxyDetailed(raw, defaultType);
+  return res.ok ? res.proxy : null;
 }
 
 const COUNTRY_LANGUAGE_MAP: Record<string, string> = {

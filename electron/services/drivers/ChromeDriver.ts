@@ -153,7 +153,21 @@ export class ChromeDriver implements BrowserDriver {
       `--window-size=${profile.fingerprint.screen.width},${profile.fingerprint.screen.height}`,
     ];
 
-    if (profile.fingerprint.webrtc === 'replace' || profile.fingerprint.webrtc === 'disable') {
+    const proxyHostIsIpv6 =
+      profile.proxy.type !== 'none' &&
+      net.isIP(profile.proxy.host.trim().replace(/^\[|\]$/g, '')) === 6;
+    const shouldBlockIpv6 = (profile.ipv6Policy ?? 'block') === 'block' && !proxyHostIsIpv6;
+
+    if (shouldBlockIpv6) {
+      args.push('--disable-ipv6');
+    }
+
+    if (
+      profile.fingerprint.webrtc === 'replace' ||
+      profile.fingerprint.webrtc === 'disable' ||
+      shouldBlockIpv6 ||
+      profile.ipv6Policy === 'proxy-only'
+    ) {
       args.push('--force-webrtc-ip-handling-policy=disable_non_proxied_udp');
       args.push('--enforce-webrtc-ip-permission-check');
     }

@@ -79,7 +79,9 @@ export class ProfileLauncher {
   private async resolveGeo(
     profile: Profile,
     useFallbackGeo: boolean,
-  ): Promise<{ ok: true; geo: ResolvedGeo; updatedProfile: Profile } | { ok: false; error: string }> {
+  ): Promise<
+    { ok: true; geo: ResolvedGeo; updatedProfile: Profile } | { ok: false; error: string }
+  > {
     if (profile.geo.mode === 'manual' || useFallbackGeo) {
       const lang = profile.geo.language || 'en-US';
       return {
@@ -163,7 +165,10 @@ export class ProfileLauncher {
     const settings = this.settingsService.getSettings();
     const userDataDir = this.profileService.getProfileDir(profileId);
 
-    this.logger.info('launcher', `Starting profile ${profile.name} (${profileId}) via ${driver.name}`);
+    this.logger.info(
+      'launcher',
+      `Starting profile ${profile.name} (${profileId}) via ${driver.name}`,
+    );
 
     const geoResolution = await this.resolveGeo(profile, Boolean(options?.useFallbackGeo));
     if (!geoResolution.ok) {

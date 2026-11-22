@@ -61,6 +61,7 @@ export function createDatabase(dbPath: string): DbContext {
       browser_version TEXT NOT NULL DEFAULT '131.0.6778.204',
       user_agent TEXT NOT NULL DEFAULT 'auto',
       proxy_json TEXT NOT NULL,
+      ipv6_policy TEXT NOT NULL DEFAULT 'block',
       geo_json TEXT NOT NULL,
       fingerprint_json TEXT NOT NULL,
       startup_json TEXT NOT NULL,
@@ -79,6 +80,9 @@ export function createDatabase(dbPath: string): DbContext {
   const columns = sqlite.prepare('PRAGMA table_info(profiles)').all() as { name: string }[];
   if (!columns.some((c) => c.name === 'deleted_at')) {
     sqlite.exec('ALTER TABLE profiles ADD COLUMN deleted_at TEXT');
+  }
+  if (!columns.some((c) => c.name === 'ipv6_policy')) {
+    sqlite.exec("ALTER TABLE profiles ADD COLUMN ipv6_policy TEXT NOT NULL DEFAULT 'block'");
   }
 
   const db = drizzle(sqlite, { schema });

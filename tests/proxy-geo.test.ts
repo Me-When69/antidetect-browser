@@ -124,7 +124,9 @@ describe('Part E — Unit tests: Proxy error classification, fallback APIs & 10m
 
     expect(classifyProxyError(null, 407)).toBe('Sai tài khoản/mật khẩu hoặc chưa whitelist IP');
 
-    const leaked = classifyProxyError(new Error('Failed via http://alice:SuperSecret@1.2.3.4:8080'));
+    const leaked = classifyProxyError(
+      new Error('Failed via http://alice:SuperSecret@1.2.3.4:8080'),
+    );
     expect(leaked).not.toContain('SuperSecret');
   });
 
@@ -182,106 +184,103 @@ describe('Part E — Unit tests: Proxy error classification, fallback APIs & 10m
 });
 
 describe('Part E — Integration test: Browser timezone & locale override (main frame + iframe)', () => {
-  it(
-    'applies CDP timezone/locale override and initScript so Intl timezone and navigator.language match',
-    async () => {
-      const executablePath = findLocalChromeForTest();
-      const dir = createTempDir();
-      const identity = generateConsistentIdentity('windows', 'chrome');
-      const derived = deriveGeo(
-        { countryCode: 'VN', timezone: 'Asia/Ho_Chi_Minh', lat: 10.8231, lon: 106.6297 },
-        'integration-profile-1',
+  it('applies CDP timezone/locale override and initScript so Intl timezone and navigator.language match', async () => {
+    const executablePath = findLocalChromeForTest();
+    const dir = createTempDir();
+    const identity = generateConsistentIdentity('windows', 'chrome');
+    const derived = deriveGeo(
+      { countryCode: 'VN', timezone: 'Asia/Ho_Chi_Minh', lat: 10.8231, lon: 106.6297 },
+      'integration-profile-1',
+    );
+
+    const resolvedGeo = {
+      timezone: derived.timezone,
+      language: derived.locale,
+      acceptLanguage: derived.acceptLanguage,
+      lat: derived.geolocation?.latitude ?? null,
+      lon: derived.geolocation?.longitude ?? null,
+      accuracy: derived.geolocation?.accuracy ?? 50,
+    };
+
+    const context = await chromium.launchPersistentContext(path.join(dir, 'user-data'), {
+      headless: true,
+      executablePath,
+      permissions: ['geolocation'],
+    });
+
+    try {
+      await context.setExtraHTTPHeaders({ 'Accept-Language': resolvedGeo.acceptLanguage });
+      await context.addInitScript(
+        buildFingerprintInitScript(
+          {
+            id: 'integration-profile-1',
+            name: 'Integration Test',
+            folderId: null,
+            status: 'none',
+            tags: [],
+            notes: '',
+            platform: identity.platform,
+            osVersion: identity.osVersion,
+            browser: identity.browser,
+            browserVersion: identity.browserVersion,
+            userAgent: identity.userAgent,
+            proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
+            ipv6Policy: 'block',
+            geo: {
+              mode: 'auto',
+              timezone: resolvedGeo.timezone,
+              language: resolvedGeo.language,
+              lat: resolvedGeo.lat,
+              lon: resolvedGeo.lon,
+            },
+            fingerprint: identity.fingerprint,
+            startup: { urls: [], restoreTabs: false },
+            createdAt: new Date().toISOString(),
+            lastRunAt: null,
+            deletedAt: null,
+          },
+          resolvedGeo,
+        ),
       );
 
-      const resolvedGeo = {
-        timezone: derived.timezone,
-        language: derived.locale,
-        acceptLanguage: derived.acceptLanguage,
-        lat: derived.geolocation?.latitude ?? null,
-        lon: derived.geolocation?.longitude ?? null,
-        accuracy: derived.geolocation?.accuracy ?? 50,
-      };
+      const page = await context.newPage();
+      const cdp = await context.newCDPSession(page);
+      await cdp.send('Emulation.setTimezoneOverride', { timezoneId: resolvedGeo.timezone });
+      await cdp.send('Emulation.setLocaleOverride', { locale: resolvedGeo.language });
+      if (resolvedGeo.lat !== null && resolvedGeo.lon !== null) {
+        await cdp.send('Emulation.setGeolocationOverride', {
+          latitude: resolvedGeo.lat,
+          longitude: resolvedGeo.lon,
+          accuracy: resolvedGeo.accuracy,
+        });
+      }
 
-      const context = await chromium.launchPersistentContext(path.join(dir, 'user-data'), {
-        headless: true,
-        executablePath,
-        permissions: ['geolocation'],
-      });
-
-      try {
-        await context.setExtraHTTPHeaders({ 'Accept-Language': resolvedGeo.acceptLanguage });
-        await context.addInitScript(
-          buildFingerprintInitScript(
-            {
-              id: 'integration-profile-1',
-              name: 'Integration Test',
-              folderId: null,
-              status: 'none',
-              tags: [],
-              notes: '',
-              platform: identity.platform,
-              osVersion: identity.osVersion,
-              browser: identity.browser,
-              browserVersion: identity.browserVersion,
-              userAgent: identity.userAgent,
-              proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
-              geo: {
-                mode: 'auto',
-                timezone: resolvedGeo.timezone,
-                language: resolvedGeo.language,
-                lat: resolvedGeo.lat,
-                lon: resolvedGeo.lon,
-              },
-              fingerprint: identity.fingerprint,
-              startup: { urls: [], restoreTabs: false },
-              createdAt: new Date().toISOString(),
-              lastRunAt: null,
-              deletedAt: null,
-            },
-            resolvedGeo,
-          ),
-        );
-
-        const page = await context.newPage();
-        const cdp = await context.newCDPSession(page);
-        await cdp.send('Emulation.setTimezoneOverride', { timezoneId: resolvedGeo.timezone });
-        await cdp.send('Emulation.setLocaleOverride', { locale: resolvedGeo.language });
-        if (resolvedGeo.lat !== null && resolvedGeo.lon !== null) {
-          await cdp.send('Emulation.setGeolocationOverride', {
-            latitude: resolvedGeo.lat,
-            longitude: resolvedGeo.lon,
-            accuracy: resolvedGeo.accuracy,
-          });
-        }
-
-        await page.setContent(`
+      await page.setContent(`
           <!doctype html>
           <html><body>
             <iframe id="child" srcdoc="<!doctype html><html><body>frame</body></html>"></iframe>
           </body></html>
         `);
 
-        const mainResult = await page.evaluate(() => ({
-          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          lang: navigator.language,
-        }));
+      const mainResult = await page.evaluate(() => ({
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        lang: navigator.language,
+      }));
 
-        expect(mainResult.tz).toBe('Asia/Ho_Chi_Minh');
-        expect(mainResult.lang).toBe('vi-VN');
+      expect(mainResult.tz).toBe('Asia/Ho_Chi_Minh');
+      expect(mainResult.lang).toBe('vi-VN');
 
-        const childFrame = page.frames().find((f) => f !== page.mainFrame());
-        expect(childFrame).toBeDefined();
-        const iframeResult = await childFrame!.evaluate(() => ({
-          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          lang: navigator.language,
-        }));
+      const childFrame = page.frames().find((f) => f !== page.mainFrame());
+      expect(childFrame).toBeDefined();
+      const iframeResult = await childFrame!.evaluate(() => ({
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        lang: navigator.language,
+      }));
 
-        expect(iframeResult.tz).toBe('Asia/Ho_Chi_Minh');
-        expect(iframeResult.lang).toBe('vi-VN');
-      } finally {
-        await context.close();
-      }
-    },
-    30_000,
-  );
+      expect(iframeResult.tz).toBe('Asia/Ho_Chi_Minh');
+      expect(iframeResult.lang).toBe('vi-VN');
+    } finally {
+      await context.close();
+    }
+  }, 30_000);
 });
