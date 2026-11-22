@@ -2,7 +2,11 @@ node_modules/
 dist/
 dist-electron/
 release/
-data/
+data/profiles/
+data/logs/
+data/*.db
+data/*.db-shm
+data/*.db-wal
 coverage/
 test-results/
 playwright-report/
