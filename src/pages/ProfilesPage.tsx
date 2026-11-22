@@ -31,6 +31,7 @@ import type {
   ManagedBrowserVersion,
   Platform,
   Profile,
+  ProfilePreset,
   ProfileStatus,
 } from '@shared/types';
 
@@ -115,20 +116,25 @@ export function ProfilesPage(): React.JSX.Element {
   const [installFailed, setInstallFailed] = useState(false);
   const [installLogs, setInstallLogs] = useState<string[]>([]);
 
-  // Bulk assign folder / device / version state
+  // Bulk assign folder / device / version / preset state
   const [bulkFolderId, setBulkFolderId] = useState('');
   const [bulkDeviceId, setBulkDeviceId] = useState('');
   const [bulkTargetVersion, setBulkTargetVersion] = useState('');
+  const [bulkPresetId, setBulkPresetId] = useState('');
+  const [bulkQuickSetting, setBulkQuickSetting] = useState('');
   const [versionPreview, setVersionPreview] = useState<BulkVersionPreviewItem[] | null>(null);
 
-  // Filter by platform/version & sort
+  // Filter by platform/version/color/expiry & sort
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [versionFilter, setVersionFilter] = useState<string>('all');
+  const [colorFilter, setColorFilter] = useState<string>('all');
+  const [expiryFilter, setExpiryFilter] = useState<'all' | 'expired' | 'soon' | 'valid'>('all');
   const [extraSort, setExtraSort] = useState<'none' | 'device' | 'version'>('none');
 
-  // Devices & managed browsers
+  // Devices, managed browsers & presets
   const [devices, setDevices] = useState<EmulatedDevice[]>([]);
   const [managedBrowsers, setManagedBrowsers] = useState<ManagedBrowserVersion[]>([]);
+  const [presets, setPresets] = useState<ProfilePreset[]>([]);
 
   // Downgrade warning modal state
   const [downgradePrompt, setDowngradePrompt] = useState<{
@@ -143,9 +149,11 @@ export function ProfilesPage(): React.JSX.Element {
     void Promise.all([
       window.electronAPI.listEmulatedDevices(),
       window.electronAPI.listManagedBrowsers(),
-    ]).then(([devs, brs]) => {
+      window.electronAPI.listPresets(),
+    ]).then(([devs, brs, prs]) => {
       setDevices(devs);
       setManagedBrowsers(brs);
+      setPresets(prs);
     });
   }, []);
 
@@ -161,6 +169,20 @@ export function ProfilesPage(): React.JSX.Element {
     if (versionFilter !== 'all') {
       list = list.filter((p) => p.browserVersion === versionFilter);
     }
+    if (colorFilter !== 'all') {
+      list = list.filter((p) => (p.meta?.color || '#10b981') === colorFilter);
+    }
+    if (expiryFilter !== 'all') {
+      const now = Date.now();
+      const sevenDays = 7 * 24 * 60 * 60 * 1000;
+      list = list.filter((p) => {
+        const exp = p.meta?.expiresAt ? Date.parse(p.meta.expiresAt) : NaN;
+        if (!Number.isFinite(exp)) return expiryFilter === 'valid';
+        if (expiryFilter === 'expired') return exp < now;
+        if (expiryFilter === 'soon') return exp >= now && exp <= now + sevenDays;
+        return exp >= now;
+      });
+    }
     if (extraSort === 'device') {
       list = [...list].sort((a, b) =>
         (a.deviceLabel || a.platform).localeCompare(b.deviceLabel || b.platform),
@@ -169,7 +191,7 @@ export function ProfilesPage(): React.JSX.Element {
       list = [...list].sort((a, b) => b.browserVersion.localeCompare(a.browserVersion));
     }
     return list;
-  }, [profiles, platformFilter, versionFilter, extraSort]);
+  }, [profiles, platformFilter, versionFilter, colorFilter, expiryFilter, extraSort]);
 
   const allSelected =
     displayedProfiles.length > 0 && selectedIds.length === displayedProfiles.length;
@@ -342,6 +364,48 @@ export function ProfilesPage(): React.JSX.Element {
     setVersionPreview(null);
     await refreshProfiles();
     showToast(`Đã cập nhật phiên bản ${bulkTargetVersion} cho ${count} hồ sơ`, 'success');
+  };
+
+  const handleBulkApplyPreset = async (): Promise<void> => {
+    if (!window.electronAPI || selectedIds.length === 0 || !bulkPresetId) return;
+    const count = await window.electronAPI.bulkUpdateProfiles({
+      ids: selectedIds,
+      presetId: bulkPresetId,
+    });
+    await refreshProfiles();
+    showToast(`Đã áp preset cho ${count} hồ sơ`, 'success');
+  };
+
+  const handleBulkQuickSetting = async (): Promise<void> => {
+    if (!window.electronAPI || selectedIds.length === 0 || !bulkQuickSetting) return;
+    let count = 0;
+    if (bulkQuickSetting === 'webrtc:replace') {
+      count = await window.electronAPI.bulkUpdateProfiles({ ids: selectedIds, webrtc: 'replace' });
+    } else if (bulkQuickSetting === 'webrtc:disable') {
+      count = await window.electronAPI.bulkUpdateProfiles({ ids: selectedIds, webrtc: 'disable' });
+    } else if (bulkQuickSetting === 'ads:on') {
+      count = await window.electronAPI.bulkUpdateProfiles({
+        ids: selectedIds,
+        bandwidth: { blockAds: true, blockTrackers: true },
+      });
+    } else if (bulkQuickSetting === 'clearOnClose:on') {
+      count = await window.electronAPI.bulkUpdateProfiles({
+        ids: selectedIds,
+        dataOnClose: {
+          clearCookies: true,
+          clearCache: true,
+          clearHistory: true,
+          clearLocalStorage: true,
+        },
+      });
+    } else if (bulkQuickSetting.startsWith('color:')) {
+      count = await window.electronAPI.bulkUpdateProfiles({
+        ids: selectedIds,
+        meta: { color: bulkQuickSetting.slice(6) },
+      });
+    }
+    await refreshProfiles();
+    showToast(`Đã cập nhật cấu hình cho ${count} hồ sơ`, 'success');
   };
 
   const handleBulkCreateSubmit = async (): Promise<void> => {
@@ -551,6 +615,33 @@ export function ProfilesPage(): React.JSX.Element {
         )}
 
         <Select
+          className="w-36"
+          value={colorFilter}
+          onChange={(e) => setColorFilter(e.target.value)}
+        >
+          <option value="all">Màu nhãn: Tất cả</option>
+          <option value="#10b981">Ngọc lục bảo</option>
+          <option value="#3b82f6">Xanh dương</option>
+          <option value="#f59e0b">Vàng hổ phách</option>
+          <option value="#ef4444">Đỏ san hô</option>
+          <option value="#8b5cf6">Tím thạch anh</option>
+          <option value="#64748b">Xám đá</option>
+        </Select>
+
+        <Select
+          className="w-40"
+          value={expiryFilter}
+          onChange={(e) =>
+            setExpiryFilter(e.target.value as 'all' | 'expired' | 'soon' | 'valid')
+          }
+        >
+          <option value="all">Hết hạn: Tất cả</option>
+          <option value="expired">Đã hết hạn</option>
+          <option value="soon">Sắp hết hạn (7 ngày)</option>
+          <option value="valid">Còn hạn</option>
+        </Select>
+
+        <Select
           className="w-44"
           value={extraSort !== 'none' ? `extra:${extraSort}` : (filter.sortBy ?? 'createdAt')}
           onChange={(e) => {
@@ -648,6 +739,50 @@ export function ProfilesPage(): React.JSX.Element {
               Cập nhật phiên bản
             </Button>
 
+            <Select
+              className="h-8 w-40 text-xs"
+              value={bulkPresetId}
+              onChange={(e) => setBulkPresetId(e.target.value)}
+            >
+              <option value="">-- Áp Preset --</option>
+              {presets.map((pr) => (
+                <option key={pr.id} value={pr.id}>
+                  {pr.name}
+                </option>
+              ))}
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!bulkPresetId}
+              onClick={() => void handleBulkApplyPreset()}
+            >
+              Áp Preset
+            </Button>
+
+            <Select
+              className="h-8 w-44 text-xs"
+              value={bulkQuickSetting}
+              onChange={(e) => setBulkQuickSetting(e.target.value)}
+            >
+              <option value="">-- Đổi 1 cấu hình --</option>
+              <option value="webrtc:replace">WebRTC: Replace</option>
+              <option value="webrtc:disable">WebRTC: Disable</option>
+              <option value="ads:on">Bật chặn Ads + Tracker</option>
+              <option value="clearOnClose:on">Bật dọn dữ liệu khi đóng</option>
+              <option value="color:#10b981">Màu nhãn: Ngọc lục bảo</option>
+              <option value="color:#f59e0b">Màu nhãn: Vàng</option>
+              <option value="color:#ef4444">Màu nhãn: Đỏ</option>
+            </Select>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!bulkQuickSetting}
+              onClick={() => void handleBulkQuickSetting()}
+            >
+              Áp dụng
+            </Button>
+
             <Button size="sm" variant="destructive" onClick={() => void handleBulkDelete()}>
               <Trash2 className="h-3.5 w-3.5" />
               {dict.profiles.bulkDelete}
@@ -678,6 +813,7 @@ export function ProfilesPage(): React.JSX.Element {
                 <th className="px-4 py-3">{dict.profiles.colName}</th>
                 <th className="px-4 py-3">Thiết bị</th>
                 <th className="px-4 py-3">Phiên bản</th>
+                <th className="px-4 py-3">Ghi chú</th>
                 <th className="px-4 py-3">{dict.profiles.colStatus}</th>
                 <th className="px-4 py-3">{dict.profiles.colTags}</th>
                 <th className="px-4 py-3">{dict.profiles.colProxy}</th>
@@ -719,6 +855,29 @@ export function ProfilesPage(): React.JSX.Element {
                       <Badge variant="outline" className="font-mono text-[11px]">
                         {profile.browser === 'firefox' ? 'FF' : 'CR'} {profile.browserVersion}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: profile.meta?.color || '#10b981' }}
+                          title={profile.meta?.color || '#10b981'}
+                        />
+                        <span className="max-w-[160px] truncate text-xs text-muted-foreground">
+                          {profile.meta?.notes || profile.notes || '—'}
+                        </span>
+                      </div>
+                      {profile.meta?.expiresAt && (
+                        <div
+                          className={
+                            Date.parse(profile.meta.expiresAt) < Date.now()
+                              ? 'mt-0.5 text-[10px] font-medium text-destructive'
+                              : 'mt-0.5 text-[10px] text-amber-400'
+                          }
+                        >
+                          HSD: {profile.meta.expiresAt.slice(0, 10)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">

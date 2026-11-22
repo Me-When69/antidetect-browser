@@ -8,6 +8,7 @@ import {
   Dices,
   Download,
   Fingerprint,
+  Gauge,
   Globe,
   Info,
   Laptop,
@@ -17,6 +18,7 @@ import {
   Play,
   Rocket,
   Save,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   Sliders,
@@ -33,6 +35,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AdvancedProfileSections } from '@/components/AdvancedProfileSections';
 import { cn } from '@/lib/utils';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
@@ -49,12 +52,28 @@ import type {
   EmulationConfidence,
   ManagedBrowserVersion,
   Platform,
+  ProfilePreset,
   ProxyCheckResult,
   ProxyLeakCheckResult,
 } from '@shared/types';
+import {
+  normalizeBandwidth,
+  normalizeBehavior,
+  normalizeDataOnClose,
+  normalizeMediaDevices,
+  normalizeSignals,
+} from '@shared/advancedDefaults';
 
 type SectionId =
-  'identity' | 'environment' | 'geo' | 'proxy' | 'fingerprint' | 'startup' | 'advanced';
+  | 'identity'
+  | 'environment'
+  | 'geo'
+  | 'proxy'
+  | 'fingerprint'
+  | 'behavior'
+  | 'startup'
+  | 'bandwidth'
+  | 'advanced';
 
 const DEFAULT_VALUES: CreateProfileInput = {
   name: 'Essie Crooks',
@@ -118,6 +137,7 @@ export function ProfileFormPage(): React.JSX.Element {
   const [deviceSearch, setDeviceSearch] = useState('');
   const [managedBrowsers, setManagedBrowsers] = useState<ManagedBrowserVersion[]>([]);
   const [confidence, setConfidence] = useState<EmulationConfidence | null>(null);
+  const [presets, setPresets] = useState<ProfilePreset[]>([]);
 
   const form = useForm<CreateProfileInput>({
     resolver: zodResolver(profileFormSchema),
@@ -233,13 +253,15 @@ export function ProfileFormPage(): React.JSX.Element {
     let active = true;
     const load = async (): Promise<void> => {
       if (!window.electronAPI) return;
-      const [allDevs, installedBrowsers] = await Promise.all([
+      const [allDevs, installedBrowsers, allPresets] = await Promise.all([
         window.electronAPI.listEmulatedDevices(),
         window.electronAPI.listManagedBrowsers(),
+        window.electronAPI.listPresets(),
       ]);
       if (active) {
         setDevices(allDevs);
         setManagedBrowsers(installedBrowsers);
+        setPresets(allPresets);
       }
       const defaultChromeVer =
         installedBrowsers.find((b) => b.installed && b.browserKind === 'chrome')?.version ||
@@ -267,6 +289,13 @@ export function ProfileFormPage(): React.JSX.Element {
             geo: existing.geo,
             fingerprint: existing.fingerprint,
             startup: existing.startup,
+            mediaDevices: existing.mediaDevices,
+            dataOnClose: existing.dataOnClose,
+            window: existing.window,
+            bandwidth: existing.bandwidth,
+            behavior: existing.behavior,
+            meta: existing.meta,
+            presetId: existing.presetId ?? 'balanced',
           });
           setTagsText(existing.tags.join(', '));
           setStartupUrlsText(existing.startup.urls.join('\n'));
@@ -441,13 +470,56 @@ export function ProfileFormPage(): React.JSX.Element {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const handleApplyPreset = (preset: ProfilePreset): void => {
+    form.setValue('presetId', preset.id);
+    form.setValue('fingerprint.signals', { ...preset.signals });
+    form.setValue('fingerprint.webrtc', preset.webrtc);
+    form.setValue('mediaDevices', { ...preset.mediaDevices });
+    form.setValue('dataOnClose', { ...preset.dataOnClose });
+    form.setValue('bandwidth', { ...preset.bandwidth });
+    form.setValue('behavior', { ...preset.behavior });
+    showToast(`Đã áp dụng preset "${preset.name}"`, 'success');
+  };
+
+  const handleSaveCustomPreset = async (name: string): Promise<void> => {
+    if (!window.electronAPI) return;
+    const current = form.getValues();
+    const created = await window.electronAPI.saveCustomPreset({
+      name,
+      description: 'Preset tùy chỉnh của người dùng',
+      signals: normalizeSignals(current.fingerprint.signals),
+      mediaDevices: normalizeMediaDevices(current.mediaDevices),
+      webrtc: current.fingerprint.webrtc,
+      dataOnClose: normalizeDataOnClose(current.dataOnClose),
+      bandwidth: normalizeBandwidth(current.bandwidth),
+      behavior: normalizeBehavior(current.behavior),
+    });
+    const refreshed = await window.electronAPI.listPresets();
+    setPresets(refreshed);
+    form.setValue('presetId', created.id);
+    showToast(`Đã lưu preset "${created.name}"`, 'success');
+  };
+
+  const handleDeleteCustomPreset = async (id: string): Promise<void> => {
+    if (!window.electronAPI) return;
+    await window.electronAPI.deleteCustomPreset(id);
+    const refreshed = await window.electronAPI.listPresets();
+    setPresets(refreshed);
+    if (form.getValues('presetId') === id) {
+      form.setValue('presetId', 'custom');
+    }
+    showToast('Đã xóa preset tùy chỉnh', 'info');
+  };
+
   const sections: { id: SectionId; label: string; icon: typeof User }[] = [
     { id: 'identity', label: dict.form.secIdentity, icon: User },
     { id: 'environment', label: dict.form.secEnvironment, icon: Monitor },
     { id: 'geo', label: dict.form.secGeo, icon: MapPin },
     { id: 'proxy', label: dict.form.secProxy, icon: Globe },
     { id: 'fingerprint', label: dict.form.secFingerprint, icon: Fingerprint },
+    { id: 'behavior', label: 'Hành vi trình duyệt', icon: Shield },
     { id: 'startup', label: dict.form.secStartup, icon: Rocket },
+    { id: 'bandwidth', label: 'Băng thông', icon: Gauge },
     { id: 'advanced', label: dict.form.secAdvanced, icon: Sliders },
   ];
 
@@ -1323,100 +1395,19 @@ export function ProfileFormPage(): React.JSX.Element {
             )}
           </Card>
 
-          {/* 5. Fingerprint */}
-          <Card id="sec-fingerprint" className="space-y-4 p-5">
-            <h3 className="text-sm font-semibold">{dict.form.secFingerprint}</h3>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Width</label>
-                <Input
-                  type="number"
-                  {...form.register('fingerprint.screen.width', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">Height</label>
-                <Input
-                  type="number"
-                  {...form.register('fingerprint.screen.height', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">DPR</label>
-                <Input
-                  type="number"
-                  step="0.25"
-                  {...form.register('fingerprint.screen.dpr', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">CPU Cores</label>
-                <Input
-                  type="number"
-                  {...form.register('fingerprint.hardware.cores', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">RAM (GB)</label>
-                <Input
-                  type="number"
-                  {...form.register('fingerprint.hardware.memory', { valueAsNumber: true })}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-muted-foreground">
-                  {dict.form.webrtcMode}
-                </label>
-                <Select {...form.register('fingerprint.webrtc')}>
-                  <option value="replace">Replace (An toàn)</option>
-                  <option value="disable">Disable</option>
-                  <option value="real">Real (Không ẩn)</option>
-                </Select>
-              </div>
-              <div className="sm:col-span-3">
-                <label className="mb-1 block text-xs text-muted-foreground">
-                  {dict.form.webglVendor}
-                </label>
-                <Input {...form.register('fingerprint.webgl.vendor')} />
-              </div>
-              <div className="sm:col-span-3">
-                <label className="mb-1 block text-xs text-muted-foreground">
-                  {dict.form.webglRenderer}
-                </label>
-                <Input {...form.register('fingerprint.webgl.renderer')} />
-              </div>
-            </div>
-          </Card>
-
-          {/* 6. Startup & 7. Advanced */}
-          <Card id="sec-startup" className="space-y-4 p-5">
-            <h3 className="text-sm font-semibold">{dict.form.secStartup}</h3>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                {dict.form.startupUrls}
-              </label>
-              <Textarea
-                rows={3}
-                value={startupUrlsText}
-                onChange={(e) => setStartupUrlsText(e.target.value)}
-                placeholder="https://browserleaks.com/webrtc"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-xs text-foreground">
-              <input type="checkbox" {...form.register('startup.restoreTabs')} />
-              {dict.form.restoreTabs}
-            </label>
-          </Card>
-
-          <Card id="sec-advanced" className="space-y-3 p-5">
-            <h3 className="text-sm font-semibold">{dict.form.secAdvanced}</h3>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                {dict.form.notesLabel}
-              </label>
-              <Textarea rows={3} {...form.register('notes')} />
-            </div>
-          </Card>
+          {/* 5-9. Fingerprint, Behavior, Startup, Bandwidth, Advanced */}
+          <AdvancedProfileSections
+            form={form}
+            watched={watched as Partial<CreateProfileInput>}
+            currentBrowser={currentBrowser}
+            presets={presets}
+            startupUrlsText={startupUrlsText}
+            setStartupUrlsText={setStartupUrlsText}
+            onApplyPreset={handleApplyPreset}
+            onSaveCustomPreset={handleSaveCustomPreset}
+            onDeleteCustomPreset={handleDeleteCustomPreset}
+            markCustomPreset={() => form.setValue('presetId', 'custom')}
+          />
         </div>
 
         {/* Right panel: Hidemium "Danh tính này có phù hợp không" */}
