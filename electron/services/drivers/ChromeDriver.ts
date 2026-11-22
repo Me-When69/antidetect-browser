@@ -1,11 +1,15 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
+import path from 'node:path';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
 import type { CookieItem, Platform, Profile } from '@shared/types';
+import { normalizeBehavior, normalizeWindow } from '@shared/advancedDefaults';
 import { resolveBrowserExecutable } from '../browserPath';
 import { CHROME_NO_AUTOUPDATE_ARGS } from '../browserManager';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
+import { attachBandwidthRouter } from '../bandwidthRouter';
+import { applyDiskDataOnClose, applyInContextCleanup } from '../dataCleaner';
 import { runContextWarmup } from './warmupHelper';
 import type {
   BrowserDriver,
@@ -213,6 +217,88 @@ async function applyCdpOverrides(
   }
 }
 
+function computeWindowSize(profile: Profile): {
+  width: number;
+  height: number;
+  x: number | null;
+  y: number | null;
+  maximized: boolean;
+} {
+  const screenW = profile.fingerprint.screen.width || 1920;
+  const screenH = profile.fingerprint.screen.height || 1080;
+  const win = normalizeWindow(profile.window, { width: screenW, height: screenH });
+  let width = Math.min(win.width, screenW);
+  let height = Math.min(win.height, screenH);
+  if (win.randomizeSlightly) {
+    const seed = profile.fingerprint.canvasNoiseSeed || 1;
+    const dx = ((Math.abs(seed * 31) % 17) - 8); // -8..+8 px deterministic
+    const dy = ((Math.abs(seed * 17) % 17) - 8);
+    width = Math.max(320, Math.min(screenW, width + dx));
+    height = Math.max(240, Math.min(screenH, height + dy));
+  }
+  return {
+    width,
+    height,
+    x: win.x ?? null,
+    y: win.y ?? null,
+    maximized: win.maximized,
+  };
+}
+
+function writeChromeBehaviorPrefs(userDataDir: string, profile: Profile): void {
+  const behavior = normalizeBehavior(profile.behavior);
+  const defaultDir = path.join(userDataDir, 'Default');
+  const prefsPath = path.join(defaultDir, 'Preferences');
+  try {
+    if (!fs.existsSync(defaultDir)) {
+      fs.mkdirSync(defaultDir, { recursive: true });
+    }
+    let prefs: Record<string, unknown> = {};
+    if (fs.existsSync(prefsPath)) {
+      try {
+        prefs = JSON.parse(fs.readFileSync(prefsPath, 'utf8')) as Record<string, unknown>;
+      } catch {
+        prefs = {};
+      }
+    }
+    const profileObj =
+      typeof prefs['profile'] === 'object' && prefs['profile'] !== null
+        ? (prefs['profile'] as Record<string, unknown>)
+        : {};
+    const contentSettings =
+      typeof profileObj['default_content_setting_values'] === 'object' &&
+      profileObj['default_content_setting_values'] !== null
+        ? (profileObj['default_content_setting_values'] as Record<string, unknown>)
+        : {};
+
+    contentSettings['notifications'] = behavior.notifications === 'block' ? 2 : 0;
+    if (behavior.geolocationPrompt === 'block') {
+      contentSettings['geolocation'] = 2;
+    } else if (behavior.geolocationPrompt === 'allow') {
+      contentSettings['geolocation'] = 1;
+    } else {
+      contentSettings['geolocation'] = 0;
+    }
+    profileObj['default_content_setting_values'] = contentSettings;
+    prefs['profile'] = profileObj;
+
+    if (behavior.disableAutofill) {
+      prefs['autofill'] = {
+        profile_enabled: false,
+        credit_card_enabled: false,
+      };
+      prefs['credentials_enable_service'] = false;
+    }
+    if (behavior.doNotTrack) {
+      prefs['enable_do_not_track'] = true;
+    }
+
+    fs.writeFileSync(prefsPath, JSON.stringify(prefs), 'utf8');
+  } catch {
+    // Ignore preference write errors
+  }
+}
+
 export class ChromeDriver implements BrowserDriver {
   readonly name = 'chrome';
   private instances = new Map<string, DriverInstance>();
@@ -241,14 +327,41 @@ export class ChromeDriver implements BrowserDriver {
     const executablePath = resolvedBrowser.executablePath;
     console.info(`[ChromeDriver] Selected browser: ${resolvedBrowser.label} (${executablePath})`);
 
+    const behavior = normalizeBehavior(profile.behavior);
+    const winCfg = computeWindowSize(profile);
+    writeChromeBehaviorPrefs(userDataDir, profile);
+
     const args: string[] = [
       `--remote-debugging-port=${debugPort}`,
       '--disable-blink-features=AutomationControlled',
       '--no-first-run',
       '--no-default-browser-check',
       ...CHROME_NO_AUTOUPDATE_ARGS,
-      `--window-size=${profile.fingerprint.screen.width},${profile.fingerprint.screen.height}`,
+      `--window-size=${winCfg.width},${winCfg.height}`,
     ];
+
+    if (winCfg.x !== null && winCfg.y !== null) {
+      args.push(`--window-position=${winCfg.x},${winCfg.y}`);
+    }
+    if (winCfg.maximized) {
+      args.push('--start-maximized');
+    }
+    if (!behavior.hardwareAcceleration) {
+      args.push('--disable-gpu');
+    }
+    if (behavior.disableGoogleSync) {
+      args.push('--disable-sync');
+    }
+
+    // Load unpacked Chromium extensions if provided and present on disk
+    const validExtensions = (profile.startup.extensions ?? [])
+      .map((ext) => ext.trim())
+      .filter((ext) => ext.length > 0 && fs.existsSync(ext));
+    if (validExtensions.length > 0) {
+      const joined = validExtensions.join(',');
+      args.push(`--disable-extensions-except=${joined}`);
+      args.push(`--load-extension=${joined}`);
+    }
 
     const proxyHostIsIpv6 =
       profile.proxy.type !== 'none' &&
@@ -270,8 +383,16 @@ export class ChromeDriver implements BrowserDriver {
     }
 
     const acceptLang = resolvedGeo.acceptLanguage || 'en-US,en;q=0.9';
+    const extraHeaders: Record<string, string> = {
+      'Accept-Language': acceptLang,
+      ...(behavior.doNotTrack ? { DNT: '1' } : {}),
+    };
     const isMobile =
       profile.fingerprint.mobile ?? (profile.platform === 'android' || profile.platform === 'ios');
+    const allowGeoPermission =
+      behavior.geolocationPrompt === 'allow' &&
+      resolvedGeo.lat !== null &&
+      resolvedGeo.lon !== null;
 
     const context = await chromium.launchPersistentContext(userDataDir, {
       headless: false,
@@ -287,17 +408,17 @@ export class ChromeDriver implements BrowserDriver {
       locale: resolvedGeo.language || 'en-US',
       timezoneId: resolvedGeo.timezone || undefined,
       geolocation:
-        resolvedGeo.lat !== null && resolvedGeo.lon !== null
+        behavior.geolocationPrompt !== 'block' &&
+        resolvedGeo.lat !== null &&
+        resolvedGeo.lon !== null
           ? {
               latitude: resolvedGeo.lat,
               longitude: resolvedGeo.lon,
               accuracy: resolvedGeo.accuracy ?? 50,
             }
           : undefined,
-      permissions: resolvedGeo.lat !== null && resolvedGeo.lon !== null ? ['geolocation'] : [],
-      extraHTTPHeaders: {
-        'Accept-Language': acceptLang,
-      },
+      permissions: allowGeoPermission ? ['geolocation'] : [],
+      extraHTTPHeaders: extraHeaders,
       proxy: proxyServerUrl
         ? {
             server: proxyServerUrl,
@@ -309,11 +430,12 @@ export class ChromeDriver implements BrowserDriver {
       ignoreDefaultArgs: ['--enable-automation'],
     });
 
-    await context.setExtraHTTPHeaders({ 'Accept-Language': acceptLang });
-    if (resolvedGeo.lat !== null && resolvedGeo.lon !== null) {
+    await context.setExtraHTTPHeaders(extraHeaders);
+    if (allowGeoPermission) {
       await context.grantPermissions(['geolocation']).catch(() => {});
     }
 
+    await attachBandwidthRouter(context, profile.bandwidth, userDataDir);
     await context.addInitScript(buildFingerprintInitScript(profile, resolvedGeo));
 
     // Apply CDP overrides to existing and new pages
@@ -345,7 +467,9 @@ export class ChromeDriver implements BrowserDriver {
         if (closed) return;
         closed = true;
         this.instances.delete(profile.id);
+        await applyInContextCleanup(context, profile.dataOnClose);
         await context.close().catch(() => {});
+        applyDiskDataOnClose(userDataDir, profile.dataOnClose);
       },
       importCookies: async (cookies: CookieItem[]): Promise<number> => {
         if (cookies.length === 0) return 0;
@@ -383,6 +507,7 @@ export class ChromeDriver implements BrowserDriver {
       if (!closed) {
         closed = true;
         this.instances.delete(profile.id);
+        applyDiskDataOnClose(userDataDir, profile.dataOnClose);
         options.onUnexpectedClose(profile.id);
       }
     });

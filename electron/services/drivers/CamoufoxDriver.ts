@@ -2,8 +2,11 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { firefox } from 'playwright-core';
 import type { CookieItem } from '@shared/types';
+import { normalizeBehavior, normalizeWindow } from '@shared/advancedDefaults';
 import { resolveFirefoxExecutable } from '../browserPath';
 import { buildFingerprintInitScript } from '../fingerprint/injector';
+import { attachBandwidthRouter } from '../bandwidthRouter';
+import { applyDiskDataOnClose, applyInContextCleanup } from '../dataCleaner';
 import { runContextWarmup } from './warmupHelper';
 import type { BrowserDriver, DriverInstance, DriverLaunchOptions } from './BrowserDriver';
 
@@ -52,12 +55,30 @@ export class CamoufoxDriver implements BrowserDriver {
       net.isIP(profile.proxy.host.trim().replace(/^\[|\]$/g, '')) === 6;
     const shouldBlockIpv6 = (profile.ipv6Policy ?? 'block') === 'block' && !proxyHostIsIpv6;
 
+    const behavior = normalizeBehavior(profile.behavior);
+    const winCfg = normalizeWindow(profile.window, profile.fingerprint.screen);
+    const viewportW = Math.min(winCfg.width, profile.fingerprint.screen.width);
+    const viewportH = Math.min(winCfg.height, profile.fingerprint.screen.height);
+
     const firefoxUserPrefs: Record<string, string | number | boolean> = {
       'media.peerconnection.enabled': profile.fingerprint.webrtc !== 'disable',
       'media.peerconnection.ice.default_address_only': profile.fingerprint.webrtc === 'replace',
       'media.peerconnection.ice.no_host': profile.fingerprint.webrtc === 'replace',
       'network.dns.disableIPv6': shouldBlockIpv6,
       'intl.accept_languages': resolvedGeo.language || 'en-US, en',
+      'privacy.donottrackheader.enabled': behavior.doNotTrack,
+      'permissions.default.desktop-notification': behavior.notifications === 'block' ? 2 : 0,
+      'layers.acceleration.disabled': !behavior.hardwareAcceleration,
+      'geo.enabled': behavior.geolocationPrompt !== 'block',
+      'permissions.default.geo':
+        behavior.geolocationPrompt === 'block'
+          ? 2
+          : behavior.geolocationPrompt === 'allow'
+            ? 1
+            : 0,
+      'signon.rememberSignons': !behavior.disableAutofill,
+      'extensions.formautofill.addresses.enabled': !behavior.disableAutofill,
+      'extensions.formautofill.creditCards.enabled': !behavior.disableAutofill,
     };
 
     const context = await firefox.launchPersistentContext(userDataDir, {
@@ -65,13 +86,15 @@ export class CamoufoxDriver implements BrowserDriver {
       executablePath,
       userAgent: profile.userAgent !== 'auto' ? profile.userAgent : undefined,
       viewport: {
-        width: Math.min(profile.fingerprint.screen.width, 1600),
-        height: Math.min(profile.fingerprint.screen.height, 960),
+        width: viewportW,
+        height: viewportH,
       },
       locale: resolvedGeo.language || 'en-US',
       timezoneId: resolvedGeo.timezone || undefined,
       geolocation:
-        resolvedGeo.lat !== null && resolvedGeo.lon !== null
+        behavior.geolocationPrompt !== 'block' &&
+        resolvedGeo.lat !== null &&
+        resolvedGeo.lon !== null
           ? { latitude: resolvedGeo.lat, longitude: resolvedGeo.lon }
           : undefined,
       proxy: proxyServerUrl
@@ -88,6 +111,7 @@ export class CamoufoxDriver implements BrowserDriver {
       },
     });
 
+    await attachBandwidthRouter(context, profile.bandwidth, userDataDir);
     await context.addInitScript(buildFingerprintInitScript(profile, resolvedGeo));
 
     const urls = profile.startup.urls.map((u) => u.trim()).filter(Boolean);
@@ -108,7 +132,9 @@ export class CamoufoxDriver implements BrowserDriver {
         if (closed) return;
         closed = true;
         this.instances.delete(profile.id);
+        await applyInContextCleanup(context, profile.dataOnClose);
         await context.close().catch(() => {});
+        applyDiskDataOnClose(userDataDir, profile.dataOnClose);
       },
       importCookies: async (cookies: CookieItem[]): Promise<number> => {
         if (cookies.length === 0) return 0;
@@ -146,6 +172,7 @@ export class CamoufoxDriver implements BrowserDriver {
       if (!closed) {
         closed = true;
         this.instances.delete(profile.id);
+        applyDiskDataOnClose(userDataDir, profile.dataOnClose);
         options.onUnexpectedClose(profile.id);
       }
     });
