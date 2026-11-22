@@ -2,9 +2,13 @@ import type { TranslationDictionary } from './vi';
 
 export const en: TranslationDictionary = {
   app: {
-    name: 'Antidetect',
-    tagline: 'Isolated Browser Profile Manager',
+    name: 'Facet',
+    tagline: 'Each profile, its own identity.',
     localMode: 'Local',
+    about: 'About',
+    licenseLabel: 'Open-Source Apache-2.0 License • Non-Commercial • Local-First Storage',
+    limitationsNote:
+      'Emulation only alters browser-reported signals; physical GPU, system fonts, and native rendering remain those of your host machine.',
   },
   nav: {
     newProfile: 'New Profile',

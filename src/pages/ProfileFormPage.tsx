@@ -528,7 +528,7 @@ export function ProfileFormPage(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {/* Hidemium-style top action bar */}
+      {/* Top action bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card/70 px-4 py-3">
         <div className="flex items-center gap-2">
           <Badge variant="default">
@@ -581,7 +581,7 @@ export function ProfileFormPage(): React.JSX.Element {
         </div>
       </div>
 
-      {/* 3-column Hidemium layout: Left anchor nav | Center form | Right identity checker */}
+      {/* 3-column Facet layout: Left anchor nav | Center form | Right identity checker */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[190px_minmax(0,1fr)_320px]">
         {/* Left anchor menu */}
         <Card className="hidden h-fit flex-col gap-1 p-2 lg:flex">
@@ -1410,9 +1410,9 @@ export function ProfileFormPage(): React.JSX.Element {
           />
         </div>
 
-        {/* Right panel: Hidemium "Danh tính này có phù hợp không" */}
+        {/* Right panel: "Danh tính này có phù hợp không" */}
         <div className="space-y-4">
-          <Card className="space-y-4 p-4">
+          <Card className="space-y-4 bg-sidebar p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 {identityReport.ok ? (

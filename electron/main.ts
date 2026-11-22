@@ -433,13 +433,15 @@ function registerIpcHandlers(): void {
 }
 
 function createWindow(): void {
+  const iconPath = path.join(process.env.APP_ROOT!, 'build', 'icons', 'icon.png');
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 880,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#0b0e14',
-    title: 'Antidetect Browser',
+    backgroundColor: '#0E1116',
+    title: 'Facet',
+    icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),

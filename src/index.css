@@ -2,83 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Stealth Emerald Design System
- * Operator-grade density, crisp hairline borders, stillness, and one signature
- * Emerald accent (#10b981 dark / #059669 light) with full Dark & Light modes.
+/* Facet Design System
+ * Dark theme default (#0E1116 app, #0B0E13 sidebar/panel, #151A22 cards,
+ * Teal #2DD4BF primary, Violet #7C5CFF / Indigo #4B33C9 secondary accents)
+ * with high-contrast Light theme (#F4F6FA) ready.
  */
 @layer base {
   :root,
   .dark {
-    --background: 216 16% 6%;
-    --foreground: 210 17% 92%;
+    --background: 218 22% 7%;
+    --foreground: 220 33% 93%;
 
-    --card: 214 14% 9%;
-    --card-foreground: 210 17% 92%;
+    --card: 217 24% 11%;
+    --card-foreground: 220 33% 93%;
 
-    --popover: 214 14% 9%;
-    --popover-foreground: 210 17% 92%;
+    --popover: 217 24% 11%;
+    --popover-foreground: 220 33% 93%;
 
-    --primary: 160 84% 39%;
-    --primary-foreground: 160 100% 98%;
+    --primary: 172 66% 50%;
+    --primary-foreground: 171 68% 7%;
 
-    --secondary: 215 14% 13%;
-    --secondary-foreground: 210 15% 86%;
+    --secondary: 217 25% 15%;
+    --secondary-foreground: 215 18% 76%;
 
-    --muted: 215 13% 12%;
-    --muted-foreground: 215 12% 57%;
+    --muted: 217 24% 13%;
+    --muted-foreground: 218 15% 65%;
 
-    --accent: 215 14% 15%;
-    --accent-foreground: 210 17% 95%;
+    --accent: 217 25% 17%;
+    --accent-foreground: 220 33% 95%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 215 15% 17%;
-    --input: 215 15% 18%;
-    --ring: 160 84% 39%;
+    --border: 217 25% 18%;
+    --input: 217 22% 23%;
+    --ring: 172 66% 50%;
 
-    --sidebar: 216 15% 7.5%;
-    --sidebar-foreground: 214 13% 68%;
-    --sidebar-border: 215 15% 14%;
-    --sidebar-active: 160 84% 39%;
+    --sidebar: 218 27% 6%;
+    --sidebar-foreground: 215 18% 76%;
+    --sidebar-border: 217 25% 18%;
+    --sidebar-active: 172 66% 50%;
+
+    --facet-teal: #2dd4bf;
+    --facet-violet: #7c5cff;
+    --facet-indigo: #4b33c9;
+
+    --status-ready-bg: #12332b;
+    --status-ready-fg: #5ee6b0;
+    --status-running-bg: #2a2358;
+    --status-running-fg: #b7a8ff;
+    --status-warning-bg: #3a2e12;
+    --status-warning-fg: #f5c451;
+    --status-stopped-bg: #232c3a;
+    --status-stopped-fg: #b6bfcc;
 
     --radius: 0.5rem;
     color-scheme: dark;
   }
 
   .light {
-    --background: 150 14% 97%;
-    --foreground: 216 18% 11%;
+    --background: 220 33% 97%;
+    --foreground: 218 22% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 216 18% 11%;
+    --card-foreground: 218 22% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 216 18% 11%;
+    --popover-foreground: 218 22% 7%;
 
-    --primary: 161 94% 30%;
+    --primary: 175 84% 32%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 150 12% 93%;
-    --secondary-foreground: 216 16% 20%;
+    --secondary: 216 26% 93%;
+    --secondary-foreground: 215 25% 27%;
 
-    --muted: 150 10% 94%;
-    --muted-foreground: 215 12% 44%;
+    --muted: 216 24% 94%;
+    --muted-foreground: 215 19% 35%;
 
-    --accent: 155 18% 91%;
-    --accent-foreground: 216 18% 11%;
+    --accent: 216 28% 91%;
+    --accent-foreground: 218 22% 7%;
 
     --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 10% 87%;
-    --input: 150 10% 85%;
-    --ring: 161 94% 30%;
+    --border: 217 30% 88%;
+    --input: 216 28% 82%;
+    --ring: 175 84% 32%;
 
-    --sidebar: 150 16% 98.5%;
-    --sidebar-foreground: 215 14% 36%;
-    --sidebar-border: 150 10% 88%;
-    --sidebar-active: 161 94% 30%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-border: 217 30% 88%;
+    --sidebar-active: 175 84% 32%;
+
+    --facet-teal: #0d9488;
+    --facet-violet: #6d28d9;
+    --facet-indigo: #4338ca;
+
+    --status-ready-bg: #dcfce7;
+    --status-ready-fg: #14532d;
+    --status-running-bg: #ede9fe;
+    --status-running-fg: #4c1d95;
+    --status-warning-bg: #fef3c7;
+    --status-warning-fg: #78350f;
+    --status-stopped-bg: #e2e8f0;
+    --status-stopped-fg: #334155;
 
     --radius: 0.5rem;
     color-scheme: light;
@@ -97,6 +124,25 @@
       system-ui,
       -apple-system,
       sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family:
+      'Space Grotesk',
+      'Inter',
+      system-ui,
+      sans-serif;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Folder, Globe, LayoutGrid, Plus, Settings, Shield, Trash2, X } from 'lucide-react';
+import { Folder, Globe, Info, LayoutGrid, Plus, Settings, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { FacetLogo } from '@/components/FacetLogo';
+import { AboutModal } from '@/components/AboutModal';
 import { cn } from '@/lib/utils';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
@@ -28,6 +30,7 @@ export function Sidebar(): React.JSX.Element {
 
   const [addingFolder, setAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const handleQuickCreateFolder = async (): Promise<void> => {
     const trimmed = newFolderName.trim();
@@ -52,24 +55,14 @@ export function Sidebar(): React.JSX.Element {
   };
 
   const isAllProfilesActive = activePage === 'profiles' && !filter.folderId;
+  const maxConcurrent = 10;
+  const runningPercent = Math.min(100, Math.round((runningIds.length / maxConcurrent) * 100));
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-      {/* Brand header — Stealth Emerald */}
+    <aside className="flex h-full w-[232px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      {/* Brand header — Facet */}
       <div className="flex h-14 items-center justify-between px-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary ring-1 ring-primary/35">
-            <Shield className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              {dict.app.name}
-            </span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-primary">
-              Stealth Emerald
-            </span>
-          </div>
-        </div>
+        <FacetLogo size={28} showWordmark />
         <Badge variant="outline" className="font-mono text-[10px]">
           v{appInfo?.version ?? '0.1.0'}
         </Badge>
@@ -77,7 +70,7 @@ export function Sidebar(): React.JSX.Element {
 
       {/* Primary CTA */}
       <div className="px-3 pb-3 pt-1">
-        <Button onClick={openNewProfile} className="w-full justify-center gap-2 font-medium">
+        <Button onClick={openNewProfile} className="w-full justify-center gap-2 font-semibold">
           <Plus className="h-4 w-4" />
           <span>{dict.nav.newProfile}</span>
         </Button>
@@ -85,8 +78,8 @@ export function Sidebar(): React.JSX.Element {
 
       <Separator className="bg-sidebar-border" />
 
-      {/* Main navigation + Inline Folders (Fury-style density) */}
-      <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-3">
+      {/* Main navigation + Inline Folders */}
+      <nav aria-label="Main navigation" className="flex-1 space-y-5 overflow-y-auto px-2.5 py-3">
         <div className="space-y-0.5">
           <button
             type="button"
@@ -169,6 +162,7 @@ export function Sidebar(): React.JSX.Element {
               onClick={() => setAddingFolder((prev) => !prev)}
               className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
               title={dict.folders.createBtn}
+              aria-label={dict.folders.createBtn}
             >
               {addingFolder ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
             </button>
@@ -233,6 +227,7 @@ export function Sidebar(): React.JSX.Element {
                         onClick={() => void handleDeleteFolder(folder.id)}
                         className="hidden rounded p-0.5 text-muted-foreground hover:text-destructive group-hover:inline-flex"
                         title={dict.common.delete}
+                        aria-label={`${dict.common.delete} ${folder.name}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -245,25 +240,52 @@ export function Sidebar(): React.JSX.Element {
         </div>
       </nav>
 
-      {/* Footer status */}
-      <div className="border-t border-sidebar-border p-3">
-        <div className="space-y-1 rounded-lg border border-border bg-card px-3 py-2 text-xs">
+      {/* Footer quota card (Facet teal-to-violet gradient) + About */}
+      <div className="space-y-2 border-t border-sidebar-border p-3">
+        <div className="space-y-2 rounded-lg border border-border bg-card px-3 py-2.5 text-xs">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              {dict.status.ready}
-            </span>
-            <span className="font-mono text-[11px] text-muted-foreground">
-              {runningIds.length} {dict.common.running.toLowerCase()}
+            <span className="font-medium text-foreground">{dict.common.running}</span>
+            <span className="font-mono text-[11px] font-semibold text-foreground">
+              {runningIds.length} / {maxConcurrent}
             </span>
           </div>
-          <div className="font-mono text-[10px] text-muted-foreground">
-            {appInfo
-              ? `${dict.status.electron} ${appInfo.electronVersion}`
-              : dict.status.webPreview}
+          <div
+            className="h-1.5 w-full overflow-hidden rounded-full bg-border"
+            role="progressbar"
+            aria-valuenow={runningIds.length}
+            aria-valuemin={0}
+            aria-valuemax={maxConcurrent}
+            aria-label={dict.common.running}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${runningPercent}%`,
+                background: 'linear-gradient(90deg, #2DD4BF 0%, #7C5CFF 100%)',
+              }}
+            />
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setAboutOpen(true)}
+          className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <span className="flex items-center gap-2">
+            <Info className="h-3.5 w-3.5" />
+            <span>{dict.app.about} Facet</span>
+          </span>
+          <span className="font-mono text-[10px]">Apache-2.0</span>
+        </button>
       </div>
+
+      <AboutModal
+        open={aboutOpen}
+        onClose={() => setAboutOpen(false)}
+        locale={locale}
+        appInfo={appInfo}
+      />
     </aside>
   );
 }

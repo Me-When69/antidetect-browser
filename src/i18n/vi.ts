@@ -1,8 +1,12 @@
 export const vi = {
   app: {
-    name: 'Antidetect',
-    tagline: 'Quản lý hồ sơ trình duyệt cô lập',
+    name: 'Facet',
+    tagline: 'Mỗi hồ sơ, một danh tính riêng.',
     localMode: 'Cục bộ',
+    about: 'Giới thiệu',
+    licenseLabel: 'Giấy phép mã nguồn mở Apache-2.0 • Phi thương mại • Lưu dữ liệu cục bộ',
+    limitationsNote:
+      'Giả lập chỉ thay đổi lớp thông tin trình duyệt báo cáo; render canvas, font hệ thống và GPU vật lý vẫn thuộc máy chủ. Hệ thống phát hiện mạnh vẫn có thể nhận diện.',
   },
   nav: {
     newProfile: 'Hồ sơ mới',

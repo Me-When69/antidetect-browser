@@ -21,6 +21,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { StatusBadge } from '@/components/StatusBadge';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import { parseProfilesCsv } from '@shared/validation';
@@ -124,7 +125,8 @@ export function ProfilesPage(): React.JSX.Element {
   const [bulkQuickSetting, setBulkQuickSetting] = useState('');
   const [versionPreview, setVersionPreview] = useState<BulkVersionPreviewItem[] | null>(null);
 
-  // Filter by platform/version/color/expiry & sort
+  // Filter by platform/version/color/expiry & quick chip
+  const [quickChip, setQuickChip] = useState<'all' | 'running' | 'warning' | 'ready'>('all');
   const [platformFilter, setPlatformFilter] = useState<Platform | 'all'>('all');
   const [versionFilter, setVersionFilter] = useState<string>('all');
   const [colorFilter, setColorFilter] = useState<string>('all');
@@ -163,6 +165,18 @@ export function ProfilesPage(): React.JSX.Element {
 
   const displayedProfiles = useMemo(() => {
     let list = profiles;
+    if (quickChip === 'running') {
+      list = list.filter((p) => runningIds.includes(p.id));
+    } else if (quickChip === 'warning') {
+      list = list.filter(
+        (p) =>
+          p.status === 'banned' ||
+          (p.proxy.type !== 'none' && p.fingerprint.webrtc === 'real') ||
+          Boolean(p.meta?.expiresAt && Date.parse(p.meta.expiresAt) < Date.now()),
+      );
+    } else if (quickChip === 'ready') {
+      list = list.filter((p) => !runningIds.includes(p.id) && p.status !== 'banned');
+    }
     if (platformFilter !== 'all') {
       list = list.filter((p) => p.platform === platformFilter);
     }
@@ -191,7 +205,7 @@ export function ProfilesPage(): React.JSX.Element {
       list = [...list].sort((a, b) => b.browserVersion.localeCompare(a.browserVersion));
     }
     return list;
-  }, [profiles, platformFilter, versionFilter, colorFilter, expiryFilter, extraSort]);
+  }, [profiles, runningIds, quickChip, platformFilter, versionFilter, colorFilter, expiryFilter, extraSort]);
 
   const allSelected =
     displayedProfiles.length > 0 && selectedIds.length === displayedProfiles.length;
@@ -535,6 +549,34 @@ export function ProfilesPage(): React.JSX.Element {
             {dict.nav.newProfile}
           </Button>
         </div>
+      </div>
+
+      {/* Quick filter chips (Facet) */}
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Quick status filters">
+        {(
+          [
+            { id: 'all', label: isEn ? 'All' : 'Tất cả' },
+            { id: 'running', label: isEn ? 'Running' : 'Đang chạy' },
+            { id: 'ready', label: isEn ? 'Ready' : 'Sẵn sàng' },
+            { id: 'warning', label: isEn ? 'Warning' : 'Cảnh báo' },
+          ] as const
+        ).map((chip) => {
+          const active = quickChip === chip.id;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => setQuickChip(chip.id)}
+              className={
+                active
+                  ? 'rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground transition-colors'
+                  : 'rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground'
+              }
+            >
+              {chip.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters bar */}
@@ -882,14 +924,19 @@ export function ProfilesPage(): React.JSX.Element {
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         {isRunning ? (
-                          <Badge className="bg-primary/15 text-primary">
-                            {dict.common.running}
-                          </Badge>
+                          <StatusBadge variant="running">{dict.common.running}</StatusBadge>
+                        ) : profile.status === 'banned' ||
+                          (profile.proxy.type !== 'none' &&
+                            profile.fingerprint.webrtc === 'real') ? (
+                          <StatusBadge variant="warning">
+                            {isEn ? 'Warning' : 'Cảnh báo'}
+                          </StatusBadge>
+                        ) : profile.status === 'ready' || profile.status === 'active' ? (
+                          <StatusBadge variant="ready">
+                            {isEn ? 'Ready' : 'Sẵn sàng'}
+                          </StatusBadge>
                         ) : (
-                          <Badge variant="outline">{dict.common.stopped}</Badge>
-                        )}
-                        {profile.status !== 'none' && (
-                          <Badge variant="secondary">{profile.status}</Badge>
+                          <StatusBadge variant="stopped">{dict.common.stopped}</StatusBadge>
                         )}
                       </div>
                     </td>

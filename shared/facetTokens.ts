@@ -1,0 +1,48 @@
+/**
+ * Facet Design Tokens — single source of truth for colors and contrast tests.
+ */
+export const FACET_DARK_TOKENS = {
+  bgApp: '#0E1116',
+  bgSidebar: '#0B0E13',
+  bgCard: '#151A22',
+  borderDivider: '#232C3A',
+  borderInput: '#2E3848',
+  textPrimary: '#E6EAF2',
+  textSecondary: '#B6BFCC',
+  textMuted: '#98A2B3',
+  accentTeal: '#2DD4BF',
+  accentTealFg: '#06201C',
+  accentViolet: '#7C5CFF',
+  accentIndigo: '#4B33C9',
+  statusReadyBg: '#12332B',
+  statusReadyFg: '#5EE6B0',
+  statusRunningBg: '#2A2358',
+  statusRunningFg: '#B7A8FF',
+  statusWarningBg: '#3A2E12',
+  statusWarningFg: '#F5C451',
+  statusStoppedBg: '#232C3A',
+  statusStoppedFg: '#B6BFCC',
+} as const;
+
+export const FACET_LIGHT_TOKENS = {
+  bgApp: '#F4F6FA',
+  bgSidebar: '#FFFFFF',
+  bgCard: '#FFFFFF',
+  borderDivider: '#DCE3EE',
+  borderInput: '#C5D0E0',
+  textPrimary: '#0E1116',
+  textSecondary: '#334155',
+  textMuted: '#475569',
+  accentTeal: '#0D9488',
+  accentTealFg: '#FFFFFF',
+  accentViolet: '#6D28D9',
+  accentIndigo: '#4338CA',
+  statusReadyBg: '#DCFCE7',
+  statusReadyFg: '#14532D',
+  statusRunningBg: '#EDE9FE',
+  statusRunningFg: '#4C1D95',
+  statusWarningBg: '#FEF3C7',
+  statusWarningFg: '#78350F',
+  statusStoppedBg: '#E2E8F0',
+  statusStoppedFg: '#334155',
+} as const;

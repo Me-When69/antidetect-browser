@@ -45,6 +45,15 @@ const config: Config = {
           border: 'hsl(var(--sidebar-border))',
           active: 'hsl(var(--sidebar-active))',
         },
+        facet: {
+          teal: 'var(--facet-teal)',
+          violet: 'var(--facet-violet)',
+          indigo: 'var(--facet-indigo)',
+        },
+      },
+      fontFamily: {
+        display: ['"Space Grotesk"', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', '"Segoe UI"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',
