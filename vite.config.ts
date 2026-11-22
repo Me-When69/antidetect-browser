@@ -20,7 +20,13 @@ export default defineConfig({
           },
           build: {
             rollupOptions: {
-              external: ['better-sqlite3', 'playwright-core', 'proxy-chain'],
+              external: [
+                'better-sqlite3',
+                'playwright-core',
+                'proxy-chain',
+                'https-proxy-agent',
+                'socks-proxy-agent',
+              ],
             },
           },
         },
