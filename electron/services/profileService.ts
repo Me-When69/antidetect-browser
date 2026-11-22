@@ -42,16 +42,30 @@ export class ProfileService {
   }
 
   private encryptProxy(proxy: ProfileProxy): ProfileProxy {
+    const encryptedExtra = proxy.extra ? { ...proxy.extra } : undefined;
+    if (encryptedExtra && encryptedExtra['uuid']) {
+      encryptedExtra['uuid'] = this.secrets.encrypt(encryptedExtra['uuid']);
+    }
     return {
       ...proxy,
       password: this.secrets.encrypt(proxy.password),
+      ...(proxy.privateKey ? { privateKey: this.secrets.encrypt(proxy.privateKey) } : {}),
+      ...(encryptedExtra ? { extra: encryptedExtra } : {}),
+      ...(proxy.chain ? { chain: proxy.chain.map((hop) => this.encryptProxy(hop)) } : {}),
     };
   }
 
   private decryptProxy(proxy: ProfileProxy): ProfileProxy {
+    const decryptedExtra = proxy.extra ? { ...proxy.extra } : undefined;
+    if (decryptedExtra && decryptedExtra['uuid']) {
+      decryptedExtra['uuid'] = this.secrets.decrypt(decryptedExtra['uuid']);
+    }
     return {
       ...proxy,
       password: this.secrets.decrypt(proxy.password),
+      ...(proxy.privateKey ? { privateKey: this.secrets.decrypt(proxy.privateKey) } : {}),
+      ...(decryptedExtra ? { extra: decryptedExtra } : {}),
+      ...(proxy.chain ? { chain: proxy.chain.map((hop) => this.decryptProxy(hop)) } : {}),
     };
   }
 
