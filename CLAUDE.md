@@ -10,3 +10,10 @@ Quy tắc:
 - Mỗi bước: chạy được, có test cơ bản, commit nhỏ.
 - Giao diện tiếng Việt, tách chuỗi vào i18n để thêm tiếng Anh sau.
 - Không thêm tính năng ngoài yêu cầu của bước hiện tại.
+
+Quy tắc hiệu năng:
+- Tách trang phụ bằng `React.lazy` + `Suspense`, không dồn toàn bộ trang vào entry chunk.
+- Danh sách dài (bảng hồ sơ) phải ảo hóa (`@tanstack/react-virtual`); không dùng polling, gộp sự kiện trạng thái theo lô.
+- Truy vấn SQLite lọc/sắp xếp phải chạy ở SQL có index và bọc thao tác hàng loạt trong transaction.
+- Font cục bộ chỉ nạp subset `latin` + `vietnamese`; không đóng gói sẵn binary trình duyệt hay lõi proxy.
+- Kiểm tra ngân sách bundle bằng `npm run perf:budget`.

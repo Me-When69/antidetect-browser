@@ -21,6 +21,7 @@
     "test:e2e": "playwright test",
     "test:all": "npm run test && npm run test:integration && npm run test:e2e",
     "validate:devices": "node scripts/validate-devices.mjs",
+    "perf:budget": "node scripts/perf/check-budget.mjs",
     "postinstall": "node -e \"console.log('Antidetect: skipping Playwright browser download (using system Chrome/Edge)')\""
   },
   "dependencies": {
