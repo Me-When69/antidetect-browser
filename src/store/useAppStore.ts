@@ -12,7 +12,14 @@ import type {
   ThemeMode,
 } from '@shared/types';
 
-export type NavPageId = 'profiles' | 'folders' | 'proxies' | 'trash' | 'settings' | 'new-profile';
+export type NavPageId =
+  | 'profiles'
+  | 'accounts'
+  | 'folders'
+  | 'proxies'
+  | 'trash'
+  | 'settings'
+  | 'new-profile';
 
 interface ToastMessage {
   id: number;
@@ -35,6 +42,7 @@ interface AppState {
   folders: Folder[];
   tags: Tag[];
   proxies: SavedProxy[];
+  profileAccountLinks: Record<string, string[]>;
   runningIds: string[];
   selectedIds: string[];
   filter: ProfileFilter;
@@ -59,6 +67,7 @@ interface AppState {
   refreshFolders: () => Promise<void>;
   refreshTags: () => Promise<void>;
   refreshProxies: () => Promise<void>;
+  refreshProfileAccountLinks: () => Promise<void>;
   refreshSettings: () => Promise<void>;
   setLocale: (locale: LocaleCode) => Promise<void>;
   setTheme: (theme: ThemeMode) => Promise<void>;
@@ -91,6 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   folders: [],
   tags: [],
   proxies: [],
+  profileAccountLinks: {},
   runningIds: [],
   selectedIds: [],
   filter: {
@@ -163,6 +173,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         runningIds,
         profiles,
         trashProfiles,
+        profileAccountLinks,
       ] = await Promise.all([
         api.getAppInfo(),
         api.getSettings(),
@@ -173,6 +184,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         api.getRunningProfileIds(),
         api.listProfiles(get().filter),
         api.listTrashProfiles(),
+        api.listAllProfileAccountLinks(),
       ]);
       set({
         appInfo,
@@ -186,6 +198,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         runningIds,
         profiles,
         trashProfiles,
+        profileAccountLinks,
       });
     } catch (err) {
       get().showToast(err instanceof Error ? err.message : 'Lỗi tải dữ liệu', 'error');
@@ -227,6 +240,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!api) return;
     const proxies = await api.listProxies();
     set({ proxies });
+  },
+
+  refreshProfileAccountLinks: async () => {
+    const api = window.electronAPI;
+    if (!api) return;
+    const profileAccountLinks = await api.listAllProfileAccountLinks();
+    set({ profileAccountLinks });
   },
 
   refreshSettings: async () => {

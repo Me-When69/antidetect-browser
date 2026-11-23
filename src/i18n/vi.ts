@@ -12,6 +12,7 @@ export const vi = {
     newProfile: 'Hồ sơ mới',
     sectionProfiles: 'HỒ SƠ',
     allProfiles: 'Tất cả hồ sơ',
+    accounts: 'Tài khoản',
     folders: 'Thư mục',
     sectionNetwork: 'MẠNG & HỆ THỐNG',
     proxies: 'Proxy',

@@ -9,7 +9,9 @@ import {
   FileSpreadsheet,
   Flame,
   Layers,
+  KeyRound,
   Loader2,
+  Mail,
   Play,
   Plus,
   Square,
@@ -59,6 +61,7 @@ export function ProfilesPage(): React.JSX.Element {
     profiles,
     folders,
     tags,
+    profileAccountLinks,
     runningIds,
     selectedIds,
     filter,
@@ -885,6 +888,7 @@ export function ProfilesPage(): React.JSX.Element {
                 <th className="px-4 py-3">Ghi chú</th>
                 <th className="px-4 py-3">{dict.profiles.colStatus}</th>
                 <th className="px-4 py-3">{dict.profiles.colTags}</th>
+                <th className="px-4 py-3">{isEn ? 'Account' : 'Tài khoản'}</th>
                 <th className="px-4 py-3">{dict.profiles.colProxy}</th>
                 <th className="px-4 py-3">{dict.profiles.colLastRun}</th>
                 <th className="px-4 py-3 text-right">{dict.profiles.colActions}</th>
@@ -893,7 +897,7 @@ export function ProfilesPage(): React.JSX.Element {
             <tbody className="divide-y divide-border">
               {paddingTop > 0 && (
                 <tr aria-hidden="true">
-                  <td colSpan={10} style={{ height: `${paddingTop}px`, padding: 0 }} />
+                  <td colSpan={11} style={{ height: `${paddingTop}px`, padding: 0 }} />
                 </tr>
               )}
               {virtualRows.map((vRow) => {
@@ -902,6 +906,8 @@ export function ProfilesPage(): React.JSX.Element {
                 const isChecked = selectedSet.has(profile.id);
                 const isStarting = startingSet.has(profile.id);
                 const folderName = profile.folderId ? folderMap.get(profile.folderId) : null;
+                const linkedAccounts = profileAccountLinks[profile.id] ?? [];
+                const primaryAccount = linkedAccounts[0] ?? null;
 
                 return (
                   <tr key={profile.id} className="hover:bg-accent/40">
@@ -987,6 +993,77 @@ export function ProfilesPage(): React.JSX.Element {
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-2.5">
+                      {linkedAccounts.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          <span
+                            className="max-w-[160px] truncate text-xs font-medium text-foreground"
+                            title={linkedAccounts.join(', ')}
+                          >
+                            {primaryAccount}
+                            {linkedAccounts.length > 1 ? ` (+${linkedAccounts.length - 1})` : ''}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title={isEn ? 'Copy password (20s)' : 'Chép mật khẩu (20s)'}
+                              className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary"
+                              onClick={() => {
+                                if (!primaryAccount) return;
+                                void window.electronAPI
+                                  ?.copyAccountPassword(primaryAccount)
+                                  .then(() =>
+                                    showToast(
+                                      isEn
+                                        ? 'Password copied (clears in 20s)'
+                                        : 'Đã chép mật khẩu (tự xóa sau 20s)',
+                                      'success',
+                                    ),
+                                  )
+                                  .catch((err) =>
+                                    showToast(
+                                      err instanceof Error ? err.message : 'Vui lòng mở khóa kho tài khoản',
+                                      'error',
+                                    ),
+                                  );
+                              }}
+                            >
+                              <Copy className="h-2.5 w-2.5" />
+                              MK
+                            </button>
+                            <button
+                              type="button"
+                              title={isEn ? 'Copy 2FA TOTP (20s)' : 'Chép mã 2FA (20s)'}
+                              className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary"
+                              onClick={() => {
+                                if (!primaryAccount) return;
+                                void window.electronAPI
+                                  ?.copyAccountTotp(primaryAccount)
+                                  .then((res) =>
+                                    showToast(
+                                      isEn
+                                        ? `2FA ${res.code} copied (20s)`
+                                        : `Đã chép mã 2FA ${res.code} (20s)`,
+                                      'success',
+                                    ),
+                                  )
+                                  .catch((err) =>
+                                    showToast(
+                                      err instanceof Error ? err.message : 'Chưa có 2FA hoặc kho đang khóa',
+                                      'error',
+                                    ),
+                                  );
+                              }}
+                            >
+                              <KeyRound className="h-2.5 w-2.5" />
+                              2FA
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                       {profile.proxy.type === 'none'
                         ? dict.profiles.noProxy
@@ -1024,6 +1101,29 @@ export function ProfilesPage(): React.JSX.Element {
                               : dict.common.run}
                           </Button>
                         )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-primary hover:text-primary"
+                          title={isEn ? 'Open Gmail in this profile' : 'Mở Gmail trong hồ sơ này'}
+                          onClick={() => {
+                            void window.electronAPI
+                              ?.openGmailInProfile(profile.id)
+                              .then((res) => {
+                                if (!res.running && res.error) {
+                                  showToast(res.error, 'error');
+                                }
+                              })
+                              .catch((err) =>
+                                showToast(
+                                  err instanceof Error ? err.message : 'Lỗi mở Gmail trong hồ sơ',
+                                  'error',
+                                ),
+                              );
+                          }}
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
                         <Button
                           size="icon"
                           variant="ghost"

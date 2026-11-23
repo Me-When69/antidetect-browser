@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Folder, Globe, Info, LayoutGrid, Plus, Settings, Trash2, X } from 'lucide-react';
+import { Folder, Globe, Info, LayoutGrid, Mail, Plus, Settings, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -99,6 +99,20 @@ export function Sidebar(): React.JSX.Element {
               <span>{dict.nav.allProfiles}</span>
             </span>
             <span className="font-mono text-xs opacity-75">{profiles.length}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActivePage('accounts')}
+            className={cn(
+              'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors',
+              activePage === 'accounts'
+                ? 'bg-primary/15 text-primary'
+                : 'text-sidebar-foreground hover:bg-accent hover:text-foreground',
+            )}
+          >
+            <Mail className="h-4 w-4 shrink-0" />
+            <span>{dict.nav.accounts}</span>
           </button>
 
           <button

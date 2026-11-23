@@ -14,6 +14,7 @@ export const en: TranslationDictionary = {
     newProfile: 'New Profile',
     sectionProfiles: 'PROFILES',
     allProfiles: 'All Profiles',
+    accounts: 'Accounts',
     folders: 'Folders',
     sectionNetwork: 'NETWORK & SYSTEM',
     proxies: 'Proxies',

@@ -119,11 +119,22 @@ const RANDOM_NAMES = [
 ];
 
 export function ProfileFormPage(): React.JSX.Element {
-  const { locale, editingProfileId, folders, proxies, setActivePage, refreshProfiles, showToast } =
-    useAppStore();
+  const {
+    locale,
+    editingProfileId,
+    folders,
+    proxies,
+    setActivePage,
+    refreshProfiles,
+    refreshProfileAccountLinks,
+    showToast,
+  } = useAppStore();
   const dict = getTranslations(locale);
 
   const [activeSection, setActiveSection] = useState<SectionId>('identity');
+  const [linkedEmails, setLinkedEmails] = useState<string[]>([]);
+  const [vaultEmails, setVaultEmails] = useState<string[]>([]);
+  const [newLinkEmail, setNewLinkEmail] = useState('');
   const [tagsText, setTagsText] = useState('');
   const [startupUrlsText, setStartupUrlsText] = useState('');
   const [quickProxyText, setQuickProxyText] = useState('');
@@ -321,6 +332,34 @@ export function ProfileFormPage(): React.JSX.Element {
 
   useEffect(() => {
     let active = true;
+    const api = window.electronAPI;
+    if (!api) return;
+    void (async () => {
+      try {
+        if (editingProfileId) {
+          const linked = await api.listLinkedAccountsForProfile(editingProfileId);
+          if (active) setLinkedEmails(linked);
+        } else if (active) {
+          setLinkedEmails([]);
+        }
+        const st = await api.getVaultStatus();
+        if (st.unlocked) {
+          const accs = await api.listVaultAccounts();
+          if (active) setVaultEmails(accs.map((a) => a.email));
+        } else if (active) {
+          setVaultEmails([]);
+        }
+      } catch {
+        // Ignore if vault is locked
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [editingProfileId]);
+
+  useEffect(() => {
+    let active = true;
     const plat = watched.platform ?? 'windows';
     const br = watched.browser ?? 'chrome';
     if (!window.electronAPI) return;
@@ -505,6 +544,21 @@ export function ProfileFormPage(): React.JSX.Element {
       }
 
       await refreshProfiles();
+
+      // Sync linked Gmail accounts (never stores secrets in profile DB)
+      if (editingProfileId) {
+        const prev = await window.electronAPI.listLinkedAccountsForProfile(savedId);
+        for (const oldEmail of prev) {
+          if (!linkedEmails.includes(oldEmail)) {
+            await window.electronAPI.unlinkAccountFromProfile(savedId, oldEmail);
+          }
+        }
+      }
+      for (const email of linkedEmails) {
+        await window.electronAPI.linkAccountToProfile(savedId, email);
+      }
+      await refreshProfileAccountLinks();
+
       setActivePage('profiles');
 
       if (runAfterSave) {
@@ -743,6 +797,76 @@ export function ProfileFormPage(): React.JSX.Element {
                   onChange={(e) => setTagsText(e.target.value)}
                   placeholder="facebook, ads, team-a"
                 />
+              </div>
+
+              <div className="sm:col-span-2 space-y-2 rounded-lg border border-border/70 bg-secondary/20 p-3">
+                <label className="block text-xs font-medium text-foreground">
+                  {locale === 'en' ? 'Linked Gmail Accounts' : 'Tài khoản Gmail liên kết'}
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {linkedEmails.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {locale === 'en' ? 'No linked accounts' : 'Chưa liên kết tài khoản nào'}
+                    </span>
+                  ) : (
+                    linkedEmails.map((em) => (
+                      <Badge key={em} variant="outline" className="gap-1.5 text-xs">
+                        <span>{em}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setLinkedEmails((prev) => prev.filter((item) => item !== em))
+                          }
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {vaultEmails.length > 0 ? (
+                    <Select
+                      value={newLinkEmail}
+                      onChange={(e) => setNewLinkEmail(e.target.value)}
+                      className="flex-1 text-xs"
+                    >
+                      <option value="">
+                        {locale === 'en'
+                          ? '-- Select account from Vault --'
+                          : '-- Chọn tài khoản trong kho --'}
+                      </option>
+                      {vaultEmails
+                        .filter((em) => !linkedEmails.includes(em))
+                        .map((em) => (
+                          <option key={em} value={em}>
+                            {em}
+                          </option>
+                        ))}
+                    </Select>
+                  ) : (
+                    <Input
+                      value={newLinkEmail}
+                      onChange={(e) => setNewLinkEmail(e.target.value)}
+                      placeholder="user@gmail.com"
+                      className="flex-1 text-xs"
+                    />
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const clean = newLinkEmail.trim().toLowerCase();
+                      if (!clean || !clean.includes('@') || linkedEmails.includes(clean)) return;
+                      setLinkedEmails((prev) => [...prev, clean]);
+                      setNewLinkEmail('');
+                    }}
+                  >
+                    {locale === 'en' ? 'Link' : 'Liên kết'}
+                  </Button>
+                </div>
               </div>
             </div>
           </Card>

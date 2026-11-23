@@ -24,6 +24,9 @@ const TrashPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
+const AccountsPage = lazy(() =>
+  import('@/pages/AccountsPage').then((m) => ({ default: m.AccountsPage })),
+);
 
 function PageSkeleton(): React.JSX.Element {
   return (
@@ -101,6 +104,8 @@ export function App(): React.JSX.Element {
     switch (activePage) {
       case 'profiles':
         return dict.profiles.title;
+      case 'accounts':
+        return locale === 'en' ? 'Gmail Accounts' : 'Tài khoản Gmail';
       case 'folders':
         return dict.folders.title;
       case 'proxies':
@@ -125,6 +130,7 @@ export function App(): React.JSX.Element {
           {activePage === 'profiles' && <ProfilesPage />}
           <Suspense fallback={<PageSkeleton />}>
             {activePage === 'new-profile' && <ProfileFormPage />}
+            {activePage === 'accounts' && <AccountsPage />}
             {activePage === 'folders' && <FoldersPage />}
             {activePage === 'proxies' && <ProxiesPage />}
             {activePage === 'trash' && <TrashPage />}
