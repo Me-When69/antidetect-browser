@@ -19,6 +19,8 @@ import { AppLogger } from '../../electron/services/logger';
 import { generateConsistentIdentity } from '../../electron/services/fingerprint/generator';
 import type { BackupPayload } from '@shared/types';
 import type { BrowserDriver, DriverInstance } from '../../electron/services/drivers/BrowserDriver';
+import { hasActiveBandwidthRules } from '../../electron/services/bandwidthRouter';
+import { applyDiskDataOnClose } from '../../electron/services/dataCleaner';
 
 describe('Security Hardening Regression Tests (E-001+)', () => {
   const tempDirs: string[] = [];
@@ -216,5 +218,37 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
     ).toThrow(/File sao lưu không hợp lệ/);
 
     dbCtx.sqlite.close();
+  });
+
+  it('E-010: covers bandwidthRouter rule detection and dataCleaner disk cleanup safely', () => {
+    expect(hasActiveBandwidthRules(undefined)).toBe(false);
+    expect(
+      hasActiveBandwidthRules({
+        blockImages: false,
+        blockMedia: false,
+        blockExternalFonts: false,
+        blockAds: true,
+        blockTrackers: false,
+        cacheStaticResources: false,
+      }),
+    ).toBe(true);
+
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'facet-e010-'));
+    tempDirs.push(baseDir);
+    const cacheDir = path.join(baseDir, 'Default', 'Cache');
+    const keepDir = path.join(baseDir, 'Default', 'Extensions');
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.mkdirSync(keepDir, { recursive: true });
+    fs.writeFileSync(path.join(cacheDir, 'c.bin'), 'cache', 'utf8');
+    fs.writeFileSync(path.join(keepDir, 'ext.json'), '{}', 'utf8');
+
+    applyDiskDataOnClose(baseDir, {
+      clearCookies: false,
+      clearCache: true,
+      clearHistory: false,
+      clearLocalStorage: false,
+    });
+    expect(fs.existsSync(cacheDir)).toBe(false);
+    expect(fs.existsSync(path.join(keepDir, 'ext.json'))).toBe(true);
   });
 });
