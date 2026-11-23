@@ -7,6 +7,7 @@ import type {
   ProxyCoreDownloadProgress,
 } from '@shared/types';
 import type { GmailBackupProgress } from '@shared/vaultTypes';
+import type { Ipv6PoolConnectionStatsEvent } from '@shared/ipv6Types';
 
 const electronApi: ElectronApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_INFO),
@@ -210,6 +211,31 @@ const electronApi: ElectronApi = {
     ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_LIST_PROFILES_FOR_EMAIL, email),
   openGmailInProfile: (profileId, options) =>
     ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_OPEN_GMAIL_IN_PROFILE, profileId, options),
+
+  // Local IPv6 Pool
+  listIpv6Interfaces: () => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_LIST_INTERFACES),
+  getIpv6PoolStatus: () => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_GET_STATUS),
+  updateIpv6PoolConfig: (patch) => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_UPDATE_CONFIG, patch),
+  verifyIpv6PrefixRouting: () => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_VERIFY_ROUTING),
+  allocateIpv6PoolAddresses: (count) => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_ALLOCATE, count),
+  rotateProfileIpv6: (profileId, forceIfRunning) =>
+    ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_ROTATE_PROFILE, profileId, forceIfRunning),
+  rotateAllIpv6: (forceIfRunning) =>
+    ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_ROTATE_ALL, forceIfRunning),
+  removeIpv6PoolAddress: (address) =>
+    ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_REMOVE_ADDRESS, address),
+  removeAllIpv6PoolAddresses: () => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_REMOVE_ALL),
+  checkIpv6PoolHealthAll: () => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_CHECK_HEALTH_ALL),
+  detectIpv6PoolOrphans: () => ipcRenderer.invoke(IPC_CHANNELS.IPV6_POOL_DETECT_ORPHANS),
+  onIpv6PoolStats: (listener) => {
+    const handler = (_event: IpcRendererEvent, payload: Ipv6PoolConnectionStatsEvent): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC_CHANNELS.IPV6_POOL_STATS_EVENT, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.IPV6_POOL_STATS_EVENT, handler);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

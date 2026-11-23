@@ -49,6 +49,14 @@ import type {
   VaultAccountUpdateInput,
   VaultStatus,
 } from './vaultTypes';
+import type {
+  Ipv6PoolConfig,
+  Ipv6PoolConnectionStatsEvent,
+  Ipv6PoolEntrySummary,
+  Ipv6PoolStatus,
+  Ipv6RoutingCheckResult,
+  NetworkInterfaceIpv6Info,
+} from './ipv6Types';
 
 export const IPC_CHANNELS = {
   APP_GET_INFO: 'app:getInfo',
@@ -169,6 +177,20 @@ export const IPC_CHANNELS = {
   PROFILE_ACCOUNTS_LIST_ALL: 'profileAccounts:listAll',
   PROFILE_ACCOUNTS_LIST_PROFILES_FOR_EMAIL: 'profileAccounts:listProfilesForEmail',
   LAUNCHER_OPEN_GMAIL_IN_PROFILE: 'launcher:openGmailInProfile',
+
+  // Local IPv6 Pool
+  IPV6_POOL_LIST_INTERFACES: 'ipv6Pool:listInterfaces',
+  IPV6_POOL_GET_STATUS: 'ipv6Pool:getStatus',
+  IPV6_POOL_UPDATE_CONFIG: 'ipv6Pool:updateConfig',
+  IPV6_POOL_VERIFY_ROUTING: 'ipv6Pool:verifyRouting',
+  IPV6_POOL_ALLOCATE: 'ipv6Pool:allocate',
+  IPV6_POOL_ROTATE_PROFILE: 'ipv6Pool:rotateProfile',
+  IPV6_POOL_ROTATE_ALL: 'ipv6Pool:rotateAll',
+  IPV6_POOL_REMOVE_ADDRESS: 'ipv6Pool:removeAddress',
+  IPV6_POOL_REMOVE_ALL: 'ipv6Pool:removeAll',
+  IPV6_POOL_CHECK_HEALTH_ALL: 'ipv6Pool:checkHealthAll',
+  IPV6_POOL_DETECT_ORPHANS: 'ipv6Pool:detectOrphans',
+  IPV6_POOL_STATS_EVENT: 'ipv6Pool:statsEvent',
 } as const;
 
 export interface AppInfo {
@@ -361,6 +383,23 @@ export interface ElectronApi {
     profileId: string,
     options?: LaunchOptions & { url?: string },
   ) => Promise<LaunchResult>;
+
+  // Local IPv6 Pool (Renderer NEVER receives listener passwords)
+  listIpv6Interfaces: () => Promise<NetworkInterfaceIpv6Info[]>;
+  getIpv6PoolStatus: () => Promise<Ipv6PoolStatus>;
+  updateIpv6PoolConfig: (patch: Partial<Ipv6PoolConfig>) => Promise<Ipv6PoolConfig>;
+  verifyIpv6PrefixRouting: () => Promise<Ipv6RoutingCheckResult>;
+  allocateIpv6PoolAddresses: (count: number) => Promise<Ipv6PoolEntrySummary[]>;
+  rotateProfileIpv6: (
+    profileId: string,
+    forceIfRunning?: boolean,
+  ) => Promise<{ oldAddress: string | null; newAddress: string }>;
+  rotateAllIpv6: (forceIfRunning?: boolean) => Promise<{ rotated: number }>;
+  removeIpv6PoolAddress: (address: string) => Promise<void>;
+  removeAllIpv6PoolAddresses: () => Promise<{ removed: number }>;
+  checkIpv6PoolHealthAll: () => Promise<Ipv6PoolEntrySummary[]>;
+  detectIpv6PoolOrphans: () => Promise<string[]>;
+  onIpv6PoolStats: (listener: (event: Ipv6PoolConnectionStatsEvent) => void) => () => void;
 }
 
 export type { CookieItem };

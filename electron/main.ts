@@ -58,6 +58,8 @@ import { ClipboardGuard } from './services/vault/clipboardGuard';
 import { GmailOAuthService } from './services/gmail/oauthService';
 import { GmailService } from './services/gmail/gmailService';
 import { registerVaultAndGmailIpc } from './services/vault/vaultIpc';
+import { Ipv6PoolService } from './services/ipv6pool/ipv6PoolService';
+import { registerIpv6PoolIpc } from './services/ipv6pool/ipv6PoolIpc';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, '..');
@@ -72,6 +74,7 @@ let localApi: LocalApiServer | null = null;
 let vaultServiceRef: VaultService | null = null;
 let clipboardGuardRef: ClipboardGuard | null = null;
 let oauthServiceRef: GmailOAuthService | null = null;
+let ipv6PoolServiceRef: Ipv6PoolService | null = null;
 
 function resolveDataDir(): string {
   if (process.env['ANTIDETECT_DATA_DIR']) {
@@ -134,6 +137,34 @@ function initServices(): {
   const proxyService = new ProxyService(dbCtx.db, secrets, undefined, bridgeManager);
   const settingsService = new SettingsService(dbCtx.db);
   const browserManager = new BrowserManager(path.join(app.getPath('userData'), 'browsers'), logger);
+  const ipv6PoolService = new Ipv6PoolService(dbCtx.db, logger, {
+    onProfileKillSwitch: (profileId, reason) => {
+      if (profileLauncherRef) {
+        void profileLauncherRef.stop(profileId);
+      }
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.LAUNCHER_STATUS_EVENT, {
+          profileId,
+          running: false,
+          error: reason,
+        });
+      }
+    },
+    onStatsBatch: (counts) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(IPC_CHANNELS.IPV6_POOL_STATS_EVENT, { counts });
+      }
+    },
+    isProfileRunning: (profileId) => profileLauncherRef?.isRunning(profileId) ?? false,
+  });
+  ipv6PoolServiceRef = ipv6PoolService;
+  profileService.onPermanentDelete((profileId) => {
+    void ipv6PoolService.releaseProfileAddress(profileId);
+  });
+  setImmediate(() => {
+    void ipv6PoolService.detectOrphansOnStartup();
+  });
+
   const profileLauncher = new ProfileLauncher(
     profileService,
     proxyService,
@@ -142,6 +173,7 @@ function initServices(): {
     undefined,
     undefined,
     browserManager,
+    ipv6PoolService,
   );
   profileLauncherRef = profileLauncher;
   const apiServer = new LocalApiServer(profileService, profileLauncher, settingsService, logger);
@@ -483,6 +515,13 @@ function registerIpcHandlers(): void {
     profileLauncher,
     logger,
   });
+
+  if (ipv6PoolServiceRef) {
+    registerIpv6PoolIpc({
+      getMainWindow: () => mainWindow,
+      ipv6PoolService: ipv6PoolServiceRef,
+    });
+  }
 }
 
 function createWindow(): void {
@@ -543,6 +582,9 @@ app.on('before-quit', () => {
   }
   if (vaultServiceRef) {
     vaultServiceRef.close();
+  }
+  if (ipv6PoolServiceRef) {
+    void ipv6PoolServiceRef.shutdown();
   }
   if (launcher) {
     void launcher.stopAll();
