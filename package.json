@@ -53,7 +53,7 @@
     "google-auth-library": "^11.3.4",
     "googleapis": "^190.0.0",
     "https-proxy-agent": "^9.1.0",
-    "lucide-react": "^0.511.0",
+    "lucide-react": "^1.77.0",
     "otplib": "^13.6.0",
     "playwright-core": "1.65.1",
     "proxy-chain": "^3.0.3",
