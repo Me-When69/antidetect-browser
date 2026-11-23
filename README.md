@@ -17,7 +17,7 @@ Facet is an open-source, local-first desktop application for managing isolated b
 
 ## Installation & Verification
 
-Download the installer for your OS from [GitHub Releases](https://github.com/Me-When69/antidetect-browser/releases).
+Download the installer for your OS from [GitHub Releases](https://github.com/Me-When69/facet/releases).
 
 > **Unsigned Binary Notice:** Community builds are currently not code-signed, so **Windows SmartScreen** or **macOS Gatekeeper** may show a warning. Always verify the SHA-256 checksum against `SHA256SUMS.txt` attached to the release before running:
 >

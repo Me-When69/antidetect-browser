@@ -10,7 +10,7 @@
   "description": "Facet — Ứng dụng desktop mã nguồn mở quản lý nhiều hồ sơ trình duyệt cô lập",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Me-When69/antidetect-browser.git"
+    "url": "https://github.com/Me-When69/facet.git"
   },
   "main": "dist-electron/main.js",
   "type": "module",

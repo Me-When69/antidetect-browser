@@ -17,7 +17,7 @@ Facet là ứng dụng desktop **mã nguồn mở, phi thương mại, lưu dữ
 
 ## Cài đặt & Kiểm tra Checksum
 
-Tải bộ cài tương ứng hệ điều hành tại [GitHub Releases](https://github.com/Me-When69/antidetect-browser/releases).
+Tải bộ cài tương ứng hệ điều hành tại [GitHub Releases](https://github.com/Me-When69/facet/releases).
 
 > **Lưu ý bản cài chưa ký mã:** Bản cài mã nguồn mở chưa có chứng chỉ ký mã thương mại nên **Windows SmartScreen** hoặc **macOS Gatekeeper** có thể cảnh báo. Hãy luôn đối chiếu mã SHA-256 với file `SHA256SUMS.txt` đính kèm trước khi chạy:
 >
