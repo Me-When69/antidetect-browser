@@ -1,10 +1,52 @@
+import crypto from 'node:crypto';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
-import type { CreateProfileInput, LocalApiStatus } from '@shared/types';
+import type { CreateProfileInput, LocalApiStatus, Profile } from '@shared/types';
 import { generateConsistentIdentity, randomProfileName } from './fingerprint/generator';
 import type { ProfileService } from './profileService';
 import type { ProfileLauncher } from './launcher';
 import type { SettingsService } from './settingsService';
 import type { AppLogger } from './logger';
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const DEFAULT_MAX_REQUESTS_PER_WINDOW = 60;
+
+function timingSafeEqualStr(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function isAllowedHostHeader(hostHeader: string | undefined): boolean {
+  if (!hostHeader) return true;
+  const hostOnly = hostHeader.trim().toLowerCase().replace(/:\d+$/, '');
+  return hostOnly === '127.0.0.1' || hostOnly === 'localhost' || hostOnly === '[::1]';
+}
+
+function isAllowedOriginHeader(originHeader: string | undefined): boolean {
+  if (!originHeader) return true;
+  try {
+    const parsed = new URL(originHeader);
+    return (
+      parsed.hostname === '127.0.0.1' ||
+      parsed.hostname === 'localhost' ||
+      parsed.hostname === '[::1]'
+    );
+  } catch {
+    return false;
+  }
+}
+
+function redactProfileForApi(profile: Profile): Profile {
+  return {
+    ...profile,
+    proxy: {
+      ...profile.proxy,
+      password: profile.proxy.password ? '[REDACTED]' : '',
+      ...(profile.proxy.privateKey ? { privateKey: '[REDACTED]' } : {}),
+    },
+  };
+}
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown): void {
   res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -33,17 +75,34 @@ export class LocalApiServer {
   private settingsService: SettingsService;
   private logger: AppLogger;
   private runningPort = 0;
+  private maxRequestsPerMinute: number;
+  private requestTimestamps: number[] = [];
 
   constructor(
     profileService: ProfileService,
     launcher: ProfileLauncher,
     settingsService: SettingsService,
     logger: AppLogger,
+    maxRequestsPerMinute = DEFAULT_MAX_REQUESTS_PER_WINDOW,
   ) {
     this.profileService = profileService;
     this.launcher = launcher;
     this.settingsService = settingsService;
     this.logger = logger;
+    this.maxRequestsPerMinute = Math.max(1, maxRequestsPerMinute);
+  }
+
+  private checkRateLimit(): boolean {
+    const now = Date.now();
+    const cutoff = now - RATE_LIMIT_WINDOW_MS;
+    while (this.requestTimestamps.length > 0 && this.requestTimestamps[0]! < cutoff) {
+      this.requestTimestamps.shift();
+    }
+    if (this.requestTimestamps.length >= this.maxRequestsPerMinute) {
+      return false;
+    }
+    this.requestTimestamps.push(now);
+    return true;
   }
 
   getStatus(): LocalApiStatus {
@@ -58,18 +117,36 @@ export class LocalApiServer {
 
   private isAuthorized(req: IncomingMessage): boolean {
     const apiKey = this.settingsService.getSettings().localApiKey;
+    if (!apiKey) return false;
     const headerKey = req.headers['x-api-key'];
-    if (typeof headerKey === 'string' && headerKey === apiKey) {
+    if (typeof headerKey === 'string' && timingSafeEqualStr(headerKey, apiKey)) {
       return true;
     }
     const auth = req.headers['authorization'];
-    if (typeof auth === 'string' && auth.startsWith('Bearer ') && auth.slice(7) === apiKey) {
+    if (
+      typeof auth === 'string' &&
+      auth.startsWith('Bearer ') &&
+      timingSafeEqualStr(auth.slice(7), apiKey)
+    ) {
       return true;
     }
     return false;
   }
 
   private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (!isAllowedHostHeader(req.headers.host)) {
+      sendJson(res, 403, { error: 'Forbidden: invalid Host header' });
+      return;
+    }
+    if (!isAllowedOriginHeader(req.headers.origin)) {
+      sendJson(res, 403, { error: 'Forbidden: cross-origin request denied' });
+      return;
+    }
+    if (!this.checkRateLimit()) {
+      sendJson(res, 429, { error: 'Too Many Requests: rate limit exceeded' });
+      return;
+    }
+
     const method = req.method ?? 'GET';
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const pathname = url.pathname;
@@ -90,7 +167,10 @@ export class LocalApiServer {
         const profiles = this.profileService.list();
         const runningIds = new Set(this.launcher.getRunningIds());
         sendJson(res, 200, {
-          profiles: profiles.map((p) => ({ ...p, running: runningIds.has(p.id) })),
+          profiles: profiles.map((p) => ({
+            ...redactProfileForApi(p),
+            running: runningIds.has(p.id),
+          })),
         });
         return;
       }
@@ -134,7 +214,7 @@ export class LocalApiServer {
         };
 
         const created = this.profileService.create(input);
-        sendJson(res, 201, { profile: created });
+        sendJson(res, 201, { profile: redactProfileForApi(created) });
         return;
       }
 
