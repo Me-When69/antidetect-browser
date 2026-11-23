@@ -29,6 +29,7 @@ import type { ProfileService } from './profileService';
 import type { ProxyService } from './proxyService';
 import type { SettingsService } from './settingsService';
 import type { AppLogger } from './logger';
+import type { Ipv6PoolService } from './ipv6pool/ipv6PoolService';
 
 type StatusListener = (event: ProfileRunStatusEvent) => void;
 
@@ -40,6 +41,7 @@ export class ProfileLauncher {
   private chromeDriver: BrowserDriver;
   private camoufoxDriver: BrowserDriver;
   private browserManager?: BrowserManager;
+  private ipv6PoolService?: Ipv6PoolService;
   private runningDrivers = new Map<string, BrowserDriver>();
   private startingProfiles = new Set<string>();
   private listeners = new Set<StatusListener>();
@@ -52,6 +54,7 @@ export class ProfileLauncher {
     chromeDriver: BrowserDriver = new ChromeDriver(),
     camoufoxDriver: BrowserDriver = new CamoufoxDriver(),
     browserManager?: BrowserManager,
+    ipv6PoolService?: Ipv6PoolService,
   ) {
     this.profileService = profileService;
     this.proxyService = proxyService;
@@ -60,6 +63,7 @@ export class ProfileLauncher {
     this.chromeDriver = chromeDriver;
     this.camoufoxDriver = camoufoxDriver;
     this.browserManager = browserManager;
+    this.ipv6PoolService = ipv6PoolService;
   }
 
   onStatusChange(listener: StatusListener): () => void {
@@ -288,7 +292,26 @@ export class ProfileLauncher {
       `Resolved browser for ${profile.name}: ${browserCheck.label} v${effectiveVersion} (${browserCheck.executablePath})`,
     );
 
-    const geoResolution = await this.resolveGeo(profile, Boolean(options?.useFallbackGeo));
+    // Resolve local IPv6 Pool listener if profile uses 'ipv6pool'
+    let effectiveProfile = profile;
+    if (profile.proxy.type === 'ipv6pool') {
+      if (!this.ipv6PoolService) {
+        return {
+          profileId,
+          running: false,
+          wsEndpoint: '',
+          error: 'Dịch vụ Kho IPv6 cục bộ chưa được khởi tạo',
+        };
+      }
+      const resolved = await this.ipv6PoolService.resolveProxyForProfile(profileId);
+      effectiveProfile = {
+        ...profile,
+        proxy: resolved.proxy,
+        ipv6Policy: 'proxy-only',
+      };
+    }
+
+    const geoResolution = await this.resolveGeo(effectiveProfile, Boolean(options?.useFallbackGeo));
     if (!geoResolution.ok) {
       this.logger.warn(
         'launcher',
@@ -304,7 +327,11 @@ export class ProfileLauncher {
     }
 
     // Enforce Design Principle 1: runtime UA & Client Hints version always equals real running engine version
-    let launchProfile = geoResolution.updatedProfile;
+    let launchProfile = {
+      ...geoResolution.updatedProfile,
+      proxy: effectiveProfile.proxy,
+      ipv6Policy: effectiveProfile.ipv6Policy,
+    };
     if (detectedRealVersion && launchProfile.platform !== 'ios') {
       const alignedVersion = normalizeBrowserVersion(detectedRealVersion);
       let alignedUa = launchProfile.userAgent;
@@ -327,8 +354,8 @@ export class ProfileLauncher {
 
     const proxyConn = await this.proxyService.openTunnelForProfile(
       profileId,
-      profile.proxy,
-      profile.browser,
+      effectiveProfile.proxy,
+      effectiveProfile.browser,
     );
 
     try {

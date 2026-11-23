@@ -51,11 +51,19 @@ export class ProfileService {
   private db: AppDatabase;
   private secrets: SecretService;
   private profilesRootDir: string;
+  private onPermanentDeleteHooks = new Set<(profileId: string) => void>();
 
   constructor(db: AppDatabase, secrets: SecretService, profilesRootDir: string) {
     this.db = db;
     this.secrets = secrets;
     this.profilesRootDir = profilesRootDir;
+  }
+
+  onPermanentDelete(listener: (profileId: string) => void): () => void {
+    this.onPermanentDeleteHooks.add(listener);
+    return () => {
+      this.onPermanentDeleteHooks.delete(listener);
+    };
   }
 
   private encryptProxy(proxy: ProfileProxy): ProfileProxy {
@@ -433,6 +441,13 @@ export class ProfileService {
     // Only remove profile-account links; NEVER delete accounts inside vault.db.
     this.db.delete(profileAccountsTable).where(eq(profileAccountsTable.profileId, id)).run();
     this.db.delete(profilesTable).where(eq(profilesTable.id, id)).run();
+    for (const hook of this.onPermanentDeleteHooks) {
+      try {
+        hook(id);
+      } catch {
+        // Ignore hook errors
+      }
+    }
     const dir = this.getProfileDir(id);
     if (fs.existsSync(dir)) {
       try {

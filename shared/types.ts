@@ -12,7 +12,8 @@ export type ProxyType =
   | 'shadowsocks'
   | 'vmess'
   | 'vless'
-  | 'trojan';
+  | 'trojan'
+  | 'ipv6pool';
 export type GeoMode = 'auto' | 'manual';
 export type WebRtcMode = 'replace' | 'disable' | 'real';
 export type Ipv6Policy = 'block' | 'proxy-only';
@@ -282,6 +283,8 @@ export interface ProxyCheckResult {
   ok: boolean;
   ip: string;
   ipVersion?: 4 | 6;
+  asn?: string;
+  isp?: string;
   protocolUsed?: ProxyType;
   viaBridge?: boolean;
   dnsLeakRisk?: boolean;

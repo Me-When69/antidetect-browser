@@ -25,6 +25,7 @@ const PROXY_TYPE_VALUES = [
   'vmess',
   'vless',
   'trojan',
+  'ipv6pool',
 ] as const;
 
 const baseProxySchema = z.object({
@@ -176,7 +177,7 @@ export const profileFormSchema = z
     presetId: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.proxy.type !== 'none') {
+    if (data.proxy.type !== 'none' && data.proxy.type !== 'ipv6pool') {
       if (!data.proxy.host.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -775,6 +776,31 @@ export function checkIdentityConsistency(
       message:
         'Đang bật chặn ảnh hoặc font ngoài cùng cấu hình giả lập người dùng — có thể làm vỡ giao diện hoặc lộ dấu hiệu tự động hóa.',
       suggestion: 'Chỉ bật khi cần tiết kiệm băng thông cho tác vụ không phụ thuộc hiển thị.',
+    });
+  }
+
+  // 4f. IPv6 Pool / Datacenter ASN soft notice
+  if (profile.proxy.type === 'ipv6pool') {
+    warnings.push({
+      code: 'IPV6_POOL_INFRASTRUCTURE_NOTICE',
+      severity: 'warning',
+      message:
+        'Hồ sơ đang dùng Kho IPv6 cục bộ: dải IPv6 từ VPS/trung tâm dữ liệu thường bị gắn nhãn hạ tầng, nhiều trang chưa hỗ trợ IPv6 và độ chính xác vị trí (geo) của IPv6 thường thấp.',
+      suggestion:
+        'Kiểm tra ASN/ISP bằng nút Kiểm tra Proxy; nếu cần geo chính xác, đặt múi giờ/ngôn ngữ thủ công.',
+    });
+  } else if (
+    proxyCheck?.ok &&
+    proxyCheck.isp &&
+    /(hetzner|ovh|digitalocean|linode|vultr|aws|amazon|google cloud|azure|alibaba|datacenter|hosting|server|vps|cloud)/i.test(
+      proxyCheck.isp,
+    )
+  ) {
+    warnings.push({
+      code: 'DATACENTER_ASN_NOTICE',
+      severity: 'warning',
+      message: `IP đầu ra thuộc nhà cung cấp hạ tầng/trung tâm dữ liệu (${proxyCheck.isp}) trong khi thiết bị giả lập là máy người dùng thường.`,
+      suggestion: 'Một số dịch vụ có thể đánh giá thấp IP trung tâm dữ liệu; hãy cân nhắc mục đích sử dụng.',
     });
   }
 
