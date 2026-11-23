@@ -12,6 +12,10 @@ import {
   GmailOAuthService,
 } from '../../electron/services/gmail/oauthService';
 import { GmailService } from '../../electron/services/gmail/gmailService';
+import {
+  extractEncryptedEmlArchive,
+  isLegacyZipArchive,
+} from '../../electron/services/gmail/emlArchive';
 import { ProfileService } from '../../electron/services/profileService';
 import { SecretService } from '../../electron/services/secretService';
 import { SettingsService } from '../../electron/services/settingsService';
@@ -307,7 +311,7 @@ describe('Gmail Module Integration Tests (Mocked OAuth + Mocked Gmail API, zero 
     expect(modRes.modifiedCount).toBe(1);
     expect(state.lastBatchModifyBody).toEqual({ ids: ['msg-1'], removeLabelIds: ['UNREAD'] });
 
-    // 3. Encrypted ZIP backup (default) — creates .zip and leaves NO plaintext .eml on disk
+    // 3. Encrypted .facet-eml backup (default, AES-256-GCM) — leaves NO plaintext .eml on disk
     const zipTargetDir = path.join(dir, 'backup-zip');
     const zipProgress = await gmail.backupEmails({
       email: 'alice@example.com',
@@ -317,10 +321,20 @@ describe('Gmail Module Integration Tests (Mocked OAuth + Mocked Gmail API, zero 
       zipPassword: 'ZipPassword!1',
     });
     expect(zipProgress.done).toBe(true);
-    expect(zipProgress.outputPath?.endsWith('.zip')).toBe(true);
+    expect(zipProgress.outputPath?.endsWith('.facet-eml')).toBe(true);
     expect(fs.existsSync(zipProgress.outputPath!)).toBe(true);
     const filesInZipDir = fs.readdirSync(zipTargetDir);
     expect(filesInZipDir.some((f) => f.endsWith('.eml'))).toBe(false);
+
+    // Verify round-trip extraction, wrong password rejection, and legacy PKZIP detection
+    const rawArchive = fs.readFileSync(zipProgress.outputPath!);
+    const extracted = extractEncryptedEmlArchive(rawArchive, 'ZipPassword!1');
+    expect(extracted).toHaveLength(1);
+    expect(extracted[0]?.content.toString('utf8')).toContain('Subject: Hello Facet');
+    expect(() => extractEncryptedEmlArchive(rawArchive, 'WrongPass!')).toThrow(/Sai mật khẩu/);
+    const legacyZipHeader = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]);
+    expect(isLegacyZipArchive(legacyZipHeader)).toBe(true);
+    expect(() => extractEncryptedEmlArchive(legacyZipHeader, 'any')).toThrow(/\.zip AES-256/);
 
     // 4. Unencrypted .eml backup
     const emlTargetDir = path.join(dir, 'backup-eml');

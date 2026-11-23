@@ -25,7 +25,8 @@ Thumbs.db
 !.env.example
 credentials.json
 token*
-vault*
+vault.db
+vault.db-*
 *.db
 *.db-*
 *.sqlite

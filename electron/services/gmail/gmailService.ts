@@ -1,7 +1,5 @@
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import type * as ArchiverTypes from 'archiver';
 import { google, type gmail_v1 } from 'googleapis';
 import type {
   GmailBackupOptions,
@@ -10,43 +8,7 @@ import type {
 } from '@shared/vaultTypes';
 import type { VaultService } from '../vault/vaultService';
 import { GMAIL_SCOPE_MODIFY, type GmailOAuthService } from './oauthService';
-
-const require = createRequire(import.meta.url);
-
-type ArchiverCallable = ((
-  format: string,
-  options?: ArchiverTypes.ArchiverOptions & { encryptionMethod?: string; password?: string },
-) => ArchiverTypes.Archiver) & {
-  registerFormat: (format: string, mod: unknown) => void;
-};
-
-let zipEncryptedRegistered = false;
-function getArchiver(): ArchiverCallable {
-  const rawMod = require('archiver') as ArchiverCallable | { default?: ArchiverCallable };
-  const archiverMod =
-    typeof rawMod === 'function'
-      ? rawMod
-      : typeof rawMod.default === 'function'
-        ? rawMod.default
-        : null;
-  if (!archiverMod) {
-    throw new Error('Không thể nạp thư viện archiver để nén ZIP mã hóa');
-  }
-  if (!zipEncryptedRegistered) {
-    try {
-      const rawZipEnc = require('archiver-zip-encrypted') as { default?: unknown } | unknown;
-      const zipEncryptedMod =
-        typeof rawZipEnc === 'object' && rawZipEnc !== null && 'default' in rawZipEnc
-          ? ((rawZipEnc as { default?: unknown }).default ?? rawZipEnc)
-          : rawZipEnc;
-      archiverMod.registerFormat('zip-encrypted', zipEncryptedMod);
-    } catch {
-      // Already registered
-    }
-    zipEncryptedRegistered = true;
-  }
-  return archiverMod;
-}
+import { createEncryptedEmlArchive, type EmlArchiveEntry } from './emlArchive';
 
 export interface GmailServiceOptions {
   /** Optional custom Gmail API root URL (for integration tests with local mock server). */
@@ -372,86 +334,59 @@ export class GmailService {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
     if (options.encryptZip) {
-      const archiver = getArchiver();
-      const zipPath = path.join(options.targetDir, `gmail-backup-${safeEmail}-${timestamp}.zip`);
-      const output = fs.createWriteStream(zipPath);
-      const archive = archiver('zip-encrypted', {
-        zlib: { level: 6 },
-        encryptionMethod: 'aes256',
-        password: options.zipPassword,
-      });
-
-      const finishPromise = new Promise<void>((resolve, reject) => {
-        output.on('close', resolve);
-        output.on('error', reject);
-        archive.on('error', reject);
-      });
-
-      archive.pipe(output);
-
+      const archivePath = path.join(
+        options.targetDir,
+        `gmail-backup-${safeEmail}-${timestamp}.facet-eml`,
+      );
+      const entries: EmlArchiveEntry[] = [];
       let current = 0;
-      try {
-        for (const id of ids) {
-          if (signal?.aborted) {
-            archive.abort();
-            output.destroy();
-            try {
-              if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-            } catch {
-              // Ignore cleanup errors
-            }
-            const cancelled: GmailBackupProgress = {
-              email: cleanEmail,
-              current,
-              total,
-              done: true,
-              cancelled: true,
-            };
-            onProgress?.(cancelled);
-            return cancelled;
-          }
 
-          const rawRes = await this.withRetry(
-            cleanEmail,
-            () =>
-              gmail.users.messages.get({
-                userId: 'me',
-                id,
-                format: 'raw',
-              }),
-            signal,
-          );
-          const rawData = rawRes.data.raw;
-          if (rawData) {
-            const emlBuf = decodeBase64UrlToBuffer(rawData);
-            archive.append(emlBuf, { name: `${sanitizeSegment(id)}.eml` });
-          }
-          current += 1;
-          onProgress?.({ email: cleanEmail, current, total });
+      for (const id of ids) {
+        if (signal?.aborted) {
+          const cancelled: GmailBackupProgress = {
+            email: cleanEmail,
+            current,
+            total,
+            done: true,
+            cancelled: true,
+          };
+          onProgress?.(cancelled);
+          return cancelled;
         }
 
-        await archive.finalize();
-        await finishPromise;
-
-        const done: GmailBackupProgress = {
-          email: cleanEmail,
-          current,
-          total,
-          done: true,
-          outputPath: zipPath,
-        };
-        onProgress?.(done);
-        return done;
-      } catch (err) {
-        archive.abort();
-        output.destroy();
-        try {
-          if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
-        } catch {
-          // Ignore cleanup errors
+        const rawRes = await this.withRetry(
+          cleanEmail,
+          () =>
+            gmail.users.messages.get({
+              userId: 'me',
+              id,
+              format: 'raw',
+            }),
+          signal,
+        );
+        const rawData = rawRes.data.raw;
+        if (rawData) {
+          entries.push({
+            name: `${sanitizeSegment(id)}.eml`,
+            content: decodeBase64UrlToBuffer(rawData),
+          });
         }
-        throw err;
+        current += 1;
+        onProgress?.({ email: cleanEmail, current, total });
       }
+
+      const encryptedBuf = createEncryptedEmlArchive(entries, options.zipPassword ?? '');
+      fs.writeFileSync(archivePath, encryptedBuf);
+
+      const done: GmailBackupProgress = {
+        email: cleanEmail,
+        current,
+        total,
+        done: true,
+        outputPath: archivePath,
+      };
+      onProgress?.(done);
+      return done;
     } else {
       // Unencrypted .eml folder (user explicitly opted out of encrypted zip after warning)
       const outDir = path.join(options.targetDir, `gmail-backup-${safeEmail}-${timestamp}`);

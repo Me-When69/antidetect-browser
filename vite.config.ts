@@ -35,8 +35,6 @@ export default defineConfig({
                 'googleapis',
                 'google-auth-library',
                 'fernet',
-                'archiver',
-                'archiver-zip-encrypted',
                 'zod',
               ],
             },
