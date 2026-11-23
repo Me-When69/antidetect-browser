@@ -5,6 +5,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createDatabase } from '../../electron/db';
 import { ProfileService } from '../../electron/services/profileService';
 import { SecretService } from '../../electron/services/secretService';
+import {
+  assertTrustedIpcSender,
+  ipcIdSchema,
+  ipcVersionSchema,
+} from '../../electron/services/ipcSecurity';
 
 describe('Security Hardening Regression Tests (E-001+)', () => {
   const tempDirs: string[] = [];
@@ -45,5 +50,28 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
     expect(validDir.startsWith(path.resolve(profilesDir) + path.sep)).toBe(true);
 
     dbCtx.sqlite.close();
+  });
+
+  it('E-002: enforces trusted IPC sender check, Zod schemas, and zero raw ipcMain.handle in main.ts', () => {
+    const fakeWebContents = { id: 1 } as unknown as Electron.WebContents;
+    const otherWebContents = { id: 2 } as unknown as Electron.WebContents;
+    const mockWin = {
+      isDestroyed: () => false,
+      webContents: fakeWebContents,
+    };
+
+    expect(() => assertTrustedIpcSender(fakeWebContents, mockWin)).not.toThrow();
+    expect(() => assertTrustedIpcSender(otherWebContents, mockWin)).toThrow();
+    expect(() => assertTrustedIpcSender(fakeWebContents, null)).toThrow();
+
+    expect(() => ipcIdSchema.parse('')).toThrow();
+    expect(() => ipcVersionSchema.parse('136.0.7103.92')).not.toThrow();
+    expect(() => ipcVersionSchema.parse('136; rm -rf /')).toThrow();
+
+    const mainSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'electron/main.ts'),
+      'utf8',
+    );
+    expect(mainSource.includes('ipcMain.handle(')).toBe(false);
   });
 });

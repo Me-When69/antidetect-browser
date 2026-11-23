@@ -60,6 +60,19 @@ import { GmailService } from './services/gmail/gmailService';
 import { registerVaultAndGmailIpc } from './services/vault/vaultIpc';
 import { Ipv6PoolService } from './services/ipv6pool/ipv6PoolService';
 import { registerIpv6PoolIpc } from './services/ipv6pool/ipv6PoolIpc';
+import {
+  createSafeIpcRegistrar,
+  ipcBrowserSchema,
+  ipcCookieFormatSchema,
+  ipcIdListSchema,
+  ipcIdSchema,
+  ipcInstallBrowserSchema,
+  ipcPlatformSchema,
+  ipcProxyCoreSchema,
+  ipcShortStringSchema,
+  ipcVersionSchema,
+} from './services/ipcSecurity';
+import { profileProxySchema } from '@shared/validation';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, '..');
@@ -224,7 +237,9 @@ function registerIpcHandlers(): void {
     apiServer,
   } = initServices();
 
-  ipcMain.handle(IPC_CHANNELS.APP_GET_INFO, (): AppInfo => ({
+  const safeHandle = createSafeIpcRegistrar(ipcMain, () => mainWindow);
+
+  safeHandle(IPC_CHANNELS.APP_GET_INFO, (): AppInfo => ({
     name: app.getName(),
     version: app.getVersion(),
     platform: process.platform,
@@ -233,112 +248,143 @@ function registerIpcHandlers(): void {
   }));
 
   // Profiles
-  ipcMain.handle(IPC_CHANNELS.PROFILES_LIST, (_e, filter?: ProfileFilter) =>
+  safeHandle(IPC_CHANNELS.PROFILES_LIST, (_e, filter?: ProfileFilter) =>
     profileService.list(filter),
   );
-  ipcMain.handle(IPC_CHANNELS.PROFILES_GET, (_e, id: string) => profileService.getById(id));
-  ipcMain.handle(IPC_CHANNELS.PROFILES_CREATE, (_e, input: CreateProfileInput) =>
+  safeHandle(IPC_CHANNELS.PROFILES_GET, (_e, id: string) =>
+    profileService.getById(ipcIdSchema.parse(id)),
+  );
+  safeHandle(IPC_CHANNELS.PROFILES_CREATE, (_e, input: CreateProfileInput) =>
     profileService.create(input),
   );
-  ipcMain.handle(IPC_CHANNELS.PROFILES_UPDATE, (_e, input: UpdateProfileInput) =>
-    profileService.update(input),
-  );
-  ipcMain.handle(IPC_CHANNELS.PROFILES_DELETE, async (_e, id: string) => {
-    await profileLauncher.stop(id);
-    profileService.delete(id);
+  safeHandle(IPC_CHANNELS.PROFILES_UPDATE, (_e, input: UpdateProfileInput) => {
+    ipcIdSchema.parse(input?.id);
+    return profileService.update(input);
   });
-  ipcMain.handle(IPC_CHANNELS.PROFILES_DUPLICATE, (_e, id: string) => profileService.duplicate(id));
-  ipcMain.handle(IPC_CHANNELS.PROFILES_BULK_DELETE, async (_e, ids: string[]) => {
-    await profileLauncher.bulkStop(ids);
-    return profileService.bulkDelete(ids);
+  safeHandle(IPC_CHANNELS.PROFILES_DELETE, async (_e, id: string) => {
+    const safeId = ipcIdSchema.parse(id);
+    await profileLauncher.stop(safeId);
+    profileService.delete(safeId);
   });
-  ipcMain.handle(IPC_CHANNELS.PROFILES_BULK_UPDATE, (_e, input: BulkUpdateInput) =>
-    profileService.bulkUpdate(input),
+  safeHandle(IPC_CHANNELS.PROFILES_DUPLICATE, (_e, id: string) =>
+    profileService.duplicate(ipcIdSchema.parse(id)),
   );
-  ipcMain.handle(IPC_CHANNELS.PROFILES_BULK_CREATE, (_e, input: BulkCreateInput) =>
+  safeHandle(IPC_CHANNELS.PROFILES_BULK_DELETE, async (_e, ids: string[]) => {
+    const safeIds = ipcIdListSchema.parse(ids);
+    await profileLauncher.bulkStop(safeIds);
+    return profileService.bulkDelete(safeIds);
+  });
+  safeHandle(IPC_CHANNELS.PROFILES_BULK_UPDATE, (_e, input: BulkUpdateInput) => {
+    ipcIdListSchema.parse(input?.ids);
+    return profileService.bulkUpdate(input);
+  });
+  safeHandle(IPC_CHANNELS.PROFILES_BULK_CREATE, (_e, input: BulkCreateInput) =>
     profileService.bulkCreate(input),
   );
-  ipcMain.handle(IPC_CHANNELS.PROFILES_LIST_TRASH, () => profileService.listTrash());
-  ipcMain.handle(IPC_CHANNELS.PROFILES_RESTORE, (_e, id: string) => profileService.restore(id));
-  ipcMain.handle(IPC_CHANNELS.PROFILES_PERMANENT_DELETE, async (_e, id: string) => {
-    await profileLauncher.stop(id);
-    profileService.permanentDelete(id);
-  });
-  ipcMain.handle(IPC_CHANNELS.PROFILES_EMPTY_TRASH, () => profileService.emptyTrash());
-  ipcMain.handle(IPC_CHANNELS.PROFILES_IMPORT_CSV, (_e, rawCsv: string, folderId?: string | null) =>
-    profileService.importCsv(rawCsv, folderId ?? null),
+  safeHandle(IPC_CHANNELS.PROFILES_LIST_TRASH, () => profileService.listTrash());
+  safeHandle(IPC_CHANNELS.PROFILES_RESTORE, (_e, id: string) =>
+    profileService.restore(ipcIdSchema.parse(id)),
   );
-  ipcMain.handle(IPC_CHANNELS.PROFILES_CLEAN_CACHE, (_e, id: string) =>
-    profileService.cleanProfileCache(id),
+  safeHandle(IPC_CHANNELS.PROFILES_PERMANENT_DELETE, async (_e, id: string) => {
+    const safeId = ipcIdSchema.parse(id);
+    await profileLauncher.stop(safeId);
+    profileService.permanentDelete(safeId);
+  });
+  safeHandle(IPC_CHANNELS.PROFILES_EMPTY_TRASH, () => profileService.emptyTrash());
+  safeHandle(IPC_CHANNELS.PROFILES_IMPORT_CSV, (_e, rawCsv: string, folderId?: string | null) =>
+    profileService.importCsv(String(rawCsv ?? ''), folderId ? ipcIdSchema.parse(folderId) : null),
+  );
+  safeHandle(IPC_CHANNELS.PROFILES_CLEAN_CACHE, (_e, id: string) =>
+    profileService.cleanProfileCache(ipcIdSchema.parse(id)),
   );
 
   // Folders & Tags
-  ipcMain.handle(IPC_CHANNELS.FOLDERS_LIST, () => profileService.listFolders());
-  ipcMain.handle(IPC_CHANNELS.FOLDERS_CREATE, (_e, name: string) =>
-    profileService.createFolder(name),
+  safeHandle(IPC_CHANNELS.FOLDERS_LIST, () => profileService.listFolders());
+  safeHandle(IPC_CHANNELS.FOLDERS_CREATE, (_e, name: string) =>
+    profileService.createFolder(ipcShortStringSchema.parse(name)),
   );
-  ipcMain.handle(IPC_CHANNELS.FOLDERS_DELETE, (_e, id: string) => profileService.deleteFolder(id));
-  ipcMain.handle(IPC_CHANNELS.TAGS_LIST, () => profileService.listTags());
-  ipcMain.handle(IPC_CHANNELS.TAGS_CREATE, (_e, name: string, color?: string) =>
-    profileService.createTag(name, color),
+  safeHandle(IPC_CHANNELS.FOLDERS_DELETE, (_e, id: string) =>
+    profileService.deleteFolder(ipcIdSchema.parse(id)),
   );
-  ipcMain.handle(IPC_CHANNELS.TAGS_DELETE, (_e, id: string) => profileService.deleteTag(id));
+  safeHandle(IPC_CHANNELS.TAGS_LIST, () => profileService.listTags());
+  safeHandle(IPC_CHANNELS.TAGS_CREATE, (_e, name: string, color?: string) =>
+    profileService.createTag(ipcShortStringSchema.parse(name), color),
+  );
+  safeHandle(IPC_CHANNELS.TAGS_DELETE, (_e, id: string) =>
+    profileService.deleteTag(ipcIdSchema.parse(id)),
+  );
 
   // Launcher
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_START, (_e, id: string, options?: LaunchOptions) =>
-    profileLauncher.start(id, options),
+  safeHandle(IPC_CHANNELS.LAUNCHER_START, (_e, id: string, options?: LaunchOptions) =>
+    profileLauncher.start(ipcIdSchema.parse(id), options),
   );
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_STOP, (_e, id: string) => profileLauncher.stop(id));
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_BULK_START, (_e, ids: string[]) =>
-    profileLauncher.bulkStart(ids),
+  safeHandle(IPC_CHANNELS.LAUNCHER_STOP, (_e, id: string) =>
+    profileLauncher.stop(ipcIdSchema.parse(id)),
   );
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_BULK_STOP, (_e, ids: string[]) =>
-    profileLauncher.bulkStop(ids),
+  safeHandle(IPC_CHANNELS.LAUNCHER_BULK_START, (_e, ids: string[]) =>
+    profileLauncher.bulkStart(ipcIdListSchema.parse(ids)),
   );
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_RUNNING_IDS, () => profileLauncher.getRunningIds());
-  ipcMain.handle(IPC_CHANNELS.LAUNCHER_WARMUP, (_e, profileId: string, config: WarmupConfig) =>
-    profileLauncher.warmup(profileId, config),
+  safeHandle(IPC_CHANNELS.LAUNCHER_BULK_STOP, (_e, ids: string[]) =>
+    profileLauncher.bulkStop(ipcIdListSchema.parse(ids)),
+  );
+  safeHandle(IPC_CHANNELS.LAUNCHER_RUNNING_IDS, () => profileLauncher.getRunningIds());
+  safeHandle(IPC_CHANNELS.LAUNCHER_WARMUP, (_e, profileId: string, config: WarmupConfig) =>
+    profileLauncher.warmup(ipcIdSchema.parse(profileId), config),
   );
 
   // Proxies
-  ipcMain.handle(IPC_CHANNELS.PROXIES_LIST, () => proxyService.list());
-  ipcMain.handle(IPC_CHANNELS.PROXIES_CREATE, (_e, input: CreateSavedProxyInput) =>
+  safeHandle(IPC_CHANNELS.PROXIES_LIST, () => proxyService.list());
+  safeHandle(IPC_CHANNELS.PROXIES_CREATE, (_e, input: CreateSavedProxyInput) =>
     proxyService.create(input),
   );
-  ipcMain.handle(
+  safeHandle(
     IPC_CHANNELS.PROXIES_UPDATE,
-    (_e, id: string, input: Partial<CreateSavedProxyInput>) => proxyService.update(id, input),
+    (_e, id: string, input: Partial<CreateSavedProxyInput>) =>
+      proxyService.update(ipcIdSchema.parse(id), input),
   );
-  ipcMain.handle(IPC_CHANNELS.PROXIES_DELETE, (_e, id: string) => proxyService.delete(id));
-  ipcMain.handle(IPC_CHANNELS.PROXIES_CHECK, (_e, proxy: ProfileProxy) =>
-    proxyService.checkProxy(proxy),
+  safeHandle(IPC_CHANNELS.PROXIES_DELETE, (_e, id: string) =>
+    proxyService.delete(ipcIdSchema.parse(id)),
   );
-  ipcMain.handle(
+  safeHandle(IPC_CHANNELS.PROXIES_CHECK, (_e, proxy: ProfileProxy) =>
+    proxyService.checkProxy(profileProxySchema.parse(proxy)),
+  );
+  safeHandle(
     IPC_CHANNELS.PROXIES_CHECK_LEAK,
     (_e, proxy: ProfileProxy, expectedProxyIp?: string, ipv6Policy?: Ipv6Policy) =>
-      proxyService.checkProxyLeak(proxy, expectedProxyIp, ipv6Policy ?? 'block'),
+      proxyService.checkProxyLeak(
+        profileProxySchema.parse(proxy),
+        expectedProxyIp,
+        ipv6Policy ?? 'block',
+      ),
   );
 
   // Fingerprint
-  ipcMain.handle(
+  safeHandle(
     IPC_CHANNELS.FINGERPRINT_GENERATE,
-    (_e, platform: Platform, browser: BrowserType) => generateConsistentIdentity(platform, browser),
+    (_e, platform: Platform, browser: BrowserType) =>
+      generateConsistentIdentity(
+        ipcPlatformSchema.parse(platform),
+        ipcBrowserSchema.parse(browser),
+      ),
   );
-  ipcMain.handle(IPC_CHANNELS.FINGERPRINT_PRESETS, () => listDevicePresets());
+  safeHandle(IPC_CHANNELS.FINGERPRINT_PRESETS, () => listDevicePresets());
 
   // Cookies
-  ipcMain.handle(IPC_CHANNELS.COOKIES_IMPORT, (_e, profileId: string, rawText: string) =>
-    profileLauncher.importCookies(profileId, rawText),
+  safeHandle(IPC_CHANNELS.COOKIES_IMPORT, (_e, profileId: string, rawText: string) =>
+    profileLauncher.importCookies(ipcIdSchema.parse(profileId), String(rawText ?? '')),
   );
-  ipcMain.handle(
+  safeHandle(
     IPC_CHANNELS.COOKIES_EXPORT,
     (_e, profileId: string, format: 'json' | 'netscape') =>
-      profileLauncher.exportCookies(profileId, format),
+      profileLauncher.exportCookies(
+        ipcIdSchema.parse(profileId),
+        ipcCookieFormatSchema.parse(format),
+      ),
   );
 
   // Settings & Local API
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_GET, () => settingsService.getSettings());
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_UPDATE, async (_e, patch: Partial<AppSettings>) => {
+  safeHandle(IPC_CHANNELS.SETTINGS_GET, () => settingsService.getSettings());
+  safeHandle(IPC_CHANNELS.SETTINGS_UPDATE, async (_e, patch: Partial<AppSettings>) => {
     const updated = settingsService.updateSettings(patch);
     if (patch.localApiEnabled !== undefined || patch.localApiPort !== undefined) {
       if (updated.localApiEnabled) {
@@ -351,18 +397,18 @@ function registerIpcHandlers(): void {
     }
     return updated;
   });
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_REGEN_API_KEY, () => settingsService.regenerateApiKey());
-  ipcMain.handle(IPC_CHANNELS.API_STATUS, () => apiServer.getStatus());
+  safeHandle(IPC_CHANNELS.SETTINGS_REGEN_API_KEY, () => settingsService.regenerateApiKey());
+  safeHandle(IPC_CHANNELS.API_STATUS, () => apiServer.getStatus());
 
   // Backup & Logs
-  ipcMain.handle(IPC_CHANNELS.BACKUP_EXPORT, () => profileService.exportBackup());
-  ipcMain.handle(IPC_CHANNELS.BACKUP_IMPORT, (_e, payload: BackupPayload) =>
+  safeHandle(IPC_CHANNELS.BACKUP_EXPORT, () => profileService.exportBackup());
+  safeHandle(IPC_CHANNELS.BACKUP_IMPORT, (_e, payload: BackupPayload) =>
     profileService.importBackup(payload),
   );
-  ipcMain.handle(IPC_CHANNELS.LOGS_EXPORT, () => logger.exportLogs());
+  safeHandle(IPC_CHANNELS.LOGS_EXPORT, () => logger.exportLogs());
 
   // Browser executable detection & on-demand Playwright Chromium install
-  ipcMain.handle(IPC_CHANNELS.BROWSER_CHECK, (): BrowserCheckResult => {
+  safeHandle(IPC_CHANNELS.BROWSER_CHECK, (): BrowserCheckResult => {
     try {
       const settings = settingsService.getSettings();
       const resolved = resolveBrowserExecutable({ customPath: settings.chromePath });
@@ -389,15 +435,16 @@ function registerIpcHandlers(): void {
     logger,
   );
 
-  ipcMain.handle(IPC_CHANNELS.BROWSER_LIST_INSTALLED, () => {
+  safeHandle(IPC_CHANNELS.BROWSER_LIST_INSTALLED, () => {
     const settings = settingsService.getSettings();
     return listInstalledBrowsers(settings.chromePath, settings.camoufoxPath);
   });
 
-  ipcMain.handle(
+  safeHandle(
     IPC_CHANNELS.BROWSER_INSTALL_CHROMIUM,
     (_e, targetBrowser: 'chromium' | 'firefox' = 'chromium') => {
-      return browserInstaller.install(targetBrowser, (payload: BrowserInstallProgressEvent) => {
+      const safeBrowser = ipcInstallBrowserSchema.parse(targetBrowser);
+      return browserInstaller.install(safeBrowser, (payload: BrowserInstallProgressEvent) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send(IPC_CHANNELS.BROWSER_INSTALL_PROGRESS, payload);
         }
@@ -406,9 +453,9 @@ function registerIpcHandlers(): void {
   );
 
   // External proxy cores (sing-box / xray)
-  ipcMain.handle(IPC_CHANNELS.PROXY_CORES_LIST, () => coreManager.listCores());
-  ipcMain.handle(IPC_CHANNELS.PROXY_CORES_DOWNLOAD, (_e, core: 'sing-box' | 'xray') =>
-    coreManager.downloadCore(core, (payload) => {
+  safeHandle(IPC_CHANNELS.PROXY_CORES_LIST, () => coreManager.listCores());
+  safeHandle(IPC_CHANNELS.PROXY_CORES_DOWNLOAD, (_e, core: 'sing-box' | 'xray') =>
+    coreManager.downloadCore(ipcProxyCoreSchema.parse(core), (payload) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send(IPC_CHANNELS.PROXY_CORES_PROGRESS, payload);
       }
@@ -416,28 +463,35 @@ function registerIpcHandlers(): void {
   );
 
   // Emulated devices catalog
-  ipcMain.handle(IPC_CHANNELS.DEVICES_LIST, (_e, platform?: Platform) => listDevices(platform));
-  ipcMain.handle(IPC_CHANNELS.DEVICES_PICK_RANDOM, (_e, platform: Platform, seed?: number) =>
-    pickWeightedDevice(platform, seed),
+  safeHandle(IPC_CHANNELS.DEVICES_LIST, (_e, platform?: Platform) =>
+    listDevices(platform ? ipcPlatformSchema.parse(platform) : undefined),
   );
-  ipcMain.handle(
+  safeHandle(IPC_CHANNELS.DEVICES_PICK_RANDOM, (_e, platform: Platform, seed?: number) =>
+    pickWeightedDevice(ipcPlatformSchema.parse(platform), seed),
+  );
+  safeHandle(
     IPC_CHANNELS.DEVICES_APPLY,
     (_e, baseProfile: CreateProfileInput, deviceId: string, realBrowserVersion: string) => {
-      const device = getDeviceById(deviceId);
+      const safeDeviceId = ipcIdSchema.parse(deviceId);
+      const device = getDeviceById(safeDeviceId);
       if (!device) {
-        throw new Error(`Không tìm thấy thiết bị giả lập: ${deviceId}`);
+        throw new Error(`Không tìm thấy thiết bị giả lập: ${safeDeviceId}`);
       }
-      return applyDevice(baseProfile, device, realBrowserVersion);
+      return applyDevice(baseProfile, device, ipcVersionSchema.parse(realBrowserVersion));
     },
   );
-  ipcMain.handle(
+  safeHandle(
     IPC_CHANNELS.DEVICES_CONFIDENCE,
     (_e, targetPlatform: Platform, browser?: BrowserType) =>
-      getEmulationConfidence(targetPlatform, process.platform, browser),
+      getEmulationConfidence(
+        ipcPlatformSchema.parse(targetPlatform),
+        process.platform,
+        browser ? ipcBrowserSchema.parse(browser) : undefined,
+      ),
   );
 
   // Multi-version Browser Manager
-  ipcMain.handle(IPC_CHANNELS.BROWSERS_LIST_MANAGED, () => {
+  safeHandle(IPC_CHANNELS.BROWSERS_LIST_MANAGED, () => {
     const settings = settingsService.getSettings();
     const profiles = profileService.list();
     return browserManager.listInstalledVersions(
@@ -446,41 +500,43 @@ function registerIpcHandlers(): void {
       settings.camoufoxPath,
     );
   });
-  ipcMain.handle(IPC_CHANNELS.BROWSERS_FETCH_AVAILABLE, () =>
+  safeHandle(IPC_CHANNELS.BROWSERS_FETCH_AVAILABLE, () =>
     browserManager.fetchAvailableChromeVersions(),
   );
-  ipcMain.handle(IPC_CHANNELS.BROWSERS_DOWNLOAD_VERSION, (_e, version: string) =>
-    browserManager.downloadChromeVersion(version, (payload) => {
+  safeHandle(IPC_CHANNELS.BROWSERS_DOWNLOAD_VERSION, (_e, version: string) =>
+    browserManager.downloadChromeVersion(ipcVersionSchema.parse(version), (payload) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send(IPC_CHANNELS.BROWSERS_DOWNLOAD_PROGRESS, payload);
       }
     }),
   );
-  ipcMain.handle(IPC_CHANNELS.BROWSERS_CANCEL_DOWNLOAD, (_e, version: string) =>
-    browserManager.cancelDownload(version),
+  safeHandle(IPC_CHANNELS.BROWSERS_CANCEL_DOWNLOAD, (_e, version: string) =>
+    browserManager.cancelDownload(ipcVersionSchema.parse(version)),
   );
-  ipcMain.handle(IPC_CHANNELS.BROWSERS_DELETE_VERSION, (_e, version: string) =>
-    browserManager.deleteChromeVersion(version),
+  safeHandle(IPC_CHANNELS.BROWSERS_DELETE_VERSION, (_e, version: string) =>
+    browserManager.deleteChromeVersion(ipcVersionSchema.parse(version)),
   );
-  ipcMain.handle(
+  safeHandle(
     IPC_CHANNELS.PROFILES_PREVIEW_BULK_VERSION,
     (_e, profileIds: string[], targetVersion: string) => {
-      const selected = profileIds
+      const safeIds = ipcIdListSchema.parse(profileIds);
+      const safeVer = ipcVersionSchema.parse(targetVersion);
+      const selected = safeIds
         .map((id) => profileService.getById(id))
         .filter((p): p is NonNullable<typeof p> => p !== null);
-      return previewBulkVersionUpdate(selected, targetVersion);
+      return previewBulkVersionUpdate(selected, safeVer);
     },
   );
 
   // Advanced Profile Presets
   const presetService = new PresetService(dbCtx!.db);
-  ipcMain.handle(IPC_CHANNELS.PRESETS_LIST, () => presetService.listPresets());
-  ipcMain.handle(
+  safeHandle(IPC_CHANNELS.PRESETS_LIST, () => presetService.listPresets());
+  safeHandle(
     IPC_CHANNELS.PRESETS_SAVE,
     (_e, input: Omit<ProfilePreset, 'id' | 'builtIn'>) => presetService.saveCustomPreset(input),
   );
-  ipcMain.handle(IPC_CHANNELS.PRESETS_DELETE, (_e, id: string) =>
-    presetService.deleteCustomPreset(id),
+  safeHandle(IPC_CHANNELS.PRESETS_DELETE, (_e, id: string) =>
+    presetService.deleteCustomPreset(ipcIdSchema.parse(id)),
   );
 
   // Encrypted Vault & Gmail Accounts
