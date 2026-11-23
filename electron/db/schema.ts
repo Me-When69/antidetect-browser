@@ -66,3 +66,13 @@ export const profileAccountsTable = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.profileId, table.accountEmail] })],
 );
+
+export const ipv6PoolTable = sqliteTable('ipv6_pool_addresses', {
+  address: text('address').primaryKey(),
+  interfaceName: text('interface_name').notNull(),
+  prefix64: text('prefix64').notNull(),
+  profileId: text('profile_id').unique(),
+  health: text('health').notNull().default('unknown'),
+  lastCheckedAt: text('last_checked_at'),
+  assignedAt: text('assigned_at').notNull(),
+});
