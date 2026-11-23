@@ -654,6 +654,13 @@ export class VaultService {
       .run(new Date().toISOString(), clean);
   }
 
+  deleteOAuthToken(email: string): boolean {
+    this.requireDek();
+    const clean = email.trim().toLowerCase();
+    const info = this.db.prepare('DELETE FROM tokens WHERE email = ?').run(clean);
+    return info.changes > 0;
+  }
+
   setGoogleCredentials(credentialsJson: string): void {
     const dek = this.requireDek();
     // Basic validation that it's a Desktop/Installed OAuth client JSON

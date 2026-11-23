@@ -81,6 +81,13 @@ describe('Gmail Module Integration Tests (Mocked OAuth + Mocked Gmail API, zero 
           return;
         }
 
+        // 1b. Mock OAuth2 Revoke Endpoint
+        if (url.pathname === '/oauth2/revoke' && req.method === 'POST') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end('{}');
+          return;
+        }
+
         // 2. Mock Gmail API: users/me/messages (list)
         if (url.pathname === '/gmail/v1/users/me/messages' && req.method === 'GET') {
           if (state.rateLimitListOnce) {
@@ -227,6 +234,43 @@ describe('Gmail Module Integration Tests (Mocked OAuth + Mocked Gmail API, zero 
 
     oauth.dispose();
     badOauth.dispose();
+    vault.close();
+  });
+
+  it('revokes Gmail OAuth token remotely and still deletes locally when offline/unreachable (PHA 1.3)', async () => {
+    const { vault } = setupVault();
+    vault.setOAuthToken(
+      'alice@example.com',
+      JSON.stringify({ access_token: 'acc-1', refresh_token: 'ref-1' }),
+      GMAIL_SCOPE_READONLY,
+    );
+
+    // Case 1: Remote revoke succeeds (HTTP 200)
+    const oauthOk = new GmailOAuthService(vault, {
+      revokeEndpointOverride: `${mockBaseUrl}/oauth2/revoke`,
+    });
+    const rev1 = await oauthOk.revokeAccount('alice@example.com');
+    expect(rev1.remoteRevoked).toBe(true);
+    expect(rev1.localDeleted).toBe(true);
+    expect(vault.getOAuthToken('alice@example.com')).toBeNull();
+    oauthOk.dispose();
+
+    // Case 2: Remote revoke unreachable/offline -> still deletes local token cleanly
+    vault.setOAuthToken(
+      'alice@example.com',
+      JSON.stringify({ access_token: 'acc-2', refresh_token: 'ref-2' }),
+      GMAIL_SCOPE_READONLY,
+    );
+    const oauthOffline = new GmailOAuthService(vault, {
+      revokeEndpointOverride: 'http://127.0.0.1:1/oauth2/revoke',
+    });
+    const rev2 = await oauthOffline.revokeAccount('alice@example.com');
+    expect(rev2.remoteRevoked).toBe(false);
+    expect(rev2.localDeleted).toBe(true);
+    expect(rev2.notice).toContain('Đã xóa token cục bộ');
+    expect(vault.getOAuthToken('alice@example.com')).toBeNull();
+    oauthOffline.dispose();
+
     vault.close();
   });
 

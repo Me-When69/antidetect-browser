@@ -177,6 +177,7 @@ const electronApi: ElectronApi = {
 
   authorizeGmailAccount: (email, allowModify) =>
     ipcRenderer.invoke(IPC_CHANNELS.GMAIL_AUTHORIZE, email, allowModify),
+  revokeGmailAccount: (email) => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_REVOKE, email),
   searchGmailMessages: (emails, query, maxPerAccount) =>
     ipcRenderer.invoke(IPC_CHANNELS.GMAIL_SEARCH_MESSAGES, emails, query, maxPerAccount),
   cancelGmailSearch: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_CANCEL_SEARCH),

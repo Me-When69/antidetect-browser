@@ -298,6 +298,13 @@ export function registerVaultAndGmailIpc(deps: VaultIpcDeps): void {
     return result;
   });
 
+  handle(IPC_CHANNELS.GMAIL_REVOKE, async (_e, rawEmail: unknown) => {
+    const email = emailSchema.parse(rawEmail);
+    const result = await oauthService.revokeAccount(email);
+    logger.info('gmail', `Revoked Gmail API for ${email} (remote=${result.remoteRevoked})`);
+    return result;
+  });
+
   handle(
     IPC_CHANNELS.GMAIL_SEARCH_MESSAGES,
     async (_e, rawEmails: unknown, rawQuery: unknown, rawMax?: unknown) => {

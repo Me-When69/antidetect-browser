@@ -22,6 +22,7 @@ export interface OAuthServiceOptions {
   /** Optional custom OAuth endpoints (used in integration tests with a local mock server). */
   tokenEndpointOverride?: string;
   authEndpointOverride?: string;
+  revokeEndpointOverride?: string;
 }
 
 function base64UrlEncode(buf: Buffer): string {
@@ -387,5 +388,67 @@ export class GmailOAuthService {
     }
 
     return { client, scope: tokenRecord.scope };
+  }
+
+  /**
+   * Revoke Gmail OAuth token at Google's revocation endpoint and remove it locally.
+   * Even if offline or token is already expired, the local token is always removed cleanly.
+   */
+  async revokeAccount(
+    email: string,
+  ): Promise<{ remoteRevoked: boolean; localDeleted: boolean; notice: string }> {
+    const cleanEmail = email.trim().toLowerCase();
+    const tokenRecord = this.vault.getOAuthToken(cleanEmail);
+    this.clientCache.delete(cleanEmail);
+
+    if (!tokenRecord) {
+      return {
+        remoteRevoked: false,
+        localDeleted: false,
+        notice: 'Tài khoản này hiện chưa có token Gmail API để thu hồi.',
+      };
+    }
+
+    let tokenToRevoke = '';
+    try {
+      const parsed = JSON.parse(tokenRecord.tokenJson) as Credentials;
+      tokenToRevoke = parsed.refresh_token ?? parsed.access_token ?? '';
+    } catch {
+      tokenToRevoke = '';
+    }
+
+    let remoteRevoked = false;
+    let remoteError = '';
+
+    if (tokenToRevoke) {
+      const revokeUrl =
+        this.options.revokeEndpointOverride ?? 'https://oauth2.googleapis.com/revoke';
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(revokeUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ token: tokenToRevoke }).toString(),
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          remoteRevoked = true;
+        } else {
+          remoteError = `HTTP ${res.status}`;
+        }
+      } catch (err) {
+        remoteError = err instanceof Error ? err.message : String(err);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    const localDeleted = this.vault.deleteOAuthToken(cleanEmail);
+    const notice = remoteRevoked
+      ? 'Đã thu hồi quyền Gmail API trên Google và xóa token cục bộ.'
+      : `Đã xóa token cục bộ (không thể thu hồi từ xa: ${remoteError || 'token đã hết hạn hoặc mất mạng'}). Bạn có thể kiểm tra lại trong Google Account → Bảo mật.`;
+
+    return { remoteRevoked, localDeleted, notice };
   }
 }

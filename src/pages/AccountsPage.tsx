@@ -975,6 +975,40 @@ export function AccountsPage(): React.JSX.Element {
                                   ? 'Authorize'
                                   : 'Cấp quyền'}
                           </Button>
+                          {(acc.authorized || acc.needsReauth) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-[11px] text-amber-400 hover:text-amber-300"
+                              onClick={() => {
+                                if (
+                                  !window.confirm(
+                                    isEn
+                                      ? `Revoke Gmail API access for ${acc.email}?`
+                                      : `Thu hồi quyền Gmail API cho ${acc.email}?`,
+                                  )
+                                ) {
+                                  return;
+                                }
+                                void window.electronAPI
+                                  ?.revokeGmailAccount(acc.email)
+                                  .then(async (res) => {
+                                    const list =
+                                      (await window.electronAPI?.listVaultAccounts()) ?? [];
+                                    setAccounts(list);
+                                    showToast(res.notice, 'info');
+                                  })
+                                  .catch((err) =>
+                                    showToast(
+                                      err instanceof Error ? err.message : 'Lỗi thu hồi quyền',
+                                      'error',
+                                    ),
+                                  );
+                              }}
+                            >
+                              {isEn ? 'Revoke' : 'Thu hồi'}
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"

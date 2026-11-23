@@ -163,6 +163,7 @@ export const IPC_CHANNELS = {
   VAULT_IMPORT_LEGACY_DB: 'vault:importLegacyDb',
 
   GMAIL_AUTHORIZE: 'gmail:authorize',
+  GMAIL_REVOKE: 'gmail:revoke',
   GMAIL_SEARCH_MESSAGES: 'gmail:searchMessages',
   GMAIL_CANCEL_SEARCH: 'gmail:cancelSearch',
   GMAIL_BATCH_MODIFY: 'gmail:batchModify',
@@ -361,6 +362,9 @@ export interface ElectronApi {
 
   // Gmail API
   authorizeGmailAccount: (email: string, allowModify: boolean) => Promise<{ scope: string }>;
+  revokeGmailAccount: (
+    email: string,
+  ) => Promise<{ remoteRevoked: boolean; localDeleted: boolean; notice: string }>;
   searchGmailMessages: (
     emails: string[],
     query: string,
