@@ -22,3 +22,8 @@ Quy tắc Kho tài khoản & Gmail API:
 - Dữ liệu nhạy cảm (password, totp, recovery, notes, OAuth token, Google credentials.json) mã hóa AES-256-GCM + AAD trong `userData/vault.db` tách biệt với `antidetect.db`.
 - Renderer KHÔNG BAO GIỜ nhận mật khẩu chữ rõ, khóa bí mật TOTP hoặc refresh token trong luồng thường; mọi IPC xác thực bằng Zod và kiểm tra sender frame.
 - Chỉ xin scope `gmail.readonly` (mặc định) hoặc `gmail.modify` (opt-in). TUYỆT ĐỐI không thêm `gmail.send`, không tự động đăng nhập Google, không tạo tài khoản hàng loạt, không giải CAPTCHA.
+
+Quy tắc Kho IPv6 cục bộ:
+- Chỉ chấp nhận tiền tố Unicast toàn cục `2000::/3` độ dài `/64`, bắt buộc xác nhận quyền sở hữu và kiểm tra định tuyến trước khi gán hàng loạt.
+- Không chạy cả app bằng quyền quản trị; chỉ nâng quyền cho lô `netsh` qua `CommandRunner` với tham số đã kiểm tra chặt; chỉ gỡ địa chỉ do app gán.
+- Listener chỉ lắng nghe `127.0.0.1` kèm mật khẩu ngẫu nhiên riêng (không gửi mật khẩu sang renderer, không ghi URL đích vào log); không rơi về IPv4 thật (kill switch); không hỗ trợ xoay theo từng request.

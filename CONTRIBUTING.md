@@ -32,5 +32,6 @@ To keep Facet safe, compliant, and focused on legitimate local-first management,
 - **CAPTCHA & verification bypass:** Any integration with CAPTCHA solvers, anti-bot bypasses, or Google security challenge circumvention.
 - **Automated Google login / auto-fill:** Scripts or Playwright automation that auto-fill credentials or log into Google login pages on the user's behalf.
 - **Anti-abuse evasion:** Features designed specifically to evade platform anti-fraud or anti-abuse systems.
+- **Open / shared / rotating proxy abuse:** Open (unauthenticated) proxy mode, binding local IPv6 listeners outside `127.0.0.1` or sharing proxies across devices/users, per-request or per-connection IP rotation, scanning/using prefixes not owned by the user, or turning Facet into a proxy-reselling service.
 
 Please review [docs/ACCEPTABLE_USE.md](docs/ACCEPTABLE_USE.md) before proposing new features.
