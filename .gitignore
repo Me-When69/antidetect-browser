@@ -23,3 +23,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+credentials.json
+token*
+vault.db
+vault.db-*
+*.eml
+
