@@ -28,3 +28,14 @@
 | `@vitest/coverage-v8`, `test-exclude`                                       | Moderate     | `devDependencies`                | `@vitest/coverage-v8 -> test-exclude -> glob/minimatch` | Có (cùng `vitest`)              | **Có**                                               | **PHA 1.5:** Nâng đồng bộ cùng `vitest`.                                                                                                                          |
 | `drizzle-kit` & `esbuild`                                                   | Moderate     | `devDependencies`                | `drizzle-kit -> @esbuild-kit/* -> esbuild@0.24`         | Chỉ có bản downgrade            | **Có**                                               | Ghi nhận (chỉ là CLI dev không dùng ở runtime; theo dõi bản `drizzle-kit` mới bỏ `@esbuild-kit`).                                                                 |
 | `electron-builder`, `app-builder-lib`, `@electron/universal`, `dmg-builder` | Moderate     | `devDependencies`                | `electron-builder -> app-builder-lib -> minimatch`      | Chờ upstream `electron-builder` | Không ảnh hưởng runtime                              | Ghi nhận (chỉ chạy lúc đóng gói build, không đóng gói vào app).                                                                                                   |
+
+---
+
+## 3. Kết quả Sau PHA 1 (2026-11-23 — Nhánh `chore/electron-upgrade`)
+
+| Phạm vi kiểm tra                        | Trước PHA 1 (`v0.2.0`)                              | Sau PHA 1                                                     | Trạng thái                                         |
+| :-------------------------------------- | :-------------------------------------------------- | :------------------------------------------------------------ | :------------------------------------------------- |
+| **`npm audit --omit=dev`** (Production) | `6 moderate` (`0 high`, `0 critical`)               | **`0 total`** (`0 critical`, `0 high`, `0 moderate`, `0 low`) | **ĐẠT** (gỡ `archiver` + `archiver-zip-encrypted`) |
+| **`npm audit`** (Toàn bộ prod + dev)    | `2 critical`, `2 high`, `18 moderate` (`total: 22`) | **`0 critical`, `0 high`**, `10 moderate` (`total: 10`)       | **ĐẠT** (nâng `vitest@5.1.1` & `electron@45.4.1`)  |
+
+- **10 moderate còn lại** chỉ nằm trong `devDependencies` (`drizzle-kit` và `electron-builder`), không được đóng gói vào ứng dụng production và được theo dõi định kỳ bởi Dependabot (`.github/dependabot.yml`).

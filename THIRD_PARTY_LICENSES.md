@@ -24,7 +24,6 @@ Facet is licensed under the **Apache License 2.0**. Below are the licenses of di
 | `otplib`                                                         | MIT              | RFC 6238 TOTP 2FA code generation                  |
 | `googleapis`, `google-auth-library`                              | Apache-2.0       | Official Gmail API & OAuth2 PKCE client            |
 | `fernet`                                                         | MIT              | Read-only importer for legacy Python Fernet vaults |
-| `archiver`, `archiver-zip-encrypted`                             | MIT              | AES-256 encrypted `.zip` email backup              |
 
 ## Optional External Binaries (NOT Bundled — Downloaded On-Demand by User)
 

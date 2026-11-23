@@ -19,6 +19,7 @@ Quy tắc hiệu năng:
 - Font cục bộ chỉ nạp subset `latin` + `vietnamese`; không đóng gói sẵn binary trình duyệt hay lõi proxy.
 - Kiểm tra ngân sách bundle bằng `npm run perf:budget`.
 - Không ghi đường dẫn tuyệt đối của máy cá nhân (`C:\Users\...`, `file:///...`) hay bí mật vào repo; kiểm tra tự động qua `npm run check:paths` và `npm run check:secrets` (cấu hình `.gitleaks.toml`).
+- Bản đóng gói production bắt buộc bật Electron Fuses (`scripts/apply-fuses.mjs`) và đạt `npm audit --omit=dev --audit-level=high` = 0 lỗ hổng; theo dõi lịch nâng cấp Electron định kỳ trong `docs/MAINTENANCE.md`.
 
 Quy tắc Kho tài khoản & Gmail API:
 

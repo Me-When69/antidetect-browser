@@ -7,6 +7,17 @@ All notable changes to **Facet** are documented in this file.
 ### Added
 
 - **PHA 0 Repo Hygiene & Baseline**: Added `docs/BASELINE.md`, `.gitleaks.toml`, `scripts/check-personal-paths.mjs` (`npm run check:paths`), `scripts/check-secrets.mjs` (`npm run check:secrets`), hardened `.gitignore`, and wired path/secret/format checks into CI.
+- **PHA 0b Safe Rename to Facet**: Renamed package to `facet` / `productName: Facet` with idempotent, crash-safe SHA-256 one-time data migration (`electron/services/dataMigration.ts`, `docs/DATA_MIGRATION.md`) preserving legacy `antidetect-app` userData intact.
+- **PHA 1.2 Default Encrypted Profile Backups**: Added `FACET_BKP` v1 (`AES-256-GCM + scrypt + AAD`) default encryption for profile backup export/import with optional proxy credential stripping and legacy plaintext JSON compatibility.
+- **PHA 1.3 Gmail OAuth Revocation**: Added one-click OAuth token revocation (`GMAIL_REVOKE`) calling Google's revoke endpoint and always clearing local vault tokens even when offline.
+- **PHA 1.7 CI & Supply Chain Hardening**: Added `.github/dependabot.yml`, `.github/workflows/codeql.yml`, SHA-pinned GitHub Actions, production `npm audit --omit=dev --audit-level=high` CI gate, and `docs/MAINTENANCE.md`.
+- **PHA 1.8 Security Review**: Added `SECURITY_REVIEW.md` and updated `docs/AUDIT.md` & `diagnostics/REPORT.md`.
+
+### Changed & Security
+
+- **PHA 1.4 Zero-Dep Email Backup (`.facet-eml`)**: Replaced `archiver` and `archiver-zip-encrypted` with built-in `node:crypto` + `node:zlib` (`AES-256-GCM + gzip + scrypt + AAD`), bringing `npm audit --omit=dev` to **0 vulnerabilities**.
+- **PHA 1.5 Vitest 5 Upgrade**: Upgraded `vitest` and `@vitest/coverage-v8` to `5.1.1`, eliminating all critical audit advisories.
+- **PHA 1.6 Electron 45.4.1 + Production Fuses**: Upgraded Electron from EOL `36.9.5` to `45.4.1` (Node 24, Chromium 156), fixed async `clipboard.readText()` compatibility, and enabled 6 production Electron Fuses via `scripts/apply-fuses.mjs`.
 
 ## [v0.2.0] - 2026-11-23
 
