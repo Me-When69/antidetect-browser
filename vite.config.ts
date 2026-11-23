@@ -37,6 +37,7 @@ export default defineConfig({
                 'fernet',
                 'archiver',
                 'archiver-zip-encrypted',
+                'zod',
               ],
             },
           },

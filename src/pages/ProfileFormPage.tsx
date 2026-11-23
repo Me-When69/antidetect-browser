@@ -457,9 +457,12 @@ export function ProfileFormPage(): React.JSX.Element {
 
     // Sanitize numeric fields that may become NaN when cleared in HTML number inputs
     const currentRaw = form.getValues();
-    if (currentRaw.proxy.type === 'none') {
+    if (currentRaw.proxy.type === 'none' || currentRaw.proxy.type === 'ipv6pool') {
       form.setValue('proxy.port', 0);
       form.setValue('proxy.host', '');
+      if (currentRaw.proxy.type === 'ipv6pool') {
+        form.setValue('ipv6Policy', 'proxy-only');
+      }
     } else if (!Number.isFinite(currentRaw.proxy.port)) {
       form.setValue('proxy.port', 0);
     }
@@ -1273,6 +1276,9 @@ export function ProfileFormPage(): React.JSX.Element {
                 </label>
                 <Select {...form.register('proxy.type')}>
                   <option value="none">Không dùng Proxy</option>
+                  <optgroup label="Kho cục bộ">
+                    <option value="ipv6pool">Kho IPv6 cục bộ (/64 cố định theo hồ sơ)</option>
+                  </optgroup>
                   <optgroup label="Cơ bản">
                     <option value="http">HTTP</option>
                     <option value="https">HTTPS</option>

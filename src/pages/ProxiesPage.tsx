@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { CheckCircle2, Globe, Loader2, Plus, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, Globe, Loader2, Network, Plus, Trash2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Ipv6PoolPanel } from '@/components/Ipv6PoolPanel';
 import { getTranslations } from '@/i18n';
 import { useAppStore } from '@/store/useAppStore';
 import { parseQuickProxy } from '@shared/validation';
@@ -13,6 +14,8 @@ import type { ProxyCheckResult, SavedProxy } from '@shared/types';
 export function ProxiesPage(): React.JSX.Element {
   const { locale, proxies, refreshProxies, showToast } = useAppStore();
   const dict = getTranslations(locale);
+  const isEn = locale === 'en';
+  const [activeTab, setActiveTab] = useState<'saved' | 'ipv6pool'>('saved');
 
   const [quickText, setQuickText] = useState('');
   const [name, setName] = useState('');
@@ -27,7 +30,7 @@ export function ProxiesPage(): React.JSX.Element {
 
   const applyQuickPaste = (): void => {
     const parsed = parseQuickProxy(quickText, type);
-    if (!parsed || parsed.type === 'none') {
+    if (!parsed || parsed.type === 'none' || parsed.type === 'ipv6pool') {
       showToast('Định dạng proxy không hợp lệ (dùng host:port:user:pass hoặc URL)', 'error');
       return;
     }
@@ -96,12 +99,44 @@ export function ProxiesPage(): React.JSX.Element {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">{dict.proxies.title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{dict.proxies.subtitle}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">{dict.proxies.title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{dict.proxies.subtitle}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('saved')}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'saved'
+                ? 'border-primary/40 bg-primary/15 text-primary'
+                : 'border-border bg-card text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Globe className="h-3.5 w-3.5" />
+            <span>{isEn ? 'Saved Proxies' : 'Proxy đã lưu'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('ipv6pool')}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'ipv6pool'
+                ? 'border-primary/40 bg-primary/15 text-primary'
+                : 'border-border bg-card text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Network className="h-3.5 w-3.5" />
+            <span>{isEn ? 'Local IPv6 Pool' : 'Kho IPv6 cục bộ'}</span>
+          </button>
+        </div>
       </div>
 
-      <Card className="space-y-4 p-4">
+      {activeTab === 'ipv6pool' ? (
+        <Ipv6PoolPanel />
+      ) : (
+        <>
+          <Card className="space-y-4 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Input
             value={quickText}
@@ -221,6 +256,8 @@ export function ProxiesPage(): React.JSX.Element {
             </tbody>
           </table>
         </Card>
+      )}
+        </>
       )}
     </div>
   );
