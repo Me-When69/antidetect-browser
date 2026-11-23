@@ -18,6 +18,7 @@ Quy tắc hiệu năng:
 - Truy vấn SQLite lọc/sắp xếp phải chạy ở SQL có index và bọc thao tác hàng loạt trong transaction.
 - Font cục bộ chỉ nạp subset `latin` + `vietnamese`; không đóng gói sẵn binary trình duyệt hay lõi proxy.
 - Kiểm tra ngân sách bundle bằng `npm run perf:budget`.
+- Không ghi đường dẫn tuyệt đối của máy cá nhân (`C:\Users\...`, `file:///...`) hay bí mật vào repo; kiểm tra tự động qua `npm run check:paths` và `npm run check:secrets` (cấu hình `.gitleaks.toml`).
 
 Quy tắc Kho tài khoản & Gmail API:
 

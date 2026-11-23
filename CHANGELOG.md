@@ -2,6 +2,12 @@
 
 All notable changes to **Facet** are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **PHA 0 Repo Hygiene & Baseline**: Added `docs/BASELINE.md`, `.gitleaks.toml`, `scripts/check-personal-paths.mjs` (`npm run check:paths`), `scripts/check-secrets.mjs` (`npm run check:secrets`), hardened `.gitignore`, and wired path/secret/format checks into CI.
+
 ## [v0.2.0] - 2026-11-23
 
 ### Added
