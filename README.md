@@ -11,6 +11,7 @@ Facet is an open-source, local-first desktop application for managing isolated b
 - **47 Emulated Device Presets & Multi-Version Browser Manager**: Windows, macOS, Linux, Android (CDP mobile/touch emulation), and iOS presets. UA and Client Hints always match the real running engine version; download and manage multiple Chrome for Testing versions with downgrade protection.
 - **Advanced Controls & Presets**: Per-signal controls (`real` / `noise` / `off`), deterministic Media Devices, `dataOnClose` cleanup, window sizing, bandwidth blocking (images, media, external fonts, ads, trackers), and 4 built-in presets (*Balanced*, *Max Privacy*, *Low Bandwidth*, *Test Real*) + custom presets.
 - **Local Automation API**: Localhost-only (`127.0.0.1`) REST API with API key returning CDP `wsEndpoint` for Playwright, Puppeteer, or Selenium.
+- **Encrypted Gmail Accounts Vault**: Local `vault.db` with envelope AES-256-GCM + AAD encryption (`scrypt`), 2FA TOTP (`otplib`), 20-second auto-clearing clipboard, security audit, official Gmail API OAuth2 PKCE (`gmail.readonly` default, opt-in `gmail.modify`, **never `gmail.send`**), AES-256 encrypted `.zip` email backup, profile-account linking, and legacy Python/Fernet vault import. See [docs/VAULT.md](docs/VAULT.md), [docs/GMAIL_SETUP.md](docs/GMAIL_SETUP.md), [docs/ACCEPTABLE_USE.md](docs/ACCEPTABLE_USE.md), and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Installation & Verification
 Download the installer for your OS from [GitHub Releases](https://github.com/Me-When69/antidetect-browser/releases).

@@ -11,6 +11,7 @@ Facet là ứng dụng desktop **mã nguồn mở, phi thương mại, lưu dữ
 - **47 thiết bị giả lập & Quản lý nhiều phiên bản trình duyệt**: Hỗ trợ Windows, macOS, Linux, Android (CDP mobile/touch) và iOS. Phiên bản trong UA và Client Hints luôn khớp đúng nhân thật đang chạy; tải/xóa nhiều phiên bản Chrome for Testing và cảnh báo hạ phiên bản.
 - **Cấu hình nâng cao & Preset**: Chỉnh từng tín hiệu (`Thật` / `Nhiễu` / `Tắt`), giả lập Media Devices theo seed, dọn dữ liệu khi đóng, chỉnh kích thước cửa sổ, chặn băng thông (ảnh, media, font ngoài, quảng cáo, tracker), 4 preset sẵn (*Cân bằng*, *Bảo mật tối đa*, *Tiết kiệm băng thông*, *Thử nghiệm*) và lưu preset riêng.
 - **Local REST API**: Chỉ lắng nghe `127.0.0.1` kèm API key để kết nối Playwright, Puppeteer hoặc Selenium qua `wsEndpoint`.
+- **Kho Tài khoản Gmail mã hóa**: Lưu cục bộ trong `vault.db` theo mô hình phong bì AES-256-GCM + AAD (`scrypt`), mã 2FA TOTP (`otplib`), tự xóa clipboard sau 20 giây, kiểm tra bảo mật, cấp quyền Gmail API OAuth2 PKCE (`gmail.readonly` mặc định, tùy chọn `gmail.modify`, **không bao giờ `gmail.send`**), sao lưu `.eml` dạng `.zip` mã hóa AES-256, liên kết với hồ sơ trình duyệt và nhập từ kho Python cũ. Xem [docs/VAULT.md](docs/VAULT.md), [docs/GMAIL_SETUP.md](docs/GMAIL_SETUP.md), [docs/ACCEPTABLE_USE.md](docs/ACCEPTABLE_USE.md) và [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Cài đặt & Kiểm tra Checksum
 Tải bộ cài tương ứng hệ điều hành tại [GitHub Releases](https://github.com/Me-When69/antidetect-browser/releases).

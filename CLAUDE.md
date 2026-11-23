@@ -17,3 +17,8 @@ Quy tắc hiệu năng:
 - Truy vấn SQLite lọc/sắp xếp phải chạy ở SQL có index và bọc thao tác hàng loạt trong transaction.
 - Font cục bộ chỉ nạp subset `latin` + `vietnamese`; không đóng gói sẵn binary trình duyệt hay lõi proxy.
 - Kiểm tra ngân sách bundle bằng `npm run perf:budget`.
+
+Quy tắc Kho tài khoản & Gmail API:
+- Dữ liệu nhạy cảm (password, totp, recovery, notes, OAuth token, Google credentials.json) mã hóa AES-256-GCM + AAD trong `userData/vault.db` tách biệt với `antidetect.db`.
+- Renderer KHÔNG BAO GIỜ nhận mật khẩu chữ rõ, khóa bí mật TOTP hoặc refresh token trong luồng thường; mọi IPC xác thực bằng Zod và kiểm tra sender frame.
+- Chỉ xin scope `gmail.readonly` (mặc định) hoặc `gmail.modify` (opt-in). TUYỆT ĐỐI không thêm `gmail.send`, không tự động đăng nhập Google, không tạo tài khoản hàng loạt, không giải CAPTCHA.
