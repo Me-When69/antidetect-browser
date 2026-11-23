@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 
 export interface ClipboardAdapter {
-  readText: () => string;
-  writeText: (text: string) => void;
+  readText: () => string | Promise<string>;
+  writeText: (text: string) => void | Promise<void>;
 }
 
 function sha256(text: string): string {
@@ -28,13 +28,13 @@ export class ClipboardGuard {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    this.adapter.writeText(value);
+    void this.adapter.writeText(value);
     const expectedHash = sha256(value);
     this.lastHash = expectedHash;
 
     this.timer = setTimeout(() => {
       this.timer = null;
-      this.clearIfUnchanged(expectedHash);
+      void this.clearIfUnchanged(expectedHash);
     }, ttlMs);
     if (typeof this.timer.unref === 'function') {
       this.timer.unref();
@@ -42,14 +42,34 @@ export class ClipboardGuard {
   }
 
   private clearIfUnchanged(expectedHash: string): void {
+    const applyClear = (current: string): void => {
+      try {
+        if (current && sha256(current) === expectedHash) {
+          void this.adapter.writeText('');
+        }
+      } catch {
+        // Ignore clipboard access errors
+      } finally {
+        if (this.lastHash === expectedHash) {
+          this.lastHash = null;
+        }
+      }
+    };
+
     try {
-      const current = this.adapter.readText();
-      if (current && sha256(current) === expectedHash) {
-        this.adapter.writeText('');
+      const maybePromise = this.adapter.readText();
+      if (typeof maybePromise === 'string') {
+        applyClear(maybePromise);
+      } else {
+        void maybePromise
+          .then((val) => applyClear(val))
+          .catch(() => {
+            if (this.lastHash === expectedHash) {
+              this.lastHash = null;
+            }
+          });
       }
     } catch {
-      // Ignore clipboard access errors
-    } finally {
       if (this.lastHash === expectedHash) {
         this.lastHash = null;
       }
@@ -64,7 +84,7 @@ export class ClipboardGuard {
     if (this.lastHash) {
       const h = this.lastHash;
       this.lastHash = null;
-      this.clearIfUnchanged(h);
+      void this.clearIfUnchanged(h);
     }
   }
 }

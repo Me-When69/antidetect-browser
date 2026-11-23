@@ -1,6 +1,7 @@
 appId: dev.facet.browser
 productName: Facet
 asar: true
+afterPack: scripts/apply-fuses.mjs
 electronLanguages:
   - en-US
   - vi
