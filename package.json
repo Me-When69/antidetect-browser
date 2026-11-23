@@ -2,7 +2,12 @@
   "name": "antidetect-app",
   "version": "0.1.0",
   "private": true,
-  "description": "Ứng dụng desktop quản lý nhiều hồ sơ trình duyệt cô lập",
+  "license": "Apache-2.0",
+  "description": "Facet — Ứng dụng desktop mã nguồn mở quản lý nhiều hồ sơ trình duyệt cô lập",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Me-When69/antidetect-browser.git"
+  },
   "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
