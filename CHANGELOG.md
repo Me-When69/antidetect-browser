@@ -2,22 +2,32 @@
 
 All notable changes to **Facet** are documented in this file.
 
-## [Unreleased]
+## [v0.3.0] - 2026-11-23
 
 ### Added
 
-- **PHA 0 Repo Hygiene & Baseline**: Added `docs/BASELINE.md`, `.gitleaks.toml`, `scripts/check-personal-paths.mjs` (`npm run check:paths`), `scripts/check-secrets.mjs` (`npm run check:secrets`), hardened `.gitignore`, and wired path/secret/format checks into CI.
-- **PHA 0b Safe Rename to Facet**: Renamed package to `facet` / `productName: Facet` with idempotent, crash-safe SHA-256 one-time data migration (`electron/services/dataMigration.ts`, `docs/DATA_MIGRATION.md`) preserving legacy `antidetect-app` userData intact.
-- **PHA 1.2 Default Encrypted Profile Backups**: Added `FACET_BKP` v1 (`AES-256-GCM + scrypt + AAD`) default encryption for profile backup export/import with optional proxy credential stripping and legacy plaintext JSON compatibility.
-- **PHA 1.3 Gmail OAuth Revocation**: Added one-click OAuth token revocation (`GMAIL_REVOKE`) calling Google's revoke endpoint and always clearing local vault tokens even when offline.
-- **PHA 1.7 CI & Supply Chain Hardening**: Added `.github/dependabot.yml`, `.github/workflows/codeql.yml`, SHA-pinned GitHub Actions, production `npm audit --omit=dev --audit-level=high` CI gate, and `docs/MAINTENANCE.md`.
-- **PHA 1.8 Security Review**: Added `SECURITY_REVIEW.md` and updated `docs/AUDIT.md` & `diagnostics/REPORT.md`.
+- **Safe Rename & Crash-Safe Data Migration (PHA 0b / 1.9.1)**: Renamed package to `facet` / `productName: Facet` with idempotent, per-file SHA-256 verified one-time migration (`electron/services/dataMigration.ts`, `docs/DATA_MIGRATION.md`) preserving legacy `antidetect-app` userData intact, plus `SecretService` legacy storage fallback (`reencryptIfLegacy`).
+- **Default Encrypted Profile Backups (PHA 1.2)**: Added `FACET_BKP` v1 (`AES-256-GCM + scrypt N=32768 + AAD`) default encryption for profile backup export/import, optional proxy credential stripping, and backward-compatible legacy plaintext JSON import.
+- **Gmail OAuth Token Revocation (PHA 1.3)**: Added one-click OAuth revocation (`GMAIL_REVOKE`) calling Google's revoke endpoint while always deleting local tokens in `vault.db` even when offline.
+- **In-App `.facet-eml` Extractor & Format Spec (PHA 1.9.3)**: Added `docs/FACET_EML_FORMAT.md` and "Giải nén sao lưu thư (.facet-eml)" UI/IPC (`GMAIL_EXTRACT_ARCHIVE`) with path-traversal sanitization.
+- **CI, Supply Chain & Static Hardening (PHA 0 / 1.7 / 1.8 / 1.9.2)**: Added `.github/dependabot.yml`, `.github/workflows/codeql.yml`, SHA-pinned GitHub Actions, `npm audit --omit=dev --audit-level=high` CI gate, `npm run check:paths`, `npm run check:secrets`, `npm run check:static` (forbidding `ELECTRON_RUN_AS_NODE` / `child_process.fork`), `scripts/smoke-packaged.mjs`, `SECURITY_REVIEW.md`, and `docs/MAINTENANCE.md`.
 
-### Changed & Security
+### Changed
 
-- **PHA 1.4 Zero-Dep Email Backup (`.facet-eml`)**: Replaced `archiver` and `archiver-zip-encrypted` with built-in `node:crypto` + `node:zlib` (`AES-256-GCM + gzip + scrypt + AAD`), bringing `npm audit --omit=dev` to **0 vulnerabilities**.
-- **PHA 1.5 Vitest 5 Upgrade**: Upgraded `vitest` and `@vitest/coverage-v8` to `5.1.1`, eliminating all critical audit advisories.
-- **PHA 1.6 Electron 45.4.1 + Production Fuses**: Upgraded Electron from EOL `36.9.5` to `45.4.1` (Node 24, Chromium 156), fixed async `clipboard.readText()` compatibility, and enabled 6 production Electron Fuses via `scripts/apply-fuses.mjs`.
+- **Electron 45.4.1 & Vitest 5.1.1 (PHA 1.5 / 1.6)**: Upgraded Electron from EOL `36.9.5` to `45.4.1` (Node 24, Chromium 156, supported until 2027-04-27) and `vitest` / `@vitest/coverage-v8` to `5.1.1`; updated `ClipboardGuard` for Electron 45 async `clipboard.readText()`.
+- **BrowserInstaller Utility Process (PHA 1.9.2)**: Replaced `spawn(process.execPath, ..., { ELECTRON_RUN_AS_NODE: '1' })` with Electron `utilityProcess.fork` for full compatibility with `RunAsNode=false` Fuse, and fixed `electron-builder.yml` exclusion glob (`!docs/**` instead of `!**/docs/**`) so `googleapis` loads cleanly inside `app.asar`.
+- **Coverage Floor (PHA 1.9.4)**: Enforced `46.12%` statement coverage floor in `vitest.config.ts` and expanded unit suite to 88 tests (`46.20%` statements).
+
+### Security
+
+- **0 Production Vulnerabilities (PHA 1.4)**: Replaced `archiver` + `archiver-zip-encrypted` with zero-dependency `.facet-eml` (`node:crypto` AES-256-GCM + `node:zlib` gzip + `scrypt`), bringing `npm audit --omit=dev` to **0 vulnerabilities** and total `npm audit` to **0 critical, 0 high**.
+- **Production Electron Fuses (PHA 1.6)**: Enabled all 6 production Fuses via `scripts/apply-fuses.mjs` (`RunAsNode=false`, `EnableCookieEncryption=true`, `EnableNodeOptionsEnvironmentVariable=false`, `EnableNodeCliInspectArguments=false`, `EnableEmbeddedAsarIntegrityValidation=true`, `OnlyLoadAppFromAsar=true`).
+
+### Breaking
+
+- **Legacy `.zip` Email Archives (`v0.2.0`)**: Encrypted `.zip` email archives created in `v0.2.0` (via `archiver-zip-encrypted`) are no longer created or extracted directly inside Facet `v0.3.0`. Selecting a legacy `.zip` file shows a clear notice guiding users to extract it with **7-Zip** or **WinRAR** using the original password; new encrypted backups use `.facet-eml` and can be extracted directly inside Facet.
+- **Node.js Engine**: Minimum `engines.node` raised from `>=20.0.0` to `>=22.0.0` (CI runs Node 24 matching Electron 45).
+- **macOS / Linux `safeStorage` Note**: On Windows (DPAPI), `v0.2.0` proxy passwords decrypt automatically after the rename to `Facet`. macOS Keychain and Linux `libsecret` have not yet been verified on physical hardware; see `docs/DATA_MIGRATION.md` for recommended backup/re-import steps.
 
 ## [v0.2.0] - 2026-11-23
 
