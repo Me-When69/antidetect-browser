@@ -1,10 +1,22 @@
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserInstallProgressEvent } from '@shared/types';
 import type { AppLogger } from './logger';
 
 export type InstallableBrowser = 'chromium' | 'firefox';
+
+export interface UtilityProcessLike {
+  stdout: NodeJS.ReadableStream | null;
+  stderr: NodeJS.ReadableStream | null;
+  on(event: 'exit', listener: (code: number) => void): unknown;
+  on(event: 'error', listener: (type: string, location: string, report: string) => void): unknown;
+}
+
+export type UtilityForkFn = (
+  modulePath: string,
+  args?: string[],
+  options?: { env?: NodeJS.ProcessEnv; stdio?: 'pipe' },
+) => UtilityProcessLike;
 
 export function classifyInstallError(raw: string): string {
   if (/ENOSPC|no space left/i.test(raw)) {
@@ -45,11 +57,13 @@ export class BrowserInstaller {
   private appRoot: string;
   private browsersDir: string;
   private logger: AppLogger;
+  private forkFn: UtilityForkFn;
 
-  constructor(appRoot: string, browsersDir: string, logger: AppLogger) {
+  constructor(appRoot: string, browsersDir: string, logger: AppLogger, forkFn: UtilityForkFn) {
     this.appRoot = appRoot;
     this.browsersDir = browsersDir;
     this.logger = logger;
+    this.forkFn = forkFn;
   }
 
   isInstalling(browser: InstallableBrowser): boolean {
@@ -84,7 +98,7 @@ export class BrowserInstaller {
     this.inProgress.add(browser);
     this.logger.info(
       'browserInstaller',
-      `Starting install for ${label} via ${cliPath} into ${this.browsersDir}`,
+      `Starting install for ${label} via utilityProcess.fork (${cliPath}) into ${this.browsersDir}`,
     );
     onProgress({
       browser,
@@ -95,15 +109,39 @@ export class BrowserInstaller {
     return new Promise((resolve) => {
       let lastStderr = '';
       let lastPercent = 0;
+      let settled = false;
 
-      // Use Electron binary in Node mode (ELECTRON_RUN_AS_NODE=1) so packaged apps work without npx or system node
-      const child = spawn(process.execPath, [cliPath, 'install', browser], {
-        env: {
-          ...process.env,
-          ELECTRON_RUN_AS_NODE: '1',
-          PLAYWRIGHT_BROWSERS_PATH: this.browsersDir,
-        },
-      });
+      const finish = (result: { ok: boolean; error?: string }): void => {
+        if (settled) return;
+        settled = true;
+        this.inProgress.delete(browser);
+        resolve(result);
+      };
+
+      // Use Electron utilityProcess.fork (safe with RunAsNode=false Fuse)
+      let child: UtilityProcessLike;
+      try {
+        child = this.forkFn(cliPath, ['install', browser], {
+          env: {
+            ...process.env,
+            PLAYWRIGHT_BROWSERS_PATH: this.browsersDir,
+          },
+          stdio: 'pipe',
+        });
+      } catch (err) {
+        const msg = classifyInstallError(err instanceof Error ? err.message : String(err));
+        this.logger.error('browserInstaller', `Install ${label} failed to fork: ${msg}`);
+        onProgress({
+          browser,
+          percent: lastPercent,
+          line: msg,
+          done: true,
+          success: false,
+          error: msg,
+        });
+        finish({ ok: false, error: msg });
+        return;
+      }
 
       const handleChunk = (chunk: Buffer, isErr: boolean): void => {
         const text = chunk.toString('utf8');
@@ -122,13 +160,13 @@ export class BrowserInstaller {
         }
       };
 
-      child.stdout.on('data', (chunk: Buffer) => handleChunk(chunk, false));
-      child.stderr.on('data', (chunk: Buffer) => handleChunk(chunk, true));
+      child.stdout?.on('data', (chunk: Buffer) => handleChunk(chunk, false));
+      child.stderr?.on('data', (chunk: Buffer) => handleChunk(chunk, true));
 
-      child.on('error', (err) => {
-        this.inProgress.delete(browser);
-        const friendly = classifyInstallError(err.message);
-        this.logger.error('browserInstaller', `Install ${label} failed: ${err.message}`);
+      child.on('error', (type, location, report) => {
+        const rawErr = `${type} at ${location}: ${report}`.trim();
+        const friendly = classifyInstallError(rawErr);
+        this.logger.error('browserInstaller', `Install ${label} failed: ${rawErr}`);
         onProgress({
           browser,
           percent: lastPercent,
@@ -137,11 +175,10 @@ export class BrowserInstaller {
           success: false,
           error: friendly,
         });
-        resolve({ ok: false, error: friendly });
+        finish({ ok: false, error: friendly });
       });
 
-      child.on('close', (code) => {
-        this.inProgress.delete(browser);
+      child.on('exit', (code) => {
         if (code === 0) {
           this.logger.info('browserInstaller', `Installed ${label} successfully`);
           onProgress({
@@ -151,7 +188,7 @@ export class BrowserInstaller {
             done: true,
             success: true,
           });
-          resolve({ ok: true });
+          finish({ ok: true });
         } else {
           const friendly = classifyInstallError(lastStderr || `Mã lỗi ${code ?? -1}`);
           this.logger.error('browserInstaller', `Install ${label} exited ${code}: ${friendly}`);
@@ -163,7 +200,7 @@ export class BrowserInstaller {
             success: false,
             error: friendly,
           });
-          resolve({ ok: false, error: friendly });
+          finish({ ok: false, error: friendly });
         }
       });
     });

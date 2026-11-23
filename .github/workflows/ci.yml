@@ -30,8 +30,8 @@ jobs:
       - name: Audit production dependencies (fail on high/critical)
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Check personal paths & secrets
-        run: npm run check:paths && npm run check:secrets
+      - name: Check personal paths, secrets & static security rules
+        run: npm run check:paths && npm run check:secrets && npm run check:static
 
       - name: Validate device catalog
         run: npm run validate:devices

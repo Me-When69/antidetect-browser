@@ -1,6 +1,15 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, clipboard, ipcMain, safeStorage, session, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  ipcMain,
+  safeStorage,
+  session,
+  shell,
+  utilityProcess,
+} from 'electron';
 import { migrateLegacyUserDataIfNeeded } from './services/dataMigration';
 
 // Migrate legacy userData (antidetect-app -> Facet) once with SHA-256 verification before opening DB/browsers
@@ -441,6 +450,7 @@ function registerIpcHandlers(): void {
     process.env.APP_ROOT!,
     process.env['PLAYWRIGHT_BROWSERS_PATH'] ?? path.join(app.getPath('userData'), 'browsers'),
     logger,
+    (modulePath, args, options) => utilityProcess.fork(modulePath, args, options),
   );
 
   safeHandle(IPC_CHANNELS.BROWSER_LIST_INSTALLED, () => {
