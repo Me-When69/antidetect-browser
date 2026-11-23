@@ -10,6 +10,8 @@ import {
   ipcIdSchema,
   ipcVersionSchema,
 } from '../../electron/services/ipcSecurity';
+import { classifyProxyError } from '../../electron/services/proxyService';
+import { classifyFirefoxLaunchError } from '../../electron/services/drivers/CamoufoxDriver';
 
 describe('Security Hardening Regression Tests (E-001+)', () => {
   const tempDirs: string[] = [];
@@ -86,5 +88,23 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
     expect(mainSource).toContain('setWindowOpenHandler');
     expect(mainSource).toContain("on('will-navigate'");
     expect(mainSource).toContain('Content-Security-Policy');
+  });
+
+  it('E-005: classifies Firefox exitCode=0 and Chrome proxy/QUIC errors into clear Vietnamese messages', () => {
+    const ffMsg = classifyFirefoxLaunchError(
+      new Error('browserType.launchPersistentContext: [pid=1234] <process did exit: exitCode=0, signal=null>'),
+    );
+    expect(ffMsg).toContain('exitCode=0');
+    expect(ffMsg).toContain('xung đột');
+
+    expect(classifyProxyError(new Error('net::ERR_PROXY_CONNECTION_FAILED'))).toContain(
+      'ERR_PROXY_CONNECTION_FAILED',
+    );
+    expect(classifyProxyError(new Error('net::ERR_TUNNEL_CONNECTION_FAILED'))).toContain(
+      'ERR_TUNNEL_CONNECTION_FAILED',
+    );
+    expect(classifyProxyError(new Error('net::ERR_QUIC_PROTOCOL_ERROR'))).toContain(
+      'ERR_QUIC_PROTOCOL_ERROR',
+    );
   });
 });

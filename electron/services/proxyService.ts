@@ -153,6 +153,15 @@ export function classifyProxyError(err: unknown, statusCode?: number): string {
   if (code === 'ENOTFOUND' || /ENOTFOUND|EAI_AGAIN/i.test(combined)) {
     return 'Không tìm thấy host proxy';
   }
+  if (/ERR_PROXY_CONNECTION_FAILED/i.test(combined)) {
+    return 'Không thể kết nối tới máy chủ proxy (ERR_PROXY_CONNECTION_FAILED). Kiểm tra host, cổng hoặc tường lửa.';
+  }
+  if (/ERR_TUNNEL_CONNECTION_FAILED/i.test(combined)) {
+    return 'Proxy không thể tạo đường hầm HTTPS (ERR_TUNNEL_CONNECTION_FAILED). Kiểm tra xác thực hoặc giao thức proxy.';
+  }
+  if (/ERR_QUIC_PROTOCOL_ERROR/i.test(combined)) {
+    return 'Lỗi giao thức UDP/QUIC qua proxy (ERR_QUIC_PROTOCOL_ERROR). Proxy không hỗ trợ UDP — hãy tắt QUIC hoặc dùng HTTPS/TCP.';
+  }
 
   const clean = scrubSecrets(msg || (statusCode ? `HTTP ${statusCode}` : 'Lỗi kết nối proxy'));
   return clean.length > 140 ? `${clean.slice(0, 140)}...` : clean;

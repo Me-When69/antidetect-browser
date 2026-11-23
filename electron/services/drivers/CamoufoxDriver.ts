@@ -11,6 +11,17 @@ import { applyDiskDataOnClose, applyInContextCleanup } from '../dataCleaner';
 import { runContextWarmup } from './warmupHelper';
 import type { BrowserDriver, DriverInstance, DriverLaunchOptions } from './BrowserDriver';
 
+export function classifyFirefoxLaunchError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? '');
+  if (/process did exit:\s*exitCode=0/i.test(raw)) {
+    return 'Firefox thoát ngay với mã exitCode=0 (thường do xung đột file khóa profile, có tiến trình Firefox khác đang mở cùng thư mục, hoặc tệp dữ liệu bị hỏng). Hãy đóng toàn bộ Firefox, xóa cache hoặc nhân bản hồ sơ sang thư mục mới rồi thử lại.';
+  }
+  if (/ENOENT|spawn .* ENOENT/i.test(raw)) {
+    return 'Không tìm thấy tệp thực thi Firefox/Camoufox. Vui lòng kiểm tra đường dẫn trong Cài đặt hoặc tải lại Firefox.';
+  }
+  return raw;
+}
+
 export class CamoufoxDriver implements BrowserDriver {
   readonly name = 'camoufox';
   private instances = new Map<string, DriverInstance>();
@@ -95,35 +106,40 @@ export class CamoufoxDriver implements BrowserDriver {
       'extensions.formautofill.creditCards.enabled': !behavior.disableAutofill,
     };
 
-    const context = await firefox.launchPersistentContext(firefoxProfileDir, {
-      headless: false,
-      executablePath,
-      userAgent: profile.userAgent !== 'auto' ? profile.userAgent : undefined,
-      viewport: {
-        width: viewportW,
-        height: viewportH,
-      },
-      locale: resolvedGeo.language || 'en-US',
-      timezoneId: resolvedGeo.timezone || undefined,
-      geolocation:
-        behavior.geolocationPrompt !== 'block' &&
-        resolvedGeo.lat !== null &&
-        resolvedGeo.lon !== null
-          ? { latitude: resolvedGeo.lat, longitude: resolvedGeo.lon }
+    let context;
+    try {
+      context = await firefox.launchPersistentContext(firefoxProfileDir, {
+        headless: false,
+        executablePath,
+        userAgent: profile.userAgent !== 'auto' ? profile.userAgent : undefined,
+        viewport: {
+          width: viewportW,
+          height: viewportH,
+        },
+        locale: resolvedGeo.language || 'en-US',
+        timezoneId: resolvedGeo.timezone || undefined,
+        geolocation:
+          behavior.geolocationPrompt !== 'block' &&
+          resolvedGeo.lat !== null &&
+          resolvedGeo.lon !== null
+            ? { latitude: resolvedGeo.lat, longitude: resolvedGeo.lon }
+            : undefined,
+        proxy: proxyServerUrl
+          ? {
+              server: proxyServerUrl,
+              ...(options.proxyUsername ? { username: options.proxyUsername } : {}),
+              ...(options.proxyPassword ? { password: options.proxyPassword } : {}),
+            }
           : undefined,
-      proxy: proxyServerUrl
-        ? {
-            server: proxyServerUrl,
-            ...(options.proxyUsername ? { username: options.proxyUsername } : {}),
-            ...(options.proxyPassword ? { password: options.proxyPassword } : {}),
-          }
-        : undefined,
-      firefoxUserPrefs,
-      env: {
-        ...process.env,
-        CAMOU_CONFIG_1: JSON.stringify(camoufoxConfig),
-      },
-    });
+        firefoxUserPrefs,
+        env: {
+          ...process.env,
+          CAMOU_CONFIG_1: JSON.stringify(camoufoxConfig),
+        },
+      });
+    } catch (err) {
+      throw new Error(classifyFirefoxLaunchError(err));
+    }
 
     await attachBandwidthRouter(context, profile.bandwidth, firefoxProfileDir);
     await context.addInitScript(buildFingerprintInitScript(profile, resolvedGeo));
