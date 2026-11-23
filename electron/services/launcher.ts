@@ -33,6 +33,8 @@ import type { Ipv6PoolService } from './ipv6pool/ipv6PoolService';
 
 type StatusListener = (event: ProfileRunStatusEvent) => void;
 
+export const DEFAULT_MAX_CONCURRENT_PROFILES = 10;
+
 export class ProfileLauncher {
   private profileService: ProfileService;
   private proxyService: ProxyService;
@@ -42,6 +44,7 @@ export class ProfileLauncher {
   private camoufoxDriver: BrowserDriver;
   private browserManager?: BrowserManager;
   private ipv6PoolService?: Ipv6PoolService;
+  private maxConcurrentProfiles: number;
   private runningDrivers = new Map<string, BrowserDriver>();
   private startingProfiles = new Set<string>();
   private listeners = new Set<StatusListener>();
@@ -55,6 +58,7 @@ export class ProfileLauncher {
     camoufoxDriver: BrowserDriver = new CamoufoxDriver(),
     browserManager?: BrowserManager,
     ipv6PoolService?: Ipv6PoolService,
+    maxConcurrentProfiles = DEFAULT_MAX_CONCURRENT_PROFILES,
   ) {
     this.profileService = profileService;
     this.proxyService = proxyService;
@@ -64,6 +68,7 @@ export class ProfileLauncher {
     this.camoufoxDriver = camoufoxDriver;
     this.browserManager = browserManager;
     this.ipv6PoolService = ipv6PoolService;
+    this.maxConcurrentProfiles = Math.max(1, maxConcurrentProfiles);
   }
 
   onStatusChange(listener: StatusListener): () => void {
@@ -186,6 +191,15 @@ export class ProfileLauncher {
         running: false,
         wsEndpoint: '',
         error: 'Hồ sơ này đang trong quá trình khởi chạy, vui lòng đợi vài giây.',
+      };
+    }
+
+    if (this.runningDrivers.size + this.startingProfiles.size >= this.maxConcurrentProfiles) {
+      return {
+        profileId,
+        running: false,
+        wsEndpoint: '',
+        error: `Đã đạt giới hạn chạy đồng thời (${this.maxConcurrentProfiles} hồ sơ). Vui lòng dừng bớt hồ sơ đang chạy trước khi mở thêm.`,
       };
     }
 
