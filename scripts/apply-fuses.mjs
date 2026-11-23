@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { flipFuses, FuseVersion, FuseV1Options } from '@electron/fuses';
 
@@ -8,6 +9,7 @@ import { flipFuses, FuseVersion, FuseV1Options } from '@electron/fuses';
 export default async function afterPack(context) {
   const { appOutDir, electronPlatformName, packager } = context;
   const productName = packager.appInfo.productFilename;
+  const execName = packager.executableName || productName;
 
   let executablePath;
   if (electronPlatformName === 'win32') {
@@ -15,7 +17,8 @@ export default async function afterPack(context) {
   } else if (electronPlatformName === 'darwin') {
     executablePath = path.join(appOutDir, `${productName}.app`);
   } else {
-    executablePath = path.join(appOutDir, productName);
+    const candidate = path.join(appOutDir, execName);
+    executablePath = fs.existsSync(candidate) ? candidate : path.join(appOutDir, productName);
   }
 
   console.log(`[apply-fuses] Flipping production Electron Fuses on: ${executablePath}`);

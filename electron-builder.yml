@@ -39,6 +39,8 @@ mac:
     - dmg
 linux:
   icon: build/icons
+  maintainer: Facet Contributors <maintainers@facet.dev>
+  category: Network
   target:
     - AppImage
     - deb
