@@ -74,4 +74,17 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
     );
     expect(mainSource.includes('ipcMain.handle(')).toBe(false);
   });
+
+  it('E-003: configures CSP header, will-navigate guard, and setWindowOpenHandler deny in main.ts', () => {
+    const mainSource = fs.readFileSync(
+      path.resolve(process.cwd(), 'electron/main.ts'),
+      'utf8',
+    );
+    expect(mainSource).toContain('contextIsolation: true');
+    expect(mainSource).toContain('nodeIntegration: false');
+    expect(mainSource).toContain('sandbox: true');
+    expect(mainSource).toContain('setWindowOpenHandler');
+    expect(mainSource).toContain("on('will-navigate'");
+    expect(mainSource).toContain('Content-Security-Policy');
+  });
 });

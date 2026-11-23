@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, clipboard, ipcMain, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, safeStorage, session, shell } from 'electron';
 
 // Set PLAYWRIGHT_BROWSERS_PATH once at startup (outside app.asar) before Playwright initializes
 if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
@@ -604,6 +604,36 @@ function createWindow(): void {
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
   });
+
+  // Security guards: deny popups / window.open and block navigation outside app origin
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('will-navigate', (event, targetUrl) => {
+    const allowedDevOrigin = VITE_DEV_SERVER_URL ? new URL(VITE_DEV_SERVER_URL).origin : null;
+    try {
+      const parsed = new URL(targetUrl);
+      const isAllowed =
+        parsed.protocol === 'file:' ||
+        (allowedDevOrigin !== null && parsed.origin === allowedDevOrigin);
+      if (!isAllowed) {
+        event.preventDefault();
+      }
+    } catch {
+      event.preventDefault();
+    }
+  });
+
+  if (!VITE_DEV_SERVER_URL) {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+          ],
+        },
+      });
+    });
+  }
 
   if (VITE_DEV_SERVER_URL) {
     void mainWindow.loadURL(VITE_DEV_SERVER_URL);
