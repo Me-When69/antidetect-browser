@@ -161,7 +161,16 @@ export class ProfileService {
   }
 
   getProfileDir(profileId: string): string {
-    return path.join(this.profilesRootDir, profileId);
+    const clean = profileId.trim();
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(clean)) {
+      throw new Error(`ID hồ sơ không hợp lệ: "${profileId.slice(0, 64)}"`);
+    }
+    const rootResolved = path.resolve(this.profilesRootDir);
+    const resolved = path.resolve(rootResolved, clean);
+    if (!resolved.startsWith(rootResolved + path.sep)) {
+      throw new Error('Phát hiện đường dẫn hồ sơ không hợp lệ (path traversal)');
+    }
+    return resolved;
   }
 
   /**
