@@ -12,6 +12,13 @@ import {
 } from '../../electron/services/ipcSecurity';
 import { classifyProxyError } from '../../electron/services/proxyService';
 import { classifyFirefoxLaunchError } from '../../electron/services/drivers/CamoufoxDriver';
+import { ProfileLauncher } from '../../electron/services/launcher';
+import { ProxyService } from '../../electron/services/proxyService';
+import { SettingsService } from '../../electron/services/settingsService';
+import { AppLogger } from '../../electron/services/logger';
+import { generateConsistentIdentity } from '../../electron/services/fingerprint/generator';
+import type { BackupPayload } from '@shared/types';
+import type { BrowserDriver, DriverInstance } from '../../electron/services/drivers/BrowserDriver';
 
 describe('Security Hardening Regression Tests (E-001+)', () => {
   const tempDirs: string[] = [];
@@ -106,5 +113,108 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
     expect(classifyProxyError(new Error('net::ERR_QUIC_PROTOCOL_ERROR'))).toContain(
       'ERR_QUIC_PROTOCOL_ERROR',
     );
+  });
+
+  it('E-006: enforces max concurrent profiles limit in ProfileLauncher.start', async () => {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'facet-e006-'));
+    tempDirs.push(baseDir);
+    const dbCtx = createDatabase(path.join(baseDir, 'antidetect.db'));
+    const secrets = new SecretService();
+    const profileService = new ProfileService(dbCtx.db, secrets, path.join(baseDir, 'profiles'));
+    const proxyService = new ProxyService(dbCtx.db, secrets);
+    const settingsService = new SettingsService(dbCtx.db);
+    const logger = new AppLogger();
+
+    const makeProfile = (name: string) => {
+      const id = generateConsistentIdentity('windows', 'chrome');
+      return profileService.create({
+        name,
+        folderId: null,
+        status: 'ready',
+        tags: [],
+        notes: '',
+        platform: id.platform,
+        osVersion: id.osVersion,
+        browser: id.browser,
+        browserVersion: id.browserVersion,
+        userAgent: id.userAgent,
+        proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
+        ipv6Policy: 'block',
+        geo: { mode: 'manual', timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN', lat: null, lon: null },
+        fingerprint: id.fingerprint,
+        startup: { urls: [], restoreTabs: false },
+      });
+    };
+
+    const p1 = makeProfile('P1');
+    const p2 = makeProfile('P2');
+
+    const instances = new Map<string, DriverInstance>();
+    const mockDriver: BrowserDriver = {
+      name: 'mock',
+      launch: async (opts) => {
+        const inst: DriverInstance = {
+          profileId: opts.profile.id,
+          wsEndpoint: `ws://127.0.0.1:9222/${opts.profile.id}`,
+          close: async () => {
+            instances.delete(opts.profile.id);
+          },
+          importCookies: async () => 0,
+          exportCookies: async () => [],
+          runWarmup: async () => ({ profileId: opts.profile.id, visited: 0, failed: 0 }),
+        };
+        instances.set(opts.profile.id, inst);
+        return inst;
+      },
+      close: async (id) => {
+        instances.delete(id);
+      },
+      isRunning: (id) => instances.has(id),
+      getInstance: (id) => instances.get(id),
+    };
+
+    // Limit to 1 concurrent profile
+    const launcher = new ProfileLauncher(
+      profileService,
+      proxyService,
+      settingsService,
+      logger,
+      mockDriver,
+      mockDriver,
+      undefined,
+      undefined,
+      1,
+    );
+
+    const r1 = await launcher.start(p1.id);
+    expect(r1.running).toBe(true);
+
+    const r2 = await launcher.start(p2.id);
+    expect(r2.running).toBe(false);
+    expect(r2.error).toContain('giới hạn chạy đồng thời');
+
+    await launcher.stopAll();
+    dbCtx.sqlite.close();
+  });
+
+  it('E-008: rejects corrupted or invalid backup payload in ProfileService.importBackup', () => {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 'facet-e008-'));
+    tempDirs.push(baseDir);
+    const dbCtx = createDatabase(path.join(baseDir, 'antidetect.db'));
+    const svc = new ProfileService(dbCtx.db, new SecretService(), path.join(baseDir, 'profiles'));
+
+    expect(() => svc.importBackup({} as BackupPayload)).toThrow(/File sao lưu không hợp lệ/);
+    expect(() =>
+      svc.importBackup({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        folders: [],
+        tags: [],
+        proxies: [],
+        profiles: [{ id: '../evil', name: 'Bad' }] as unknown as BackupPayload['profiles'],
+      }),
+    ).toThrow(/File sao lưu không hợp lệ/);
+
+    dbCtx.sqlite.close();
   });
 });

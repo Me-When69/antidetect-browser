@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { and, asc, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { z } from 'zod';
 import type { AppDatabase } from '../db';
 import {
   foldersTable,
@@ -836,6 +837,52 @@ export class ProfileService {
   }
 
   importBackup(payload: BackupPayload): { profiles: number; folders: number; proxies: number } {
+    const backupSchema = z.object({
+      version: z.number().int().positive(),
+      exportedAt: z.string().min(1),
+      folders: z.array(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().min(1),
+          createdAt: z.string().min(1),
+        }),
+      ),
+      tags: z.array(
+        z.object({
+          id: z.string().min(1),
+          name: z.string().min(1),
+          color: z.string(),
+          createdAt: z.string().min(1),
+        }),
+      ),
+      proxies: z.array(
+        z.object({
+          id: z.string().min(1),
+          name: z.string(),
+          type: z.string().min(1),
+          host: z.string(),
+          port: z.number().int().min(0).max(65535),
+          username: z.string(),
+          password: z.string(),
+          country: z.string(),
+          createdAt: z.string(),
+        }),
+      ),
+      profiles: z.array(
+        z.object({
+          id: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/, 'ID hồ sơ trong file sao lưu không hợp lệ'),
+          name: z.string().min(1),
+        }).passthrough(),
+      ),
+    });
+
+    const parsed = backupSchema.safeParse(payload);
+    if (!parsed.success) {
+      throw new Error(
+        `File sao lưu không hợp lệ hoặc đã bị chỉnh sửa hỏng cấu trúc (${parsed.error.issues[0]?.message ?? 'sai định dạng'})`,
+      );
+    }
+
     let foldersCount = 0;
     let proxiesCount = 0;
     let profilesCount = 0;
