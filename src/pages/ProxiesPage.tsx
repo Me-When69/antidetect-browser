@@ -137,126 +137,136 @@ export function ProxiesPage(): React.JSX.Element {
       ) : (
         <>
           <Card className="space-y-4 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={quickText}
-            onChange={(e) => setQuickText(e.target.value)}
-            placeholder={dict.proxies.quickPaste}
-            className="max-w-md"
-          />
-          <Button variant="secondary" size="sm" onClick={applyQuickPaste}>
-            {dict.form.applyProxy}
-          </Button>
-        </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={quickText}
+                onChange={(e) => setQuickText(e.target.value)}
+                placeholder={dict.proxies.quickPaste}
+                className="max-w-md"
+              />
+              <Button variant="secondary" size="sm" onClick={applyQuickPaste}>
+                {dict.form.applyProxy}
+              </Button>
+            </div>
 
-        <div className="grid gap-3 md:grid-cols-6">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên gợi nhớ" />
-          <Select value={type} onChange={(e) => setType(e.target.value as SavedProxy['type'])}>
-            <option value="http">HTTP</option>
-            <option value="https">HTTPS</option>
-            <option value="socks5">SOCKS5</option>
-          </Select>
-          <Input value={host} onChange={(e) => setHost(e.target.value)} placeholder="Host / IP" />
-          <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="Port" />
-          <Input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="User"
-          />
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Pass"
-          />
-        </div>
+            <div className="grid gap-3 md:grid-cols-6">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tên gợi nhớ"
+              />
+              <Select value={type} onChange={(e) => setType(e.target.value as SavedProxy['type'])}>
+                <option value="http">HTTP</option>
+                <option value="https">HTTPS</option>
+                <option value="socks5">SOCKS5</option>
+              </Select>
+              <Input
+                value={host}
+                onChange={(e) => setHost(e.target.value)}
+                placeholder="Host / IP"
+              />
+              <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="Port" />
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="User"
+              />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Pass"
+              />
+            </div>
 
-        <div>
-          <Button onClick={() => void handleAdd()}>
-            <Plus className="h-4 w-4" />
-            {dict.proxies.addTitle}
-          </Button>
-        </div>
-      </Card>
+            <div>
+              <Button onClick={() => void handleAdd()}>
+                <Plus className="h-4 w-4" />
+                {dict.proxies.addTitle}
+              </Button>
+            </div>
+          </Card>
 
-      {proxies.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">{dict.proxies.empty}</Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-border bg-secondary/40 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Tên</th>
-                <th className="px-4 py-3">Loại</th>
-                <th className="px-4 py-3">Địa chỉ</th>
-                <th className="px-4 py-3">Trạng thái kiểm tra</th>
-                <th className="px-4 py-3 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {proxies.map((proxy) => {
-                const res = checkResults[proxy.id];
-                return (
-                  <tr key={proxy.id} className="hover:bg-accent/40">
-                    <td className="px-4 py-3 font-medium">{proxy.name}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="secondary">{proxy.type.toUpperCase()}</Badge>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {proxy.host}:{proxy.port}
-                      {proxy.username ? ` (${proxy.username})` : ''}
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      {res ? (
-                        res.ok ? (
-                          <span className="inline-flex items-center gap-1.5 text-emerald-400">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            {res.ip} • {res.country} ({res.latencyMs}ms)
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-destructive">
-                            <XCircle className="h-3.5 w-3.5" />
-                            {res.error}
-                          </span>
-                        )
-                      ) : proxy.country ? (
-                        <span className="text-muted-foreground">{proxy.country}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={checkingId === proxy.id}
-                          onClick={() => void handleCheck(proxy)}
-                        >
-                          {checkingId === proxy.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Globe className="h-3.5 w-3.5" />
-                          )}
-                          {dict.proxies.checkBtn}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => void handleDelete(proxy.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
+          {proxies.length === 0 ? (
+            <Card className="p-10 text-center text-sm text-muted-foreground">
+              {dict.proxies.empty}
+            </Card>
+          ) : (
+            <Card className="overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border bg-secondary/40 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Tên</th>
+                    <th className="px-4 py-3">Loại</th>
+                    <th className="px-4 py-3">Địa chỉ</th>
+                    <th className="px-4 py-3">Trạng thái kiểm tra</th>
+                    <th className="px-4 py-3 text-right">Thao tác</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
-      )}
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {proxies.map((proxy) => {
+                    const res = checkResults[proxy.id];
+                    return (
+                      <tr key={proxy.id} className="hover:bg-accent/40">
+                        <td className="px-4 py-3 font-medium">{proxy.name}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="secondary">{proxy.type.toUpperCase()}</Badge>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {proxy.host}:{proxy.port}
+                          {proxy.username ? ` (${proxy.username})` : ''}
+                        </td>
+                        <td className="px-4 py-3 text-xs">
+                          {res ? (
+                            res.ok ? (
+                              <span className="inline-flex items-center gap-1.5 text-emerald-400">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                {res.ip} • {res.country} ({res.latencyMs}ms)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-destructive">
+                                <XCircle className="h-3.5 w-3.5" />
+                                {res.error}
+                              </span>
+                            )
+                          ) : proxy.country ? (
+                            <span className="text-muted-foreground">{proxy.country}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={checkingId === proxy.id}
+                              onClick={() => void handleCheck(proxy)}
+                            >
+                              {checkingId === proxy.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Globe className="h-3.5 w-3.5" />
+                              )}
+                              {dict.proxies.checkBtn}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => void handleDelete(proxy.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Card>
+          )}
         </>
       )}
     </div>

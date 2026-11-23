@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "description": "Facet — Ứng dụng desktop mã nguồn mở quản lý nhiều hồ sơ trình duyệt cô lập",
   "repository": {
     "type": "git",

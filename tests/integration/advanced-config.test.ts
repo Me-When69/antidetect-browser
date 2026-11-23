@@ -152,7 +152,14 @@ function makeProfile(id: string, overrides: Partial<Profile> = {}): Profile {
     startup: { urls: [], restoreTabs: false },
     mediaDevices: { ...DEFAULT_MEDIA_DEVICES },
     dataOnClose: { ...DEFAULT_DATA_ON_CLOSE },
-    window: { width: 960, height: 640, x: null, y: null, randomizeSlightly: false, maximized: false },
+    window: {
+      width: 960,
+      height: 640,
+      x: null,
+      y: null,
+      randomizeSlightly: false,
+      maximized: false,
+    },
     bandwidth: { ...DEFAULT_BANDWIDTH },
     behavior: { ...DEFAULT_BEHAVIOR },
     createdAt: new Date().toISOString(),
@@ -211,7 +218,9 @@ describe('Integration: Advanced Profile Config on Real Chrome', () => {
           await afterLoad(page);
         }
         const data = await page.evaluate(() =>
-          (window as unknown as { __probeAdvanced: () => Promise<Record<string, unknown>> }).__probeAdvanced(),
+          (
+            window as unknown as { __probeAdvanced: () => Promise<Record<string, unknown>> }
+          ).__probeAdvanced(),
         );
         await browser.close().catch(() => {});
         return { data, pageErrors };
@@ -286,7 +295,9 @@ describe('Integration: Advanced Profile Config on Real Chrome', () => {
       expect(runOff.pageErrors).toEqual([]);
       expect(runOff.data['webglAvailable']).toBe(false);
       expect(runOff.data['audioSum']).toBe(0);
-      expect(String(runOff.data['canvasUrl'])).toContain('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB');
+      expect(String(runOff.data['canvasUrl'])).toContain(
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB',
+      );
       expect(runOff.data['imgLoaded']).toBe(false);
       expect(runOff.data['scriptLoaded']).toBe(true);
 

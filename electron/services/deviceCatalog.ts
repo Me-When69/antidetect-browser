@@ -3,12 +3,7 @@ import macosDevicesRaw from '../../data/devices/macos.json';
 import linuxDevicesRaw from '../../data/devices/linux.json';
 import androidDevicesRaw from '../../data/devices/android.json';
 import iosDevicesRaw from '../../data/devices/ios.json';
-import type {
-  BrowserType,
-  CreateProfileInput,
-  EmulatedDevice,
-  Platform,
-} from '../../shared/types';
+import type { BrowserType, CreateProfileInput, EmulatedDevice, Platform } from '../../shared/types';
 
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
@@ -180,7 +175,7 @@ export function applyDevice(
       fonts: [...device.fonts],
       mobile: device.mobile,
       maxTouchPoints: device.touch.maxTouchPoints,
-      model: hints ? hints.model : device.model ?? '',
+      model: hints ? hints.model : (device.model ?? ''),
       architecture: hints ? hints.architecture : '',
       bitness: hints ? hints.bitness : '',
       platformVersion: hints ? hints.platformVersion : '',

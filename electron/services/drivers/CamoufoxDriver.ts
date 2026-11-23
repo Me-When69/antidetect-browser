@@ -96,11 +96,7 @@ export class CamoufoxDriver implements BrowserDriver {
       'layers.acceleration.disabled': !behavior.hardwareAcceleration,
       'geo.enabled': behavior.geolocationPrompt !== 'block',
       'permissions.default.geo':
-        behavior.geolocationPrompt === 'block'
-          ? 2
-          : behavior.geolocationPrompt === 'allow'
-            ? 1
-            : 0,
+        behavior.geolocationPrompt === 'block' ? 2 : behavior.geolocationPrompt === 'allow' ? 1 : 0,
       'signon.rememberSignons': !behavior.disableAutofill,
       'extensions.formautofill.addresses.enabled': !behavior.disableAutofill,
       'extensions.formautofill.creditCards.enabled': !behavior.disableAutofill,

@@ -73,7 +73,9 @@ function isTokenRevokedOrExpiredError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
   const responseData =
     typeof err === 'object' && err !== null && 'response' in err
-      ? JSON.stringify((err as { response?: { data?: unknown } }).response?.data ?? '').toLowerCase()
+      ? JSON.stringify(
+          (err as { response?: { data?: unknown } }).response?.data ?? '',
+        ).toLowerCase()
       : '';
   const combined = `${msg} ${responseData}`;
   return (
@@ -85,8 +87,7 @@ function isTokenRevokedOrExpiredError(err: unknown): boolean {
   );
 }
 
-const TOKEN_EXPIRED_VI_MSG =
-  'Token Gmail đã hết hạn hoặc bị thu hồi. Vui lòng cấp quyền lại.';
+const TOKEN_EXPIRED_VI_MSG = 'Token Gmail đã hết hạn hoặc bị thu hồi. Vui lòng cấp quyền lại.';
 
 export class GmailOAuthService {
   private vault: VaultService;
@@ -367,7 +368,11 @@ export class GmailOAuthService {
         }
         // Save updated credentials (expiry_date / access_token)
         if (this.vault.isUnlocked()) {
-          this.vault.setOAuthToken(cleanEmail, JSON.stringify(client.credentials), tokenRecord.scope);
+          this.vault.setOAuthToken(
+            cleanEmail,
+            JSON.stringify(client.credentials),
+            tokenRecord.scope,
+          );
         }
       } catch (err) {
         this.clientCache.delete(cleanEmail);

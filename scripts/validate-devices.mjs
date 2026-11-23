@@ -75,7 +75,10 @@ for (const spec of EXPECTED_FILES) {
       errors.push(`${ctx}: mobile must be boolean`);
     } else if ((spec.platform === 'android' || spec.platform === 'ios') && !d.mobile) {
       errors.push(`${ctx}: mobile must be true for ${spec.platform}`);
-    } else if ((spec.platform === 'windows' || spec.platform === 'macos' || spec.platform === 'linux') && d.mobile) {
+    } else if (
+      (spec.platform === 'windows' || spec.platform === 'macos' || spec.platform === 'linux') &&
+      d.mobile
+    ) {
       errors.push(`${ctx}: mobile must be false for ${spec.platform}`);
     }
 
@@ -184,4 +187,6 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Device catalog OK: validated ${totalCount} devices across ${EXPECTED_FILES.length} platforms.`);
+console.log(
+  `Device catalog OK: validated ${totalCount} devices across ${EXPECTED_FILES.length} platforms.`,
+);

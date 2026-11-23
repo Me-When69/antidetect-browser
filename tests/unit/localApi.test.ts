@@ -80,7 +80,13 @@ describe('LocalApiServer Security Tests (E-004)', () => {
         password: 'SuperSecretProxyPassword!99',
       },
       ipv6Policy: 'block',
-      geo: { mode: 'manual', timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN', lat: null, lon: null },
+      geo: {
+        mode: 'manual',
+        timezone: 'Asia/Ho_Chi_Minh',
+        language: 'vi-VN',
+        lat: null,
+        lon: null,
+      },
       fingerprint: identity.fingerprint,
       startup: { urls: [], restoreTabs: false },
     });

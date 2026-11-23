@@ -27,11 +27,11 @@ export function hasActiveBandwidthRules(cfg?: ProfileBandwidth | null): boolean 
   if (!cfg) return false;
   return Boolean(
     cfg.blockImages ||
-      cfg.blockMedia ||
-      cfg.blockExternalFonts ||
-      cfg.blockAds ||
-      cfg.blockTrackers ||
-      cfg.cacheStaticResources,
+    cfg.blockMedia ||
+    cfg.blockExternalFonts ||
+    cfg.blockAds ||
+    cfg.blockTrackers ||
+    cfg.cacheStaticResources,
   );
 }
 
@@ -134,10 +134,7 @@ export async function attachBandwidthRouter(
         if (response.status() === 200 && body.length <= 5 * 1024 * 1024) {
           try {
             fs.writeFileSync(bodyPath, body);
-            fs.writeFileSync(
-              metaPath,
-              JSON.stringify({ status: response.status(), contentType }),
-            );
+            fs.writeFileSync(metaPath, JSON.stringify({ status: response.status(), contentType }));
           } catch {
             // Ignore disk cache write errors
           }

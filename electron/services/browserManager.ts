@@ -295,10 +295,7 @@ export class BrowserManager {
 
     // Stable & Beta channels
     const channelsJson = await httpsGetJson(CFT_LAST_KNOWN_URL);
-    const channels = (channelsJson['channels'] ?? {}) as Record<
-      string,
-      { version?: string }
-    >;
+    const channels = (channelsJson['channels'] ?? {}) as Record<string, { version?: string }>;
 
     for (const ch of ['Stable', 'Beta'] as const) {
       const ver = channels[ch]?.version;
@@ -373,7 +370,10 @@ export class BrowserManager {
     fs.mkdirSync(versionDir, { recursive: true });
     const state = { cancelled: false };
     this.activeDownloads.set(version, state);
-    this.logger.info('browserManager', `Downloading Chrome for Testing ${version} into ${versionDir}`);
+    this.logger.info(
+      'browserManager',
+      `Downloading Chrome for Testing ${version} into ${versionDir}`,
+    );
 
     try {
       const installed = await install({
@@ -385,23 +385,41 @@ export class BrowserManager {
           if (state.cancelled) {
             throw new Error('DOWNLOAD_CANCELLED');
           }
-          const percent = totalBytes > 0 ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : 0;
+          const percent =
+            totalBytes > 0 ? Math.min(100, Math.round((downloadedBytes / totalBytes) * 100)) : 0;
           onProgress({ version, percent, downloadedBytes, totalBytes });
         },
       });
 
       onProgress({ version, percent: 100, downloadedBytes: 1, totalBytes: 1, done: true });
-      this.logger.info('browserManager', `Downloaded Chrome ${version}: ${installed.executablePath}`);
+      this.logger.info(
+        'browserManager',
+        `Downloaded Chrome ${version}: ${installed.executablePath}`,
+      );
       return { ok: true, executablePath: installed.executablePath };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg === 'DOWNLOAD_CANCELLED' || state.cancelled) {
         fs.rmSync(versionDir, { recursive: true, force: true });
-        onProgress({ version, percent: 0, downloadedBytes: 0, totalBytes: 0, done: true, cancelled: true });
+        onProgress({
+          version,
+          percent: 0,
+          downloadedBytes: 0,
+          totalBytes: 0,
+          done: true,
+          cancelled: true,
+        });
         return { ok: false, error: 'Đã hủy tải phiên bản trình duyệt' };
       }
       this.logger.error('browserManager', `Failed downloading Chrome ${version}: ${msg}`);
-      onProgress({ version, percent: 0, downloadedBytes: 0, totalBytes: 0, done: true, error: msg });
+      onProgress({
+        version,
+        percent: 0,
+        downloadedBytes: 0,
+        totalBytes: 0,
+        done: true,
+        error: msg,
+      });
       return { ok: false, error: msg };
     } finally {
       this.activeDownloads.delete(version);

@@ -83,9 +83,10 @@ describe('deviceCatalog & applyDevice', () => {
         browser: applied.browser,
       });
       const errors = report.warnings.filter((w) => w.severity === 'error');
-      expect(errors, `Device ${device.id} failed consistency check: ${JSON.stringify(errors)}`).toEqual(
-        [],
-      );
+      expect(
+        errors,
+        `Device ${device.id} failed consistency check: ${JSON.stringify(errors)}`,
+      ).toEqual([]);
       expect(report.ok).toBe(true);
     }
   });

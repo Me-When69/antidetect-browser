@@ -13,13 +13,7 @@ import type {
 } from '@shared/types';
 
 export type NavPageId =
-  | 'profiles'
-  | 'accounts'
-  | 'folders'
-  | 'proxies'
-  | 'trash'
-  | 'settings'
-  | 'new-profile';
+  'profiles' | 'accounts' | 'folders' | 'proxies' | 'trash' | 'settings' | 'new-profile';
 
 interface ToastMessage {
   id: number;

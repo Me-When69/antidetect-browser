@@ -7,7 +7,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ChromeDriver } from '../../electron/services/drivers/ChromeDriver';
 import { resolveBrowserExecutable } from '../../electron/services/browserPath';
 import { detectExecutableVersion } from '../../electron/services/browserManager';
-import { applyDevice, getDeviceById, normalizeBrowserVersion } from '../../electron/services/deviceCatalog';
+import {
+  applyDevice,
+  getDeviceById,
+  normalizeBrowserVersion,
+} from '../../electron/services/deviceCatalog';
 import { createDatabase } from '../../electron/db';
 import { SecretService } from '../../electron/services/secretService';
 import { AppLogger } from '../../electron/services/logger';
@@ -177,7 +181,9 @@ describe('Integration: Device Emulation (Desktop, Android, iOS) & Downgrade Guar
         const page = await context.newPage();
         await page.goto(server.url, { waitUntil: 'domcontentloaded' });
         const result = await page.evaluate(() =>
-          (window as unknown as { __collectProbe: () => Promise<Record<string, unknown>> }).__collectProbe(),
+          (
+            window as unknown as { __collectProbe: () => Promise<Record<string, unknown>> }
+          ).__collectProbe(),
         );
         await browser.close().catch(() => {});
         return result;

@@ -111,9 +111,7 @@ export function normalizeWindow(
   };
 }
 
-export function normalizeBandwidth(
-  partial?: Partial<ProfileBandwidth> | null,
-): ProfileBandwidth {
+export function normalizeBandwidth(partial?: Partial<ProfileBandwidth> | null): ProfileBandwidth {
   return {
     ...DEFAULT_BANDWIDTH,
     ...(partial ?? {}),

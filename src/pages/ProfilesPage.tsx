@@ -210,7 +210,16 @@ export function ProfilesPage(): React.JSX.Element {
       list = [...list].sort((a, b) => b.browserVersion.localeCompare(a.browserVersion));
     }
     return list;
-  }, [profiles, runningIds, quickChip, platformFilter, versionFilter, colorFilter, expiryFilter, extraSort]);
+  }, [
+    profiles,
+    runningIds,
+    quickChip,
+    platformFilter,
+    versionFilter,
+    colorFilter,
+    expiryFilter,
+    extraSort,
+  ]);
 
   const allSelected =
     displayedProfiles.length > 0 && selectedIds.length === displayedProfiles.length;
@@ -581,7 +590,11 @@ export function ProfilesPage(): React.JSX.Element {
       </div>
 
       {/* Quick filter chips (Facet) */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Quick status filters">
+      <div
+        className="flex flex-wrap items-center gap-2"
+        role="group"
+        aria-label="Quick status filters"
+      >
         {(
           [
             { id: 'all', label: isEn ? 'All' : 'Tất cả' },
@@ -702,9 +715,7 @@ export function ProfilesPage(): React.JSX.Element {
         <Select
           className="w-40"
           value={expiryFilter}
-          onChange={(e) =>
-            setExpiryFilter(e.target.value as 'all' | 'expired' | 'soon' | 'valid')
-          }
+          onChange={(e) => setExpiryFilter(e.target.value as 'all' | 'expired' | 'soon' | 'valid')}
         >
           <option value="all">Hết hạn: Tất cả</option>
           <option value="expired">Đã hết hạn</option>
@@ -871,319 +882,319 @@ export function ProfilesPage(): React.JSX.Element {
       ) : (
         <Card className="overflow-hidden">
           <div ref={tableScrollRef} className="max-h-[calc(100vh-290px)] overflow-auto">
-          <table className="w-full min-w-[1020px] text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-border bg-secondary/95 text-xs text-muted-foreground backdrop-blur-sm">
-              <tr>
-                <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={handleToggleAll}
-                    className="rounded border-border bg-card"
-                  />
-                </th>
-                <th className="px-4 py-3">{dict.profiles.colName}</th>
-                <th className="px-4 py-3">Thiết bị</th>
-                <th className="px-4 py-3">Phiên bản</th>
-                <th className="px-4 py-3">Ghi chú</th>
-                <th className="px-4 py-3">{dict.profiles.colStatus}</th>
-                <th className="px-4 py-3">{dict.profiles.colTags}</th>
-                <th className="px-4 py-3">{isEn ? 'Account' : 'Tài khoản'}</th>
-                <th className="px-4 py-3">{dict.profiles.colProxy}</th>
-                <th className="px-4 py-3">{dict.profiles.colLastRun}</th>
-                <th className="px-4 py-3 text-right">{dict.profiles.colActions}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {paddingTop > 0 && (
-                <tr aria-hidden="true">
-                  <td colSpan={11} style={{ height: `${paddingTop}px`, padding: 0 }} />
+            <table className="w-full min-w-[1020px] text-left text-sm">
+              <thead className="sticky top-0 z-10 border-b border-border bg-secondary/95 text-xs text-muted-foreground backdrop-blur-sm">
+                <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={handleToggleAll}
+                      className="rounded border-border bg-card"
+                    />
+                  </th>
+                  <th className="px-4 py-3">{dict.profiles.colName}</th>
+                  <th className="px-4 py-3">Thiết bị</th>
+                  <th className="px-4 py-3">Phiên bản</th>
+                  <th className="px-4 py-3">Ghi chú</th>
+                  <th className="px-4 py-3">{dict.profiles.colStatus}</th>
+                  <th className="px-4 py-3">{dict.profiles.colTags}</th>
+                  <th className="px-4 py-3">{isEn ? 'Account' : 'Tài khoản'}</th>
+                  <th className="px-4 py-3">{dict.profiles.colProxy}</th>
+                  <th className="px-4 py-3">{dict.profiles.colLastRun}</th>
+                  <th className="px-4 py-3 text-right">{dict.profiles.colActions}</th>
                 </tr>
-              )}
-              {virtualRows.map((vRow) => {
-                const profile = displayedProfiles[vRow.index]!;
-                const isRunning = runningSet.has(profile.id);
-                const isChecked = selectedSet.has(profile.id);
-                const isStarting = startingSet.has(profile.id);
-                const folderName = profile.folderId ? folderMap.get(profile.folderId) : null;
-                const linkedAccounts = profileAccountLinks[profile.id] ?? [];
-                const primaryAccount = linkedAccounts[0] ?? null;
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paddingTop > 0 && (
+                  <tr aria-hidden="true">
+                    <td colSpan={11} style={{ height: `${paddingTop}px`, padding: 0 }} />
+                  </tr>
+                )}
+                {virtualRows.map((vRow) => {
+                  const profile = displayedProfiles[vRow.index]!;
+                  const isRunning = runningSet.has(profile.id);
+                  const isChecked = selectedSet.has(profile.id);
+                  const isStarting = startingSet.has(profile.id);
+                  const folderName = profile.folderId ? folderMap.get(profile.folderId) : null;
+                  const linkedAccounts = profileAccountLinks[profile.id] ?? [];
+                  const primaryAccount = linkedAccounts[0] ?? null;
 
-                return (
-                  <tr key={profile.id} className="hover:bg-accent/40">
-                    <td className="px-4 py-2.5">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleSelectProfile(profile.id)}
-                        className="rounded border-border bg-card"
-                      />
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="font-medium text-foreground">{profile.name}</div>
-                      {folderName && (
-                        <div className="mt-0.5 text-[11px] text-primary">{folderName}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="max-w-[200px] truncate text-xs font-medium text-foreground">
-                        {profile.deviceLabel || `${profile.platform.toUpperCase()} (${profile.osVersion})`}
-                      </div>
-                      <div className="mt-0.5 font-mono text-[10px] uppercase text-muted-foreground">
-                        {profile.platform} • {profile.fingerprint.screen.width}x{profile.fingerprint.screen.height}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <Badge variant="outline" className="font-mono text-[11px]">
-                        {profile.browser === 'firefox' ? 'FF' : 'CR'} {profile.browserVersion}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: profile.meta?.color || '#10b981' }}
-                          title={profile.meta?.color || '#10b981'}
+                  return (
+                    <tr key={profile.id} className="hover:bg-accent/40">
+                      <td className="px-4 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectProfile(profile.id)}
+                          className="rounded border-border bg-card"
                         />
-                        <span className="max-w-[160px] truncate text-xs text-muted-foreground">
-                          {profile.meta?.notes || profile.notes || '—'}
-                        </span>
-                      </div>
-                      {profile.meta?.expiresAt && (
-                        <div
-                          className={
-                            Date.parse(profile.meta.expiresAt) < Date.now()
-                              ? 'mt-0.5 text-[10px] font-medium text-destructive'
-                              : 'mt-0.5 text-[10px] text-amber-400'
-                          }
-                        >
-                          HSD: {profile.meta.expiresAt.slice(0, 10)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        {isRunning ? (
-                          <StatusBadge variant="running">{dict.common.running}</StatusBadge>
-                        ) : profile.status === 'banned' ||
-                          (profile.proxy.type !== 'none' &&
-                            profile.fingerprint.webrtc === 'real') ? (
-                          <StatusBadge variant="warning">
-                            {isEn ? 'Warning' : 'Cảnh báo'}
-                          </StatusBadge>
-                        ) : profile.status === 'ready' || profile.status === 'active' ? (
-                          <StatusBadge variant="ready">
-                            {isEn ? 'Ready' : 'Sẵn sàng'}
-                          </StatusBadge>
-                        ) : (
-                          <StatusBadge variant="stopped">{dict.common.stopped}</StatusBadge>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="font-medium text-foreground">{profile.name}</div>
+                        {folderName && (
+                          <div className="mt-0.5 text-[11px] text-primary">{folderName}</div>
                         )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex flex-wrap gap-1">
-                        {profile.tags.length > 0 ? (
-                          profile.tags.map((tag) => (
-                            <Badge key={tag} variant="outline" className="text-[11px]">
-                              {tag}
-                            </Badge>
-                          ))
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="max-w-[200px] truncate text-xs font-medium text-foreground">
+                          {profile.deviceLabel ||
+                            `${profile.platform.toUpperCase()} (${profile.osVersion})`}
+                        </div>
+                        <div className="mt-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                          {profile.platform} • {profile.fingerprint.screen.width}x
+                          {profile.fingerprint.screen.height}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <Badge variant="outline" className="font-mono text-[11px]">
+                          {profile.browser === 'firefox' ? 'FF' : 'CR'} {profile.browserVersion}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: profile.meta?.color || '#10b981' }}
+                            title={profile.meta?.color || '#10b981'}
+                          />
+                          <span className="max-w-[160px] truncate text-xs text-muted-foreground">
+                            {profile.meta?.notes || profile.notes || '—'}
+                          </span>
+                        </div>
+                        {profile.meta?.expiresAt && (
+                          <div
+                            className={
+                              Date.parse(profile.meta.expiresAt) < Date.now()
+                                ? 'mt-0.5 text-[10px] font-medium text-destructive'
+                                : 'mt-0.5 text-[10px] text-amber-400'
+                            }
+                          >
+                            HSD: {profile.meta.expiresAt.slice(0, 10)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          {isRunning ? (
+                            <StatusBadge variant="running">{dict.common.running}</StatusBadge>
+                          ) : profile.status === 'banned' ||
+                            (profile.proxy.type !== 'none' &&
+                              profile.fingerprint.webrtc === 'real') ? (
+                            <StatusBadge variant="warning">
+                              {isEn ? 'Warning' : 'Cảnh báo'}
+                            </StatusBadge>
+                          ) : profile.status === 'ready' || profile.status === 'active' ? (
+                            <StatusBadge variant="ready">{isEn ? 'Ready' : 'Sẵn sàng'}</StatusBadge>
+                          ) : (
+                            <StatusBadge variant="stopped">{dict.common.stopped}</StatusBadge>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-wrap gap-1">
+                          {profile.tags.length > 0 ? (
+                            profile.tags.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-[11px]">
+                                {tag}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {linkedAccounts.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className="max-w-[160px] truncate text-xs font-medium text-foreground"
+                              title={linkedAccounts.join(', ')}
+                            >
+                              {primaryAccount}
+                              {linkedAccounts.length > 1 ? ` (+${linkedAccounts.length - 1})` : ''}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                title={isEn ? 'Copy password (20s)' : 'Chép mật khẩu (20s)'}
+                                className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary"
+                                onClick={() => {
+                                  if (!primaryAccount) return;
+                                  void window.electronAPI
+                                    ?.copyAccountPassword(primaryAccount)
+                                    .then(() =>
+                                      showToast(
+                                        isEn
+                                          ? 'Password copied (clears in 20s)'
+                                          : 'Đã chép mật khẩu (tự xóa sau 20s)',
+                                        'success',
+                                      ),
+                                    )
+                                    .catch((err) =>
+                                      showToast(
+                                        err instanceof Error
+                                          ? err.message
+                                          : 'Vui lòng mở khóa kho tài khoản',
+                                        'error',
+                                      ),
+                                    );
+                                }}
+                              >
+                                <Copy className="h-2.5 w-2.5" />
+                                MK
+                              </button>
+                              <button
+                                type="button"
+                                title={isEn ? 'Copy 2FA TOTP (20s)' : 'Chép mã 2FA (20s)'}
+                                className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary"
+                                onClick={() => {
+                                  if (!primaryAccount) return;
+                                  void window.electronAPI
+                                    ?.copyAccountTotp(primaryAccount)
+                                    .then((res) =>
+                                      showToast(
+                                        isEn
+                                          ? `2FA ${res.code} copied (20s)`
+                                          : `Đã chép mã 2FA ${res.code} (20s)`,
+                                        'success',
+                                      ),
+                                    )
+                                    .catch((err) =>
+                                      showToast(
+                                        err instanceof Error
+                                          ? err.message
+                                          : 'Chưa có 2FA hoặc kho đang khóa',
+                                        'error',
+                                      ),
+                                    );
+                                }}
+                              >
+                                <KeyRound className="h-2.5 w-2.5" />
+                                2FA
+                              </button>
+                            </div>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {linkedAccounts.length > 0 ? (
-                        <div className="flex flex-col gap-1">
-                          <span
-                            className="max-w-[160px] truncate text-xs font-medium text-foreground"
-                            title={linkedAccounts.join(', ')}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                        {profile.proxy.type === 'none'
+                          ? dict.profiles.noProxy
+                          : `${profile.proxy.type.toUpperCase()} ${profile.proxy.host}:${profile.proxy.port}`}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                        {formatDate(profile.lastRunAt, dict.profiles.neverRun)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          {isRunning ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => void handleStop(profile.id)}
+                            >
+                              <Square className="h-3.5 w-3.5" />
+                              {dict.common.stop}
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              disabled={isStarting}
+                              onClick={() => void handleStart(profile.id)}
+                            >
+                              {isStarting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Play className="h-3.5 w-3.5" />
+                              )}
+                              {isStarting ? (isEn ? 'Starting...' : 'Đang mở...') : dict.common.run}
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-primary hover:text-primary"
+                            title={isEn ? 'Open Gmail in this profile' : 'Mở Gmail trong hồ sơ này'}
+                            onClick={() => {
+                              void window.electronAPI
+                                ?.openGmailInProfile(profile.id)
+                                .then((res) => {
+                                  if (!res.running && res.error) {
+                                    showToast(res.error, 'error');
+                                  }
+                                })
+                                .catch((err) =>
+                                  showToast(
+                                    err instanceof Error ? err.message : 'Lỗi mở Gmail trong hồ sơ',
+                                    'error',
+                                  ),
+                                );
+                            }}
                           >
-                            {primaryAccount}
-                            {linkedAccounts.length > 1 ? ` (+${linkedAccounts.length - 1})` : ''}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              title={isEn ? 'Copy password (20s)' : 'Chép mật khẩu (20s)'}
-                              className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary"
-                              onClick={() => {
-                                if (!primaryAccount) return;
-                                void window.electronAPI
-                                  ?.copyAccountPassword(primaryAccount)
-                                  .then(() =>
-                                    showToast(
-                                      isEn
-                                        ? 'Password copied (clears in 20s)'
-                                        : 'Đã chép mật khẩu (tự xóa sau 20s)',
-                                      'success',
-                                    ),
-                                  )
-                                  .catch((err) =>
-                                    showToast(
-                                      err instanceof Error ? err.message : 'Vui lòng mở khóa kho tài khoản',
-                                      'error',
-                                    ),
-                                  );
-                              }}
-                            >
-                              <Copy className="h-2.5 w-2.5" />
-                              MK
-                            </button>
-                            <button
-                              type="button"
-                              title={isEn ? 'Copy 2FA TOTP (20s)' : 'Chép mã 2FA (20s)'}
-                              className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary"
-                              onClick={() => {
-                                if (!primaryAccount) return;
-                                void window.electronAPI
-                                  ?.copyAccountTotp(primaryAccount)
-                                  .then((res) =>
-                                    showToast(
-                                      isEn
-                                        ? `2FA ${res.code} copied (20s)`
-                                        : `Đã chép mã 2FA ${res.code} (20s)`,
-                                      'success',
-                                    ),
-                                  )
-                                  .catch((err) =>
-                                    showToast(
-                                      err instanceof Error ? err.message : 'Chưa có 2FA hoặc kho đang khóa',
-                                      'error',
-                                    ),
-                                  );
-                              }}
-                            >
-                              <KeyRound className="h-2.5 w-2.5" />
-                              2FA
-                            </button>
-                          </div>
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-amber-500 hover:text-amber-400"
+                            title="Profile Warm-up"
+                            onClick={() => setWarmupProfile(profile)}
+                          >
+                            <Flame className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            title={dict.common.edit}
+                            onClick={() => openEditProfile(profile.id)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            title={dict.common.duplicate}
+                            onClick={() => void handleDuplicate(profile.id)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            title={dict.profiles.cookies}
+                            onClick={() => {
+                              setCookieProfile(profile);
+                              setCookieInput('');
+                            }}
+                          >
+                            <Cookie className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            title={dict.common.delete}
+                            onClick={() => void handleDelete(profile.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                      {profile.proxy.type === 'none'
-                        ? dict.profiles.noProxy
-                        : `${profile.proxy.type.toUpperCase()} ${profile.proxy.host}:${profile.proxy.port}`}
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                      {formatDate(profile.lastRunAt, dict.profiles.neverRun)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        {isRunning ? (
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => void handleStop(profile.id)}
-                          >
-                            <Square className="h-3.5 w-3.5" />
-                            {dict.common.stop}
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            disabled={isStarting}
-                            onClick={() => void handleStart(profile.id)}
-                          >
-                            {isStarting ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Play className="h-3.5 w-3.5" />
-                            )}
-                            {isStarting
-                              ? isEn
-                                ? 'Starting...'
-                                : 'Đang mở...'
-                              : dict.common.run}
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-primary hover:text-primary"
-                          title={isEn ? 'Open Gmail in this profile' : 'Mở Gmail trong hồ sơ này'}
-                          onClick={() => {
-                            void window.electronAPI
-                              ?.openGmailInProfile(profile.id)
-                              .then((res) => {
-                                if (!res.running && res.error) {
-                                  showToast(res.error, 'error');
-                                }
-                              })
-                              .catch((err) =>
-                                showToast(
-                                  err instanceof Error ? err.message : 'Lỗi mở Gmail trong hồ sơ',
-                                  'error',
-                                ),
-                              );
-                          }}
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-amber-500 hover:text-amber-400"
-                          title="Profile Warm-up"
-                          onClick={() => setWarmupProfile(profile)}
-                        >
-                          <Flame className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          title={dict.common.edit}
-                          onClick={() => openEditProfile(profile.id)}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          title={dict.common.duplicate}
-                          onClick={() => void handleDuplicate(profile.id)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          title={dict.profiles.cookies}
-                          onClick={() => {
-                            setCookieProfile(profile);
-                            setCookieInput('');
-                          }}
-                        >
-                          <Cookie className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          title={dict.common.delete}
-                          onClick={() => void handleDelete(profile.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {paddingBottom > 0 && (
+                  <tr aria-hidden="true">
+                    <td colSpan={10} style={{ height: `${paddingBottom}px`, padding: 0 }} />
                   </tr>
-                );
-              })}
-              {paddingBottom > 0 && (
-                <tr aria-hidden="true">
-                  <td colSpan={10} style={{ height: `${paddingBottom}px`, padding: 0 }} />
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
           </div>
         </Card>
       )}

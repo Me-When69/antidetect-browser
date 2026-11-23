@@ -3,6 +3,7 @@
 Facet sử dụng **Gmail API chính thức** thông qua OAuth 2.0 (Desktop Loopback + PKCE) bằng chính dự án Google Cloud của bạn.
 
 > **Tại sao Facet không đóng gói sẵn `credentials.json` dùng chung?**
+>
 > - Mỗi file OAuth Desktop App có `client_id` và hạn mức quota gắn với một dự án Google Cloud cụ thể.
 > - Đóng gói khóa chung vào mã nguồn mở vi phạm nguyên tắc bảo mật và khiến toàn bộ người dùng bị Google thu hồi hoặc giới hạn quota.
 > - Tự tạo dự án riêng đảm bảo **dữ liệu và token của bạn chỉ kết nối trực tiếp giữa máy bạn và Google**, không qua bất kỳ máy chủ trung gian nào.

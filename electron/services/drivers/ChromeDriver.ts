@@ -231,8 +231,8 @@ function computeWindowSize(profile: Profile): {
   let height = Math.min(win.height, screenH);
   if (win.randomizeSlightly) {
     const seed = profile.fingerprint.canvasNoiseSeed || 1;
-    const dx = ((Math.abs(seed * 31) % 17) - 8); // -8..+8 px deterministic
-    const dy = ((Math.abs(seed * 17) % 17) - 8);
+    const dx = (Math.abs(seed * 31) % 17) - 8; // -8..+8 px deterministic
+    const dy = (Math.abs(seed * 17) % 17) - 8;
     width = Math.max(320, Math.min(screenW, width + dx));
     height = Math.max(240, Math.min(screenH, height + dy));
   }

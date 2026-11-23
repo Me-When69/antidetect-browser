@@ -413,10 +413,7 @@ export interface LaunchResult {
   };
   consistencyErrors?: IdentityCheckWarning[];
   errorCode?:
-    | 'BROWSER_NOT_INSTALLED'
-    | 'PROXY_CHECK_FAILED'
-    | 'VERSION_DOWNGRADE'
-    | 'CONSISTENCY_ERROR';
+    'BROWSER_NOT_INSTALLED' | 'PROXY_CHECK_FAILED' | 'VERSION_DOWNGRADE' | 'CONSISTENCY_ERROR';
   missingBrowser?: 'chromium' | 'firefox';
   error?: string;
 }

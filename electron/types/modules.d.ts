@@ -3,7 +3,13 @@ declare module 'fernet' {
     constructor(secretString: string);
   }
   export class Token {
-    constructor(options: { secret: Secret; token?: string; ttl?: number; time?: number; iv?: number[] });
+    constructor(options: {
+      secret: Secret;
+      token?: string;
+      ttl?: number;
+      time?: number;
+      iv?: number[];
+    });
     encode(message?: string): string;
     decode(token?: string): string;
   }

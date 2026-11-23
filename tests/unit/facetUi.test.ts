@@ -36,7 +36,12 @@ function contrastRatio(fgHex: string, bgHex: string): number {
 describe('Facet UI components (Logo, StatusBadge, AboutModal)', () => {
   it('renders FacetLogo with 3 hexagon faces and correct dark/light strokes', () => {
     const darkHtml = renderToStaticMarkup(
-      React.createElement(FacetLogo, { size: 48, surface: 'dark', showWordmark: true, showTagline: true }),
+      React.createElement(FacetLogo, {
+        size: 48,
+        surface: 'dark',
+        showWordmark: true,
+        showTagline: true,
+      }),
     );
     expect(darkHtml).toContain('aria-label="Facet"');
     expect(darkHtml).toContain('stroke="#0E1116"');
@@ -129,7 +134,10 @@ describe('Facet Design Tokens WCAG 2.1 contrast (>= 4.5:1)', () => {
 
     for (const [name, fg, bg] of pairs) {
       const ratio = contrastRatio(fg, bg);
-      expect(ratio, `Dark contrast too low for ${name}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      expect(
+        ratio,
+        `Dark contrast too low for ${name}: ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -148,7 +156,10 @@ describe('Facet Design Tokens WCAG 2.1 contrast (>= 4.5:1)', () => {
 
     for (const [name, fg, bg] of pairs) {
       const ratio = contrastRatio(fg, bg);
-      expect(ratio, `Light contrast too low for ${name}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+      expect(
+        ratio,
+        `Light contrast too low for ${name}: ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

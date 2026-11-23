@@ -34,12 +34,10 @@ function getArchiver(): ArchiverCallable {
   }
   if (!zipEncryptedRegistered) {
     try {
-      const rawZipEnc = require('archiver-zip-encrypted') as
-        | { default?: unknown }
-        | unknown;
+      const rawZipEnc = require('archiver-zip-encrypted') as { default?: unknown } | unknown;
       const zipEncryptedMod =
         typeof rawZipEnc === 'object' && rawZipEnc !== null && 'default' in rawZipEnc
-          ? (rawZipEnc as { default?: unknown }).default ?? rawZipEnc
+          ? ((rawZipEnc as { default?: unknown }).default ?? rawZipEnc)
           : rawZipEnc;
       archiverMod.registerFormat('zip-encrypted', zipEncryptedMod);
     } catch {
@@ -121,7 +119,10 @@ function sanitizeSegment(input: string): string {
   return input.replace(/[^a-zA-Z0-9._@-]/g, '_').slice(0, 120) || 'account';
 }
 
-function extractHeader(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, name: string): string {
+function extractHeader(
+  headers: gmail_v1.Schema$MessagePartHeader[] | undefined,
+  name: string,
+): string {
   if (!headers) return '';
   const target = name.toLowerCase();
   const found = headers.find((h) => h.name?.toLowerCase() === target);

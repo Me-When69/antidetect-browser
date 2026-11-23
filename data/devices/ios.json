@@ -13,7 +13,15 @@
     "hardware": { "cores": 6, "memory": 8 },
     "gpu": { "vendor": "Apple Inc.", "renderer": "Apple GPU" },
     "touch": { "maxTouchPoints": 5 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
     "clientHints": null,
     "notes": "iPhone 16 Pro logical viewport 402x874 @ 3x. Safari/iOS does NOT expose navigator.userAgentData."
@@ -32,7 +40,15 @@
     "hardware": { "cores": 6, "memory": 8 },
     "gpu": { "vendor": "Apple Inc.", "renderer": "Apple GPU" },
     "touch": { "maxTouchPoints": 5 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
     "clientHints": null,
     "notes": "iPhone 15 Pro logical viewport 393x852 @ 3x."
@@ -51,7 +67,15 @@
     "hardware": { "cores": 6, "memory": 8 },
     "gpu": { "vendor": "Apple Inc.", "renderer": "Apple GPU" },
     "touch": { "maxTouchPoints": 5 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
     "clientHints": null,
     "notes": "iPhone 15 Pro Max logical viewport 430x932 @ 3x."
@@ -70,7 +94,15 @@
     "hardware": { "cores": 6, "memory": 6 },
     "gpu": { "vendor": "Apple Inc.", "renderer": "Apple GPU" },
     "touch": { "maxTouchPoints": 5 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
     "clientHints": null,
     "notes": "iPhone 14 logical viewport 390x844 @ 3x."
@@ -89,7 +121,15 @@
     "hardware": { "cores": 6, "memory": 4 },
     "gpu": { "vendor": "Apple Inc.", "renderer": "Apple GPU" },
     "touch": { "maxTouchPoints": 5 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
     "clientHints": null,
     "notes": "iPhone SE 3rd Gen 375x667 @ 2x."
@@ -108,7 +148,15 @@
     "hardware": { "cores": 8, "memory": 8 },
     "gpu": { "vendor": "Apple Inc.", "renderer": "Apple GPU" },
     "touch": { "maxTouchPoints": 5 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (iPad; CPU OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
     "clientHints": null,
     "notes": "iPad Pro 12.9-inch logical viewport 1024x1366 @ 2x."

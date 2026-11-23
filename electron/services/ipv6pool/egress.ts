@@ -45,7 +45,11 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-function verifyProxyAuth(headerVal: string | undefined, expectedUser: string, expectedPass: string): boolean {
+function verifyProxyAuth(
+  headerVal: string | undefined,
+  expectedUser: string,
+  expectedPass: string,
+): boolean {
   if (!headerVal) return false;
   const match = headerVal.match(/^Basic\s+([A-Za-z0-9+/=]+)$/i);
   if (!match) return false;
@@ -163,7 +167,9 @@ export class Ipv6EgressListener {
 
   private async resolveTargetIpv6(hostname: string): Promise<string> {
     if (net.isIPv4(hostname)) {
-      const err = new Error('IPv4-only destination blocked by IPv6 kill switch') as NodeJS.ErrnoException;
+      const err = new Error(
+        'IPv4-only destination blocked by IPv6 kill switch',
+      ) as NodeJS.ErrnoException;
       err.code = 'EIPV4ONLY';
       throw err;
     }
@@ -173,7 +179,9 @@ export class Ipv6EgressListener {
     const records = await this.resolve6Fn(hostname);
     const valid = records.find((r) => net.isIPv6(r));
     if (!valid) {
-      const err = new Error('No AAAA record available (IPv4-only target blocked)') as NodeJS.ErrnoException;
+      const err = new Error(
+        'No AAAA record available (IPv4-only target blocked)',
+      ) as NodeJS.ErrnoException;
       err.code = 'ENODATA';
       throw err;
     }
@@ -283,7 +291,9 @@ export class Ipv6EgressListener {
     try {
       resolvedIpv6 = await this.resolveTargetIpv6(authority.hostname);
     } catch {
-      clientSocket.end('HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\n\r\nIPv6-only: no AAAA record');
+      clientSocket.end(
+        'HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain\r\n\r\nIPv6-only: no AAAA record',
+      );
       return;
     }
 

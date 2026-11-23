@@ -79,18 +79,12 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
     expect(() => ipcVersionSchema.parse('136.0.7103.92')).not.toThrow();
     expect(() => ipcVersionSchema.parse('136; rm -rf /')).toThrow();
 
-    const mainSource = fs.readFileSync(
-      path.resolve(process.cwd(), 'electron/main.ts'),
-      'utf8',
-    );
+    const mainSource = fs.readFileSync(path.resolve(process.cwd(), 'electron/main.ts'), 'utf8');
     expect(mainSource.includes('ipcMain.handle(')).toBe(false);
   });
 
   it('E-003: configures CSP header, will-navigate guard, and setWindowOpenHandler deny in main.ts', () => {
-    const mainSource = fs.readFileSync(
-      path.resolve(process.cwd(), 'electron/main.ts'),
-      'utf8',
-    );
+    const mainSource = fs.readFileSync(path.resolve(process.cwd(), 'electron/main.ts'), 'utf8');
     expect(mainSource).toContain('contextIsolation: true');
     expect(mainSource).toContain('nodeIntegration: false');
     expect(mainSource).toContain('sandbox: true');
@@ -101,7 +95,9 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
 
   it('E-005: classifies Firefox exitCode=0 and Chrome proxy/QUIC errors into clear Vietnamese messages', () => {
     const ffMsg = classifyFirefoxLaunchError(
-      new Error('browserType.launchPersistentContext: [pid=1234] <process did exit: exitCode=0, signal=null>'),
+      new Error(
+        'browserType.launchPersistentContext: [pid=1234] <process did exit: exitCode=0, signal=null>',
+      ),
     );
     expect(ffMsg).toContain('exitCode=0');
     expect(ffMsg).toContain('xung đột');
@@ -142,7 +138,13 @@ describe('Security Hardening Regression Tests (E-001+)', () => {
         userAgent: id.userAgent,
         proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
         ipv6Policy: 'block',
-        geo: { mode: 'manual', timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN', lat: null, lon: null },
+        geo: {
+          mode: 'manual',
+          timezone: 'Asia/Ho_Chi_Minh',
+          language: 'vi-VN',
+          lat: null,
+          lon: null,
+        },
         fingerprint: id.fingerprint,
         startup: { urls: [], restoreTabs: false },
       });

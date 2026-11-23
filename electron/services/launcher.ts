@@ -16,11 +16,7 @@ import {
 } from '@shared/validation';
 import { buildAcceptLanguage, deriveGeo } from './geoService';
 import { ensureBrowserInstalled } from './browserPath';
-import {
-  detectExecutableVersion,
-  isVersionDowngrade,
-  type BrowserManager,
-} from './browserManager';
+import { detectExecutableVersion, isVersionDowngrade, type BrowserManager } from './browserManager';
 import { normalizeBrowserVersion } from './deviceCatalog';
 import type { BrowserDriver, ResolvedGeo } from './drivers/BrowserDriver';
 import { ChromeDriver } from './drivers/ChromeDriver';
@@ -229,9 +225,7 @@ export class ProfileLauncher {
         : null;
 
     const preferredCustomPath =
-      targetBrowser === 'firefox'
-        ? settings.camoufoxPath
-        : managedChromeExe || settings.chromePath;
+      targetBrowser === 'firefox' ? settings.camoufoxPath : managedChromeExe || settings.chromePath;
 
     const browserCheck = ensureBrowserInstalled(targetBrowser, {
       customPath: preferredCustomPath,

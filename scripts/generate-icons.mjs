@@ -23,8 +23,10 @@ fs.writeFileSync(path.join(outDir, 'icon.svg'), FACET_SVG, 'utf8');
 function pointInPoly(px, py, poly) {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i][0], yi = poly[i][1];
-    const xj = poly[j][0], yj = poly[j][1];
+    const xi = poly[i][0],
+      yi = poly[i][1];
+    const xj = poly[j][0],
+      yj = poly[j][1];
     const intersect = yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
     if (intersect) inside = !inside;
   }
@@ -39,9 +41,24 @@ function inRoundedRect(x, y, size, r) {
   return true;
 }
 
-const POLY_TOP = [[32, 6], [54, 19], [32, 32], [10, 19]];
-const POLY_LEFT = [[10, 19], [32, 32], [32, 58], [10, 45]];
-const POLY_RIGHT = [[32, 32], [54, 19], [54, 45], [32, 58]];
+const POLY_TOP = [
+  [32, 6],
+  [54, 19],
+  [32, 32],
+  [10, 19],
+];
+const POLY_LEFT = [
+  [10, 19],
+  [32, 32],
+  [32, 58],
+  [10, 45],
+];
+const POLY_RIGHT = [
+  [32, 32],
+  [54, 19],
+  [54, 45],
+  [32, 58],
+];
 
 const C_BG = [0x0e, 0x11, 0x16, 0xff];
 const C_TOP = [0x2d, 0xd4, 0xbf, 0xff];

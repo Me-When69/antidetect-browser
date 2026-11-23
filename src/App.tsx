@@ -18,9 +18,7 @@ const FoldersPage = lazy(() =>
 const ProxiesPage = lazy(() =>
   import('@/pages/ProxiesPage').then((m) => ({ default: m.ProxiesPage })),
 );
-const TrashPage = lazy(() =>
-  import('@/pages/TrashPage').then((m) => ({ default: m.TrashPage })),
-);
+const TrashPage = lazy(() => import('@/pages/TrashPage').then((m) => ({ default: m.TrashPage })));
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );

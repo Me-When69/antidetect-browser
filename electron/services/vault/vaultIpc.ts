@@ -1,10 +1,5 @@
 import fs from 'node:fs';
-import {
-  dialog,
-  ipcMain,
-  type BrowserWindow,
-  type IpcMainInvokeEvent,
-} from 'electron';
+import { dialog, ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
 import { IPC_CHANNELS } from '@shared/ipc';
 import type { LaunchOptions } from '@shared/types';

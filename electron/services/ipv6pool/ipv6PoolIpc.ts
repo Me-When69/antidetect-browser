@@ -59,14 +59,11 @@ export function registerIpv6PoolIpc(deps: Ipv6PoolIpcDeps): void {
     return ipv6PoolService.allocatePoolAddresses(count);
   });
 
-  handle(
-    IPC_CHANNELS.IPV6_POOL_ROTATE_PROFILE,
-    (_e, rawProfileId: unknown, rawForce?: unknown) => {
-      const profileId = nonEmptyId.parse(rawProfileId);
-      const forceIfRunning = z.boolean().optional().parse(rawForce) ?? false;
-      return ipv6PoolService.rotateProfileAddress(profileId, { forceIfRunning });
-    },
-  );
+  handle(IPC_CHANNELS.IPV6_POOL_ROTATE_PROFILE, (_e, rawProfileId: unknown, rawForce?: unknown) => {
+    const profileId = nonEmptyId.parse(rawProfileId);
+    const forceIfRunning = z.boolean().optional().parse(rawForce) ?? false;
+    return ipv6PoolService.rotateProfileAddress(profileId, { forceIfRunning });
+  });
 
   handle(IPC_CHANNELS.IPV6_POOL_ROTATE_ALL, (_e, rawForce?: unknown) => {
     const forceIfRunning = z.boolean().optional().parse(rawForce) ?? false;

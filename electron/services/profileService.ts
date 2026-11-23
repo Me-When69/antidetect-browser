@@ -98,7 +98,14 @@ export class ProfileService {
   private serializeAdvanced(
     p: Pick<
       CreateProfileInput,
-      'mediaDevices' | 'dataOnClose' | 'window' | 'bandwidth' | 'behavior' | 'meta' | 'notes' | 'fingerprint'
+      | 'mediaDevices'
+      | 'dataOnClose'
+      | 'window'
+      | 'bandwidth'
+      | 'behavior'
+      | 'meta'
+      | 'notes'
+      | 'fingerprint'
     >,
   ): string {
     return JSON.stringify({
@@ -355,9 +362,7 @@ export class ProfileService {
 
     const nextFingerprint: ProfileFingerprint = {
       ...(input.fingerprint ?? existing.fingerprint),
-      signals: normalizeSignals(
-        input.fingerprint?.signals ?? existing.fingerprint.signals,
-      ),
+      signals: normalizeSignals(input.fingerprint?.signals ?? existing.fingerprint.signals),
     };
     const nextMeta = normalizeMeta(
       input.meta ?? existing.meta,
@@ -542,115 +547,120 @@ export class ProfileService {
   bulkUpdate(input: BulkUpdateInput): number {
     const device = input.deviceId ? getDeviceById(input.deviceId) : null;
     const presetService = input.presetId ? new PresetService(this.db) : null;
-    const preset = input.presetId && presetService ? presetService.getPresetById(input.presetId) : null;
+    const preset =
+      input.presetId && presetService ? presetService.getPresetById(input.presetId) : null;
 
     return this.db.transaction(() => {
       let count = 0;
       for (const id of input.ids) {
-      const existing = this.getById(id);
-      if (!existing) continue;
-      const nextTags = input.addTags
-        ? Array.from(new Set([...existing.tags, ...input.addTags]))
-        : existing.tags;
+        const existing = this.getById(id);
+        if (!existing) continue;
+        const nextTags = input.addTags
+          ? Array.from(new Set([...existing.tags, ...input.addTags]))
+          : existing.tags;
 
-      const targetVersion = input.browserVersion
-        ? normalizeBrowserVersion(input.browserVersion)
-        : existing.browserVersion;
+        const targetVersion = input.browserVersion
+          ? normalizeBrowserVersion(input.browserVersion)
+          : existing.browserVersion;
 
-      const baseSignals = normalizeSignals(preset ? preset.signals : existing.fingerprint.signals);
-      const nextSignals = input.signals ? normalizeSignals({ ...baseSignals, ...input.signals }) : baseSignals;
-      const nextWebrtc = input.webrtc ?? (preset ? preset.webrtc : existing.fingerprint.webrtc);
-      const nextMediaDevices = normalizeMediaDevices({
-        ...(preset ? preset.mediaDevices : existing.mediaDevices),
-        ...(input.mediaDevices ?? {}),
-      });
-      const nextDataOnClose = normalizeDataOnClose({
-        ...(preset ? preset.dataOnClose : existing.dataOnClose),
-        ...(input.dataOnClose ?? {}),
-      });
-      const nextBandwidth = normalizeBandwidth({
-        ...(preset ? preset.bandwidth : existing.bandwidth),
-        ...(input.bandwidth ?? {}),
-      });
-      const nextBehavior = normalizeBehavior({
-        ...(preset ? preset.behavior : existing.behavior),
-        ...(input.behavior ?? {}),
-      });
-      const nextMeta = normalizeMeta(
-        {
-          ...(existing.meta ?? {}),
-          ...(input.meta ?? {}),
-        },
-        existing.notes,
-      );
-      const nextPresetId = preset
-        ? preset.id
-        : input.signals ||
-            input.mediaDevices ||
-            input.webrtc ||
-            input.dataOnClose ||
-            input.bandwidth ||
-            input.behavior
-          ? 'custom'
-          : existing.presetId;
-
-      if (device) {
-        const applied = applyDevice(existing, device, targetVersion);
-        this.update({
-          ...applied,
-          id,
-          folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
-          status: input.status ?? existing.status,
-          tags: nextTags,
-          proxy: input.proxy ?? existing.proxy,
-          fingerprint: {
-            ...applied.fingerprint,
-            webrtc: nextWebrtc,
-            signals: nextSignals,
-          },
-          mediaDevices: nextMediaDevices,
-          dataOnClose: nextDataOnClose,
-          bandwidth: nextBandwidth,
-          behavior: nextBehavior,
-          meta: nextMeta,
-          presetId: nextPresetId,
+        const baseSignals = normalizeSignals(
+          preset ? preset.signals : existing.fingerprint.signals,
+        );
+        const nextSignals = input.signals
+          ? normalizeSignals({ ...baseSignals, ...input.signals })
+          : baseSignals;
+        const nextWebrtc = input.webrtc ?? (preset ? preset.webrtc : existing.fingerprint.webrtc);
+        const nextMediaDevices = normalizeMediaDevices({
+          ...(preset ? preset.mediaDevices : existing.mediaDevices),
+          ...(input.mediaDevices ?? {}),
         });
-      } else {
-        let nextUa = existing.userAgent;
-        if (input.browserVersion && existing.platform !== 'ios' && nextUa !== 'auto') {
-          if (existing.browser === 'firefox') {
-            const major = targetVersion.split('.')[0] ?? '136';
-            nextUa = nextUa
-              .replace(/rv:\d+\.\d+/i, `rv:${major}.0`)
-              .replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`);
-          } else {
-            nextUa = nextUa.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${targetVersion}`);
+        const nextDataOnClose = normalizeDataOnClose({
+          ...(preset ? preset.dataOnClose : existing.dataOnClose),
+          ...(input.dataOnClose ?? {}),
+        });
+        const nextBandwidth = normalizeBandwidth({
+          ...(preset ? preset.bandwidth : existing.bandwidth),
+          ...(input.bandwidth ?? {}),
+        });
+        const nextBehavior = normalizeBehavior({
+          ...(preset ? preset.behavior : existing.behavior),
+          ...(input.behavior ?? {}),
+        });
+        const nextMeta = normalizeMeta(
+          {
+            ...(existing.meta ?? {}),
+            ...(input.meta ?? {}),
+          },
+          existing.notes,
+        );
+        const nextPresetId = preset
+          ? preset.id
+          : input.signals ||
+              input.mediaDevices ||
+              input.webrtc ||
+              input.dataOnClose ||
+              input.bandwidth ||
+              input.behavior
+            ? 'custom'
+            : existing.presetId;
+
+        if (device) {
+          const applied = applyDevice(existing, device, targetVersion);
+          this.update({
+            ...applied,
+            id,
+            folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
+            status: input.status ?? existing.status,
+            tags: nextTags,
+            proxy: input.proxy ?? existing.proxy,
+            fingerprint: {
+              ...applied.fingerprint,
+              webrtc: nextWebrtc,
+              signals: nextSignals,
+            },
+            mediaDevices: nextMediaDevices,
+            dataOnClose: nextDataOnClose,
+            bandwidth: nextBandwidth,
+            behavior: nextBehavior,
+            meta: nextMeta,
+            presetId: nextPresetId,
+          });
+        } else {
+          let nextUa = existing.userAgent;
+          if (input.browserVersion && existing.platform !== 'ios' && nextUa !== 'auto') {
+            if (existing.browser === 'firefox') {
+              const major = targetVersion.split('.')[0] ?? '136';
+              nextUa = nextUa
+                .replace(/rv:\d+\.\d+/i, `rv:${major}.0`)
+                .replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`);
+            } else {
+              nextUa = nextUa.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${targetVersion}`);
+            }
           }
+          this.update({
+            id,
+            folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
+            status: input.status ?? existing.status,
+            tags: nextTags,
+            proxy: input.proxy ?? existing.proxy,
+            browserVersion: targetVersion,
+            userAgent: nextUa,
+            fingerprint: {
+              ...existing.fingerprint,
+              webrtc: nextWebrtc,
+              signals: nextSignals,
+            },
+            mediaDevices: nextMediaDevices,
+            dataOnClose: nextDataOnClose,
+            bandwidth: nextBandwidth,
+            behavior: nextBehavior,
+            meta: nextMeta,
+            presetId: nextPresetId,
+          });
         }
-        this.update({
-          id,
-          folderId: input.folderId !== undefined ? input.folderId : existing.folderId,
-          status: input.status ?? existing.status,
-          tags: nextTags,
-          proxy: input.proxy ?? existing.proxy,
-          browserVersion: targetVersion,
-          userAgent: nextUa,
-          fingerprint: {
-            ...existing.fingerprint,
-            webrtc: nextWebrtc,
-            signals: nextSignals,
-          },
-          mediaDevices: nextMediaDevices,
-          dataOnClose: nextDataOnClose,
-          bandwidth: nextBandwidth,
-          behavior: nextBehavior,
-          meta: nextMeta,
-          presetId: nextPresetId,
-        });
+        count += 1;
       }
-      count += 1;
-    }
-    return count;
+      return count;
     });
   }
 
@@ -760,10 +770,7 @@ export class ProfileService {
 
   unlinkAccountEverywhere(email: string): void {
     const clean = email.trim().toLowerCase();
-    this.db
-      .delete(profileAccountsTable)
-      .where(eq(profileAccountsTable.accountEmail, clean))
-      .run();
+    this.db.delete(profileAccountsTable).where(eq(profileAccountsTable.accountEmail, clean)).run();
   }
 
   listLinkedAccounts(profileId: string): string[] {
@@ -869,10 +876,14 @@ export class ProfileService {
         }),
       ),
       profiles: z.array(
-        z.object({
-          id: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/, 'ID hồ sơ trong file sao lưu không hợp lệ'),
-          name: z.string().min(1),
-        }).passthrough(),
+        z
+          .object({
+            id: z
+              .string()
+              .regex(/^[a-zA-Z0-9_-]{1,128}$/, 'ID hồ sơ trong file sao lưu không hợp lệ'),
+            name: z.string().min(1),
+          })
+          .passthrough(),
       ),
     });
 

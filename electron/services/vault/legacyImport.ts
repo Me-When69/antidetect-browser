@@ -37,23 +37,26 @@ export function importFromLegacyPythonVault(
   const legacyDb = new Database(options.legacyDbPath, { readonly: true, fileMustExist: true });
   try {
     const saltRow = legacyDb.prepare("SELECT v FROM meta WHERE k = 'salt'").get() as
-      | { v: Buffer | string }
-      | undefined;
+      { v: Buffer | string } | undefined;
     const checkRow = legacyDb.prepare("SELECT v FROM meta WHERE k = 'check'").get() as
-      | { v: Buffer | string }
-      | undefined;
+      { v: Buffer | string } | undefined;
 
     if (!saltRow || !checkRow) {
       throw new Error('File không đúng định dạng vault.db của Gmail Manager cũ');
     }
 
     const saltBuf = Buffer.isBuffer(saltRow.v) ? saltRow.v : Buffer.from(saltRow.v, 'utf8');
-    const keyBuf = crypto.scryptSync(Buffer.from(options.legacyMasterPassword, 'utf8'), saltBuf, 32, {
-      N: 16384, // 2^14 as in Python vault.py
-      r: 8,
-      p: 1,
-      maxmem: 64 * 1024 * 1024,
-    });
+    const keyBuf = crypto.scryptSync(
+      Buffer.from(options.legacyMasterPassword, 'utf8'),
+      saltBuf,
+      32,
+      {
+        N: 16384, // 2^14 as in Python vault.py
+        r: 8,
+        p: 1,
+        maxmem: 64 * 1024 * 1024,
+      },
+    );
     const secret = new fernet.Secret(toBase64Url(keyBuf));
     keyBuf.fill(0);
 

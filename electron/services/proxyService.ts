@@ -258,7 +258,8 @@ const defaultProxyFetcher: ProxyHttpFetcher = async (targetUrl, proxy, timeoutMs
   return new Promise((resolve, reject) => {
     const parsed = new URL(targetUrl);
     const isHttps = parsed.protocol === 'https:';
-    const useDirectHttpProxy = !isHttps && proxy.type === 'http' && proxy.host.trim() && proxy.port > 0;
+    const useDirectHttpProxy =
+      !isHttps && proxy.type === 'http' && proxy.host.trim() && proxy.port > 0;
     const agent = useDirectHttpProxy ? undefined : buildAgent(proxy);
     const transport = isHttps ? https : http;
     let settled = false;

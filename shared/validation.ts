@@ -549,11 +549,7 @@ export function checkIdentityConsistency(
   }
 
   // 1b. Real Engine Version vs UA / profile.browserVersion
-  if (
-    options?.realEngineVersion &&
-    profile.platform !== 'ios' &&
-    profile.userAgent !== 'auto'
-  ) {
+  if (options?.realEngineVersion && profile.platform !== 'ios' && profile.userAgent !== 'auto') {
     const realMajor = options.realEngineVersion.trim().match(/^(\d+)/)?.[1] ?? null;
     const uaMajor = extractMajorFromUa(profile.userAgent, effectiveBrowser);
     if (realMajor && uaMajor && realMajor !== uaMajor) {
@@ -712,7 +708,8 @@ export function checkIdentityConsistency(
       warnings.push({
         code: 'WEBGL_OFF_ON_GPU_DEVICE',
         severity: 'warning',
-        message: 'Đã tắt WebGL (off) trong khi thiết bị giả lập có GPU — dễ bị nhận diện bất thường.',
+        message:
+          'Đã tắt WebGL (off) trong khi thiết bị giả lập có GPU — dễ bị nhận diện bất thường.',
         suggestion: 'Chuyển tín hiệu WebGL sang chế độ Nhiễu (noise) hoặc Thật (real).',
       });
     }
@@ -721,7 +718,8 @@ export function checkIdentityConsistency(
         code: 'CANVAS_OFF_ANOMALY',
         severity: 'warning',
         message: 'Tắt Canvas (off) trả về ảnh trống, khác với hành vi trình duyệt thông thường.',
-        suggestion: 'Dùng chế độ Nhiễu (noise) để vừa chống theo dõi vừa giữ tương thích trang web.',
+        suggestion:
+          'Dùng chế độ Nhiễu (noise) để vừa chống theo dõi vừa giữ tương thích trang web.',
       });
     }
     if (signals.audio === 'off') {
@@ -762,14 +760,18 @@ export function checkIdentityConsistency(
       warnings.push({
         code: 'MEDIA_ZERO_CAMERAS',
         severity: 'warning',
-        message: 'Thiết bị giả lập (điện thoại/laptop) thường có camera nhưng số camera đang đặt bằng 0.',
+        message:
+          'Thiết bị giả lập (điện thoại/laptop) thường có camera nhưng số camera đang đặt bằng 0.',
         suggestion: 'Đặt số camera >= 1 để khớp với thiết bị giả lập.',
       });
     }
   }
 
   // 4e. Bandwidth blocking images or external fonts impacts visual rendering
-  if (profile.bandwidth && (profile.bandwidth.blockImages || profile.bandwidth.blockExternalFonts)) {
+  if (
+    profile.bandwidth &&
+    (profile.bandwidth.blockImages || profile.bandwidth.blockExternalFonts)
+  ) {
     warnings.push({
       code: 'BANDWIDTH_DISPLAY_IMPACT',
       severity: 'warning',
@@ -800,7 +802,8 @@ export function checkIdentityConsistency(
       code: 'DATACENTER_ASN_NOTICE',
       severity: 'warning',
       message: `IP đầu ra thuộc nhà cung cấp hạ tầng/trung tâm dữ liệu (${proxyCheck.isp}) trong khi thiết bị giả lập là máy người dùng thường.`,
-      suggestion: 'Một số dịch vụ có thể đánh giá thấp IP trung tâm dữ liệu; hãy cân nhắc mục đích sử dụng.',
+      suggestion:
+        'Một số dịch vụ có thể đánh giá thấp IP trung tâm dữ liệu; hãy cân nhắc mục đích sử dụng.',
     });
   }
 

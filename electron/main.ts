@@ -8,7 +8,10 @@ if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
 }
 
 // Disable unused Electron Chromium features to save RAM & startup time
-app.commandLine.appendSwitch('disable-features', 'SpellCheck,MediaRouter,CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch(
+  'disable-features',
+  'SpellCheck,MediaRouter,CalculateNativeWinOcclusion',
+);
 app.commandLine.appendSwitch('disable-background-networking');
 
 import { IPC_CHANNELS, type AppInfo } from '@shared/ipc';
@@ -337,10 +340,8 @@ function registerIpcHandlers(): void {
   safeHandle(IPC_CHANNELS.PROXIES_CREATE, (_e, input: CreateSavedProxyInput) =>
     proxyService.create(input),
   );
-  safeHandle(
-    IPC_CHANNELS.PROXIES_UPDATE,
-    (_e, id: string, input: Partial<CreateSavedProxyInput>) =>
-      proxyService.update(ipcIdSchema.parse(id), input),
+  safeHandle(IPC_CHANNELS.PROXIES_UPDATE, (_e, id: string, input: Partial<CreateSavedProxyInput>) =>
+    proxyService.update(ipcIdSchema.parse(id), input),
   );
   safeHandle(IPC_CHANNELS.PROXIES_DELETE, (_e, id: string) =>
     proxyService.delete(ipcIdSchema.parse(id)),
@@ -359,13 +360,8 @@ function registerIpcHandlers(): void {
   );
 
   // Fingerprint
-  safeHandle(
-    IPC_CHANNELS.FINGERPRINT_GENERATE,
-    (_e, platform: Platform, browser: BrowserType) =>
-      generateConsistentIdentity(
-        ipcPlatformSchema.parse(platform),
-        ipcBrowserSchema.parse(browser),
-      ),
+  safeHandle(IPC_CHANNELS.FINGERPRINT_GENERATE, (_e, platform: Platform, browser: BrowserType) =>
+    generateConsistentIdentity(ipcPlatformSchema.parse(platform), ipcBrowserSchema.parse(browser)),
   );
   safeHandle(IPC_CHANNELS.FINGERPRINT_PRESETS, () => listDevicePresets());
 
@@ -373,13 +369,11 @@ function registerIpcHandlers(): void {
   safeHandle(IPC_CHANNELS.COOKIES_IMPORT, (_e, profileId: string, rawText: string) =>
     profileLauncher.importCookies(ipcIdSchema.parse(profileId), String(rawText ?? '')),
   );
-  safeHandle(
-    IPC_CHANNELS.COOKIES_EXPORT,
-    (_e, profileId: string, format: 'json' | 'netscape') =>
-      profileLauncher.exportCookies(
-        ipcIdSchema.parse(profileId),
-        ipcCookieFormatSchema.parse(format),
-      ),
+  safeHandle(IPC_CHANNELS.COOKIES_EXPORT, (_e, profileId: string, format: 'json' | 'netscape') =>
+    profileLauncher.exportCookies(
+      ipcIdSchema.parse(profileId),
+      ipcCookieFormatSchema.parse(format),
+    ),
   );
 
   // Settings & Local API
@@ -531,9 +525,8 @@ function registerIpcHandlers(): void {
   // Advanced Profile Presets
   const presetService = new PresetService(dbCtx!.db);
   safeHandle(IPC_CHANNELS.PRESETS_LIST, () => presetService.listPresets());
-  safeHandle(
-    IPC_CHANNELS.PRESETS_SAVE,
-    (_e, input: Omit<ProfilePreset, 'id' | 'builtIn'>) => presetService.saveCustomPreset(input),
+  safeHandle(IPC_CHANNELS.PRESETS_SAVE, (_e, input: Omit<ProfilePreset, 'id' | 'builtIn'>) =>
+    presetService.saveCustomPreset(input),
   );
   safeHandle(IPC_CHANNELS.PRESETS_DELETE, (_e, id: string) =>
     presetService.deleteCustomPreset(ipcIdSchema.parse(id)),

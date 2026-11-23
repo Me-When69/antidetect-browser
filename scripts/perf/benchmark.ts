@@ -166,7 +166,9 @@ function main(): void {
   const bulkUpdate50Ms = performance.now() - bulkStart;
 
   const explainList = dbCtx.sqlite
-    .prepare("EXPLAIN QUERY PLAN SELECT * FROM profiles WHERE deleted_at IS NULL AND folder_id = ? ORDER BY created_at DESC")
+    .prepare(
+      'EXPLAIN QUERY PLAN SELECT * FROM profiles WHERE deleted_at IS NULL AND folder_id = ? ORDER BY created_at DESC',
+    )
     .all(folderA.id);
 
   const heap1000Mb = process.memoryUsage().heapUsed / (1024 * 1024);

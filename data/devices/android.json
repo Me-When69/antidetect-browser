@@ -15,7 +15,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "SM-S928B", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "SM-S928B",
+      "mobile": true
+    },
     "notes": "Snapdragon 8 Gen 3 / Adreno 750 public specs."
   },
   {
@@ -34,7 +41,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "SM-S921B", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "SM-S921B",
+      "mobile": true
+    },
     "notes": "Samsung Galaxy S24 CSS viewport 360x780 @ 3x."
   },
   {
@@ -53,7 +67,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "SM-S911B", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "SM-S911B",
+      "mobile": true
+    },
     "notes": "Snapdragon 8 Gen 2 / Adreno 740."
   },
   {
@@ -72,7 +93,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; SM-A556B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "SM-A556B", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "SM-A556B",
+      "mobile": true
+    },
     "notes": "Exynos 1480 / Xclipse 530 midrange (verify exact DPR on device)."
   },
   {
@@ -91,7 +119,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 15; Pixel 9 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "15.0.0", "architecture": "arm", "bitness": "64", "model": "Pixel 9 Pro", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "15.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "Pixel 9 Pro",
+      "mobile": true
+    },
     "notes": "Google Tensor G4 / Mali-G715."
   },
   {
@@ -110,7 +145,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "Pixel 8", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "Pixel 8",
+      "mobile": true
+    },
     "notes": "Google Tensor G3 / Mali-G715."
   },
   {
@@ -129,7 +171,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; Pixel 7a) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "Pixel 7a", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "Pixel 7a",
+      "mobile": true
+    },
     "notes": "Google Tensor G2 / Mali-G710."
   },
   {
@@ -148,7 +197,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; 23127PN0CG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "23127PN0CG", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "23127PN0CG",
+      "mobile": true
+    },
     "notes": "Xiaomi 14 Global model code 23127PN0CG."
   },
   {
@@ -167,7 +223,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; 2312DRA50G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "2312DRA50G", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "2312DRA50G",
+      "mobile": true
+    },
     "notes": "Snapdragon 7s Gen 2 / Adreno 710."
   },
   {
@@ -186,7 +249,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; PHZ110) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "PHZ110", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "PHZ110",
+      "mobile": true
+    },
     "notes": "MediaTek Dimensity 9300 / Immortalis-G720."
   },
   {
@@ -205,7 +275,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; CPH2599) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "CPH2599", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "CPH2599",
+      "mobile": true
+    },
     "notes": "Popular SEA midrange OPPO Reno11."
   },
   {
@@ -224,7 +301,14 @@
     "touch": { "maxTouchPoints": 5 },
     "fonts": ["Roboto", "Noto Sans", "Droid Sans", "Noto Color Emoji"],
     "uaTemplate": "Mozilla/5.0 (Linux; Android 14; CPH2581) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Mobile Safari/537.36",
-    "clientHints": { "platform": "Android", "platformVersion": "14.0.0", "architecture": "arm", "bitness": "64", "model": "CPH2581", "mobile": true },
+    "clientHints": {
+      "platform": "Android",
+      "platformVersion": "14.0.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "CPH2581",
+      "mobile": true
+    },
     "notes": "Snapdragon 8 Gen 3 / Adreno 750."
   }
 ]

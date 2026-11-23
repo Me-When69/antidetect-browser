@@ -9,11 +9,32 @@
     "screen": { "width": 1512, "height": 982, "dpr": 2 },
     "viewport": { "width": 1440, "height": 880 },
     "hardware": { "cores": 12, "memory": 18 },
-    "gpu": { "vendor": "Google Inc. (Apple)", "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)" },
+    "gpu": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Pro, Unspecified Version)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Monaco", "Georgia", "Times New Roman", "Verdana", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Verdana",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "15.1.0", "architecture": "arm", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "15.1.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "MacBook Pro 14-inch M3 Pro default Retina scaled resolution."
   },
   {
@@ -26,11 +47,32 @@
     "screen": { "width": 1728, "height": 1117, "dpr": 2 },
     "viewport": { "width": 1600, "height": 980 },
     "hardware": { "cores": 14, "memory": 36 },
-    "gpu": { "vendor": "Google Inc. (Apple)", "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)" },
+    "gpu": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Monaco", "Georgia", "Times New Roman", "Verdana", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Verdana",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "15.1.0", "architecture": "arm", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "15.1.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "MacBook Pro 16-inch M3 Max."
   },
   {
@@ -43,11 +85,31 @@
     "screen": { "width": 2240, "height": 1260, "dpr": 2 },
     "viewport": { "width": 1920, "height": 1080 },
     "hardware": { "cores": 10, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (Apple)", "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)" },
+    "gpu": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Monaco", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "15.2.0", "architecture": "arm", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "15.2.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "iMac 24-inch 4.5K Retina default 2x scaling."
   },
   {
@@ -60,11 +122,31 @@
     "screen": { "width": 1470, "height": 956, "dpr": 2 },
     "viewport": { "width": 1440, "height": 860 },
     "hardware": { "cores": 8, "memory": 8 },
-    "gpu": { "vendor": "Google Inc. (Apple)", "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)" },
+    "gpu": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Monaco", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "14.6.0", "architecture": "arm", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "14.6.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "MacBook Air 13-inch M2."
   },
   {
@@ -77,11 +159,31 @@
     "screen": { "width": 1512, "height": 982, "dpr": 2 },
     "viewport": { "width": 1440, "height": 880 },
     "hardware": { "cores": 10, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (Apple)", "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version)" },
+    "gpu": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Monaco", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "14.6.0", "architecture": "arm", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "14.6.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "MacBook Pro 14-inch M2 Pro."
   },
   {
@@ -94,11 +196,30 @@
     "screen": { "width": 1440, "height": 900, "dpr": 2 },
     "viewport": { "width": 1400, "height": 820 },
     "hardware": { "cores": 8, "memory": 8 },
-    "gpu": { "vendor": "Google Inc. (Apple)", "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)" },
+    "gpu": {
+      "vendor": "Google Inc. (Apple)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "14.5.0", "architecture": "arm", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "14.5.0",
+      "architecture": "arm",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "MacBook Air 13-inch M1 (very high market share)."
   },
   {
@@ -111,11 +232,30 @@
     "screen": { "width": 1440, "height": 900, "dpr": 2 },
     "viewport": { "width": 1400, "height": 820 },
     "hardware": { "cores": 8, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (Intel Inc.)", "renderer": "ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics OpenGL Engine, OpenGL 4.1)" },
+    "gpu": {
+      "vendor": "Google Inc. (Intel Inc.)",
+      "renderer": "ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics OpenGL Engine, OpenGL 4.1)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "13.6.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "13.6.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "2020 Intel MacBook Pro 13-inch."
   },
   {
@@ -128,11 +268,31 @@
     "screen": { "width": 1792, "height": 1120, "dpr": 2 },
     "viewport": { "width": 1600, "height": 960 },
     "hardware": { "cores": 12, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (ATI Technologies Inc.)", "renderer": "ANGLE (ATI Technologies Inc., AMD Radeon Pro 5500M OpenGL Engine, OpenGL 4.1)" },
+    "gpu": {
+      "vendor": "Google Inc. (ATI Technologies Inc.)",
+      "renderer": "ANGLE (ATI Technologies Inc., AMD Radeon Pro 5500M OpenGL Engine, OpenGL 4.1)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["San Francisco", "Helvetica Neue", "Helvetica", "Arial", "Menlo", "Monaco", "Georgia", "Times New Roman", "Apple Color Emoji"],
+    "fonts": [
+      "San Francisco",
+      "Helvetica Neue",
+      "Helvetica",
+      "Arial",
+      "Menlo",
+      "Monaco",
+      "Georgia",
+      "Times New Roman",
+      "Apple Color Emoji"
+    ],
     "uaTemplate": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "macOS", "platformVersion": "13.6.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "macOS",
+      "platformVersion": "13.6.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "2019 Intel MacBook Pro 16-inch."
   }
 ]

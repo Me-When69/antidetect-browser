@@ -64,7 +64,11 @@ export class Ipv6PoolService {
   private logger: AppLogger;
   private addressManager: Ipv6AddressManager;
   private egressManager: Ipv6EgressManager;
-  private fetchEchoFn: (endpointUrl: string, localAddress: string, timeoutMs?: number) => Promise<string>;
+  private fetchEchoFn: (
+    endpointUrl: string,
+    localAddress: string,
+    timeoutMs?: number,
+  ) => Promise<string>;
   private onProfileKillSwitch?: (profileId: string, reason: string) => void;
   private isProfileRunningFn?: (profileId: string) => boolean;
   private orphanAddresses: string[] = [];
@@ -305,10 +309,15 @@ export class Ipv6PoolService {
       throw new Error('Vui lòng chọn card mạng (interface) và nhập tiền tố /64 trước');
     }
     if (!cfg.ownershipConfirmed) {
-      throw new Error('Bạn phải xác nhận quyền sở hữu hoặc được ủy quyền sử dụng tiền tố này trước');
+      throw new Error(
+        'Bạn phải xác nhận quyền sở hữu hoặc được ủy quyền sử dụng tiền tố này trước',
+      );
     }
 
-    const existingRows = this.db.select({ address: ipv6PoolTable.address }).from(ipv6PoolTable).all();
+    const existingRows = this.db
+      .select({ address: ipv6PoolTable.address })
+      .from(ipv6PoolTable)
+      .all();
     const exclude = getAllHostIpv6Addresses();
     for (const r of existingRows) exclude.add(r.address);
 
@@ -386,7 +395,10 @@ export class Ipv6PoolService {
         .run();
     }
 
-    this.logger.info('ipv6pool', `Assigned ${newAddrs.length} IPv6 addresses to ${cfg.interfaceName}`);
+    this.logger.info(
+      'ipv6pool',
+      `Assigned ${newAddrs.length} IPv6 addresses to ${cfg.interfaceName}`,
+    );
     return this.getStatus().entries;
   }
 
@@ -394,7 +406,9 @@ export class Ipv6PoolService {
    * Ensure a fixed IPv6 address + authenticated local egress listener for `profileId`.
    * Returns a standard HTTP proxy config pointing to 127.0.0.1:<port> with per-listener auth.
    */
-  async resolveProxyForProfile(profileId: string): Promise<{ address: string; proxy: ProfileProxy }> {
+  async resolveProxyForProfile(
+    profileId: string,
+  ): Promise<{ address: string; proxy: ProfileProxy }> {
     let row = this.db
       .select()
       .from(ipv6PoolTable)
@@ -554,11 +568,7 @@ export class Ipv6PoolService {
 
   async removeAddress(rawAddress: string): Promise<void> {
     const norm = normalizeIpv6(rawAddress);
-    const row = this.db
-      .select()
-      .from(ipv6PoolTable)
-      .where(eq(ipv6PoolTable.address, norm))
-      .get();
+    const row = this.db.select().from(ipv6PoolTable).where(eq(ipv6PoolTable.address, norm)).get();
     if (!row) return;
 
     await this.egressManager.stopListener(norm);
@@ -637,7 +647,10 @@ export class Ipv6PoolService {
     }
     this.orphanAddresses = found;
     if (found.length > 0) {
-      this.logger.warn('ipv6pool', `Detected ${found.length} orphan IPv6 addresses from previous run`);
+      this.logger.warn(
+        'ipv6pool',
+        `Detected ${found.length} orphan IPv6 addresses from previous run`,
+      );
     }
     return found;
   }
@@ -669,9 +682,8 @@ export class Ipv6PoolService {
       }
     };
 
-    const workers = Array.from(
-      { length: Math.min(Math.max(1, concurrency), rows.length) },
-      () => worker(),
+    const workers = Array.from({ length: Math.min(Math.max(1, concurrency), rows.length) }, () =>
+      worker(),
     );
     await Promise.all(workers);
     return this.getStatus().entries;

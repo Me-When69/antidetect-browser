@@ -42,12 +42,10 @@ export function parseTotpInput(raw: string): ParsedTotpConfig {
   return { secret, digits: 6, period: 30, algorithm: 'sha1' };
 }
 
-export function generateTotpCode(
-  rawSecretOrUri: string,
-  epochSeconds?: number,
-): TotpCodeResult {
+export function generateTotpCode(rawSecretOrUri: string, epochSeconds?: number): TotpCodeResult {
   const cfg = parseTotpInput(rawSecretOrUri);
-  const nowSec = epochSeconds !== undefined ? Math.floor(epochSeconds) : Math.floor(Date.now() / 1000);
+  const nowSec =
+    epochSeconds !== undefined ? Math.floor(epochSeconds) : Math.floor(Date.now() / 1000);
   const code = generateSync({
     secret: cfg.secret,
     digits: cfg.digits,

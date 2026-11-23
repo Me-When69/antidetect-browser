@@ -52,10 +52,7 @@ export async function applyInContextCleanup(
  * Clean profile disk artifacts AFTER the browser context has closed.
  * Does nothing if all flags are false.
  */
-export function applyDiskDataOnClose(
-  userDataDir: string,
-  cfg?: ProfileDataOnClose | null,
-): void {
+export function applyDiskDataOnClose(userDataDir: string, cfg?: ProfileDataOnClose | null): void {
   if (!hasAnyDataOnClose(cfg) || !cfg || !fs.existsSync(userDataDir)) return;
 
   const defaultDir = path.join(userDataDir, 'Default');

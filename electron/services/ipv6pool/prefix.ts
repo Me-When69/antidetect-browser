@@ -49,7 +49,8 @@ export function parseIpv6ToBigInt(raw: string): bigint {
   }
 
   const left = parts[0] ? parts[0].split(':').filter((s) => s.length > 0) : [];
-  const right = parts.length === 2 && parts[1] ? parts[1].split(':').filter((s) => s.length > 0) : [];
+  const right =
+    parts.length === 2 && parts[1] ? parts[1].split(':').filter((s) => s.length > 0) : [];
 
   const totalGroups = left.length + right.length;
   if (parts.length === 1 && totalGroups !== 8) {

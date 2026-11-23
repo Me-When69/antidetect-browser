@@ -58,7 +58,14 @@ function makeProfileInput(): CreateProfileInput {
     startup: { urls: [], restoreTabs: false },
     mediaDevices: { ...DEFAULT_MEDIA_DEVICES },
     dataOnClose: { ...DEFAULT_DATA_ON_CLOSE },
-    window: { width: 1280, height: 800, x: null, y: null, randomizeSlightly: false, maximized: false },
+    window: {
+      width: 1280,
+      height: 800,
+      x: null,
+      y: null,
+      randomizeSlightly: false,
+      maximized: false,
+    },
     bandwidth: { ...DEFAULT_BANDWIDTH },
     behavior: { ...DEFAULT_BEHAVIOR },
     meta: { notes: 'Legacy note', color: '#10b981', expiresAt: null },
@@ -117,7 +124,13 @@ describe('Advanced profile migration & defaults', () => {
         'Old Profile',
         'Old notes here',
         JSON.stringify({ type: 'none', host: '', port: 0, username: '', password: '' }),
-        JSON.stringify({ mode: 'manual', timezone: 'UTC', language: 'en-US', lat: null, lon: null }),
+        JSON.stringify({
+          mode: 'manual',
+          timezone: 'UTC',
+          language: 'en-US',
+          lat: null,
+          lon: null,
+        }),
         JSON.stringify({
           screen: { width: 1920, height: 1080, dpr: 1 },
           hardware: { cores: 8, memory: 16 },
@@ -225,7 +238,11 @@ describe('Presets & Bulk Apply', () => {
       expect(presetSvc.listPresets().some((p) => p.id === saved.id)).toBe(true);
       expect(presetSvc.deleteCustomPreset('balanced')).toBe(false);
 
-      const profileSvc = new ProfileService(dbCtx.db, new SecretService(), path.join(root, 'profiles'));
+      const profileSvc = new ProfileService(
+        dbCtx.db,
+        new SecretService(),
+        path.join(root, 'profiles'),
+      );
       const p1 = profileSvc.create(makeProfileInput());
       const p2 = profileSvc.create({ ...makeProfileInput(), name: 'Second' });
       const updated = profileSvc.bulkUpdate({ ids: [p1.id, p2.id], presetId: 'max-privacy' });

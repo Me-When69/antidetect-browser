@@ -14,9 +14,9 @@ import { settingsTable } from '../db/schema';
 
 const CUSTOM_PRESETS_KEY = 'custom_presets';
 
-export const BUILTIN_PRESETS: readonly ProfilePreset[] = (
-  builtInPresetsRaw as ProfilePreset[]
-).map((p) => ({ ...p, builtIn: true }));
+export const BUILTIN_PRESETS: readonly ProfilePreset[] = (builtInPresetsRaw as ProfilePreset[]).map(
+  (p) => ({ ...p, builtIn: true }),
+);
 
 export function getBuiltInPresetById(id: string): ProfilePreset | null {
   return BUILTIN_PRESETS.find((p) => p.id === id) ?? null;

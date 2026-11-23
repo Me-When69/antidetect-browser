@@ -127,11 +127,7 @@ describe('Local IPv6 Pool Unit Tests (RFC 3849 2001:db8::/32)', () => {
     expect(() => validateAddressBatch(['2001:db8:9999:1::5'], DOC_PREFIX, 10)).toThrow();
 
     // Over-limit batch MUST be rejected
-    const threeAddrs = [
-      '2001:db8:abcd:1::10',
-      '2001:db8:abcd:1::11',
-      '2001:db8:abcd:1::12',
-    ];
+    const threeAddrs = ['2001:db8:abcd:1::10', '2001:db8:abcd:1::11', '2001:db8:abcd:1::12'];
     expect(() => validateAddressBatch(threeAddrs, DOC_PREFIX, 2)).toThrow();
     expect(validateAddressBatch(threeAddrs, DOC_PREFIX, 3)).toHaveLength(3);
   });

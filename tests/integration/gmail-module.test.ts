@@ -60,7 +60,12 @@ describe('Gmail Module Integration Tests (Mocked OAuth + Mocked Gmail API, zero 
           const grantType = params.get('grant_type');
           if (grantType === 'refresh_token' && state.failRefreshWithInvalidGrant) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'invalid_grant', error_description: 'Token has been revoked' }));
+            res.end(
+              JSON.stringify({
+                error: 'invalid_grant',
+                error_description: 'Token has been revoked',
+              }),
+            );
             return;
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -336,7 +341,13 @@ describe('Gmail Module Integration Tests (Mocked OAuth + Mocked Gmail API, zero 
       userAgent: identity.userAgent,
       proxy: { type: 'none', host: '', port: 0, username: '', password: '' },
       ipv6Policy: 'block',
-      geo: { mode: 'manual', timezone: 'Asia/Ho_Chi_Minh', language: 'vi-VN', lat: null, lon: null },
+      geo: {
+        mode: 'manual',
+        timezone: 'Asia/Ho_Chi_Minh',
+        language: 'vi-VN',
+        lat: null,
+        lon: null,
+      },
       fingerprint: identity.fingerprint,
       startup: { urls: [], restoreTabs: false },
     });

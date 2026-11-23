@@ -158,10 +158,7 @@ export function AccountsPage(): React.JSX.Element {
       setRevealedPassword(null);
       setTotpEmail(null);
       void loadVaultState();
-      showToast(
-        isEn ? 'Vault automatically locked' : 'Kho tài khoản đã tự động khóa',
-        'info',
-      );
+      showToast(isEn ? 'Vault automatically locked' : 'Kho tài khoản đã tự động khóa', 'info');
     });
     const unsubBackup = api.onGmailBackupProgress((progress) => {
       setBackupProgress(progress);
@@ -211,16 +208,15 @@ export function AccountsPage(): React.JSX.Element {
     if (!status?.initialized) {
       if (masterPw.length < 6) {
         showToast(
-          isEn ? 'Master password must be at least 6 characters' : 'Mật khẩu chính tối thiểu 6 ký tự',
+          isEn
+            ? 'Master password must be at least 6 characters'
+            : 'Mật khẩu chính tối thiểu 6 ký tự',
           'error',
         );
         return;
       }
       if (masterPw !== confirmPw) {
-        showToast(
-          isEn ? 'Passwords do not match' : 'Mật khẩu xác nhận không khớp',
-          'error',
-        );
+        showToast(isEn ? 'Passwords do not match' : 'Mật khẩu xác nhận không khớp', 'error');
         return;
       }
     }
@@ -457,10 +453,7 @@ export function AccountsPage(): React.JSX.Element {
       await window.electronAPI?.changeVaultMasterPassword(oldMasterPw, newMasterPw);
       setOldMasterPw('');
       setNewMasterPw('');
-      showToast(
-        isEn ? 'Master password changed' : 'Đã đổi mật khẩu chính thành công',
-        'success',
-      );
+      showToast(isEn ? 'Master password changed' : 'Đã đổi mật khẩu chính thành công', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Lỗi đổi mật khẩu chính', 'error');
     }
@@ -473,7 +466,9 @@ export function AccountsPage(): React.JSX.Element {
         const st = await window.electronAPI?.getVaultStatus();
         if (st) setStatus(st);
         showToast(
-          isEn ? 'Imported Google credentials.json' : 'Đã nhập file credentials.json vào kho mã hóa',
+          isEn
+            ? 'Imported Google credentials.json'
+            : 'Đã nhập file credentials.json vào kho mã hóa',
           'success',
         );
       }
@@ -523,7 +518,9 @@ export function AccountsPage(): React.JSX.Element {
       inboxAccount === 'ALL' ? authorizedAccounts.map((a) => a.email) : [inboxAccount];
     if (targetEmails.length === 0) {
       showToast(
-        isEn ? 'No authorized Gmail accounts yet' : 'Chưa có tài khoản nào được cấp quyền Gmail API',
+        isEn
+          ? 'No authorized Gmail accounts yet'
+          : 'Chưa có tài khoản nào được cấp quyền Gmail API',
         'error',
       );
       return;
@@ -757,7 +754,11 @@ export function AccountsPage(): React.JSX.Element {
             [
               { id: 'accounts', label: isEn ? 'Accounts' : 'Tài khoản', icon: Mail },
               { id: 'inbox', label: isEn ? 'Inbox' : 'Hộp thư', icon: Inbox },
-              { id: 'audit', label: isEn ? 'Security Audit' : 'Kiểm tra bảo mật', icon: ShieldCheck },
+              {
+                id: 'audit',
+                label: isEn ? 'Security Audit' : 'Kiểm tra bảo mật',
+                icon: ShieldCheck,
+              },
               { id: 'backup', label: isEn ? 'Backup' : 'Sao lưu', icon: Download },
             ] as const
           ).map((tab) => {
@@ -834,9 +835,13 @@ export function AccountsPage(): React.JSX.Element {
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">{isEn ? 'Label' : 'Nhãn'}</th>
                   <th className="px-4 py-3 font-medium">{isEn ? 'Protection' : 'Bảo vệ'}</th>
-                  <th className="px-4 py-3 font-medium">{isEn ? 'Password Age' : 'Tuổi mật khẩu'}</th>
+                  <th className="px-4 py-3 font-medium">
+                    {isEn ? 'Password Age' : 'Tuổi mật khẩu'}
+                  </th>
                   <th className="px-4 py-3 font-medium">Gmail API</th>
-                  <th className="px-4 py-3 text-right font-medium">{isEn ? 'Actions' : 'Thao tác'}</th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    {isEn ? 'Actions' : 'Thao tác'}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -856,7 +861,10 @@ export function AccountsPage(): React.JSX.Element {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {acc.hasTotp ? (
-                            <Badge variant="outline" className="border-primary/40 text-primary text-[10px]">
+                            <Badge
+                              variant="outline"
+                              className="border-primary/40 text-primary text-[10px]"
+                            >
                               2FA
                             </Badge>
                           ) : (
@@ -901,7 +909,11 @@ export function AccountsPage(): React.JSX.Element {
                             size="sm"
                             variant="ghost"
                             className="h-7 px-2"
-                            title={isEn ? 'Copy password (auto-clears in 20s)' : 'Chép mật khẩu (tự xóa sau 20s)'}
+                            title={
+                              isEn
+                                ? 'Copy password (auto-clears in 20s)'
+                                : 'Chép mật khẩu (tự xóa sau 20s)'
+                            }
                             onClick={() => void handleCopyPassword(acc.email)}
                             disabled={!acc.hasPassword}
                           >
@@ -935,7 +947,11 @@ export function AccountsPage(): React.JSX.Element {
                             size="sm"
                             variant="ghost"
                             className="h-7 px-2"
-                            title={isEn ? 'Mark password changed today' : 'Đánh dấu đã đổi mật khẩu hôm nay'}
+                            title={
+                              isEn
+                                ? 'Mark password changed today'
+                                : 'Đánh dấu đã đổi mật khẩu hôm nay'
+                            }
                             onClick={() => void handleMarkPwChanged(acc.email)}
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -1052,9 +1068,7 @@ export function AccountsPage(): React.JSX.Element {
                 size="sm"
                 variant="outline"
                 className="h-7 gap-1"
-                onClick={() =>
-                  void handleBatchModify(isEn ? 'Star' : 'Gắn sao', ['STARRED'], [])
-                }
+                onClick={() => void handleBatchModify(isEn ? 'Star' : 'Gắn sao', ['STARRED'], [])}
               >
                 <Star className="h-3 w-3" />
                 {isEn ? 'Star' : 'Gắn sao'}
@@ -1063,9 +1077,7 @@ export function AccountsPage(): React.JSX.Element {
                 size="sm"
                 variant="outline"
                 className="h-7 gap-1"
-                onClick={() =>
-                  void handleBatchModify(isEn ? 'Archive' : 'Lưu trữ', [], ['INBOX'])
-                }
+                onClick={() => void handleBatchModify(isEn ? 'Archive' : 'Lưu trữ', [], ['INBOX'])}
               >
                 <Archive className="h-3 w-3" />
                 {isEn ? 'Archive' : 'Lưu trữ'}
@@ -1075,7 +1087,11 @@ export function AccountsPage(): React.JSX.Element {
                 variant="destructive"
                 className="h-7 gap-1"
                 onClick={() =>
-                  void handleBatchModify(isEn ? 'Move to Trash' : 'Chuyển vào Thùng rác', ['TRASH'], ['INBOX'])
+                  void handleBatchModify(
+                    isEn ? 'Move to Trash' : 'Chuyển vào Thùng rác',
+                    ['TRASH'],
+                    ['INBOX'],
+                  )
                 }
               >
                 <Trash2 className="h-3 w-3" />
@@ -1177,7 +1193,11 @@ export function AccountsPage(): React.JSX.Element {
                   : 'Kiểm tra 2FA, độ mạnh mật khẩu, trùng lặp (hash trong RAM), tuổi > 180 ngày, mail khôi phục và trạng thái token Gmail.'}
               </p>
             </div>
-            <Button onClick={() => void handleRunAudit()} disabled={auditLoading} className="gap-1.5">
+            <Button
+              onClick={() => void handleRunAudit()}
+              disabled={auditLoading}
+              className="gap-1.5"
+            >
               <RefreshCw className={cn('h-3.5 w-3.5', auditLoading && 'animate-spin')} />
               <span>{isEn ? 'Run Audit' : 'Quét bảo mật'}</span>
             </Button>
@@ -1311,8 +1331,16 @@ export function AccountsPage(): React.JSX.Element {
                 {isEn ? 'Target folder' : 'Thư mục lưu'}
               </label>
               <div className="flex gap-2">
-                <Input value={backupDir} readOnly placeholder={isEn ? 'Choose folder...' : 'Chọn thư mục...'} />
-                <Button type="button" variant="outline" onClick={() => void handleSelectBackupDir()}>
+                <Input
+                  value={backupDir}
+                  readOnly
+                  placeholder={isEn ? 'Choose folder...' : 'Chọn thư mục...'}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleSelectBackupDir()}
+                >
                   <FolderOpen className="h-4 w-4" />
                 </Button>
               </div>
@@ -1404,7 +1432,11 @@ export function AccountsPage(): React.JSX.Element {
                     ? 'Add Gmail Account'
                     : 'Thêm tài khoản Gmail'}
               </h3>
-              <button type="button" onClick={() => setFormOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -1650,7 +1682,11 @@ export function AccountsPage(): React.JSX.Element {
             <div className="space-y-3 rounded-lg border border-border p-3.5 text-xs">
               <h4 className="font-semibold">{isEn ? 'Auto-Lock' : 'Tự động khóa kho'}</h4>
               <div className="flex items-center justify-between gap-3">
-                <span>{isEn ? 'Lock after inactivity (minutes, 0 = off)' : 'Khóa sau khi không thao tác (phút, 0 = tắt)'}</span>
+                <span>
+                  {isEn
+                    ? 'Lock after inactivity (minutes, 0 = off)'
+                    : 'Khóa sau khi không thao tác (phút, 0 = tắt)'}
+                </span>
                 <Input
                   type="number"
                   min={0}
@@ -1666,7 +1702,9 @@ export function AccountsPage(): React.JSX.Element {
                   checked={lockOnMinimize}
                   onChange={(e) => setLockOnMinimize(e.target.checked)}
                 />
-                <span>{isEn ? 'Lock when app window minimizes' : 'Tự động khóa khi thu nhỏ cửa sổ'}</span>
+                <span>
+                  {isEn ? 'Lock when app window minimizes' : 'Tự động khóa khi thu nhỏ cửa sổ'}
+                </span>
               </label>
               <Button size="sm" onClick={() => void handleSaveVaultSettings()}>
                 {isEn ? 'Save Auto-Lock Settings' : 'Lưu cài đặt tự khóa'}
@@ -1685,15 +1723,25 @@ export function AccountsPage(): React.JSX.Element {
                     ? 'Import your Desktop App OAuth credentials.json from Google Cloud Console (see docs/GMAIL_SETUP.md).'
                     : 'Nhập file OAuth Desktop App credentials.json từ Google Cloud Console (xem docs/GMAIL_SETUP.md).'}
               </p>
-              <Button size="sm" variant="outline" onClick={() => void handleImportGoogleCreds()} className="gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleImportGoogleCreds()}
+                className="gap-1.5"
+              >
                 <Upload className="h-3.5 w-3.5" />
                 <span>{isEn ? 'Import credentials.json' : 'Nhập credentials.json'}</span>
               </Button>
             </div>
 
             {/* Change master password */}
-            <form onSubmit={(e) => void handleChangeMasterPw(e)} className="space-y-2 rounded-lg border border-border p-3.5 text-xs">
-              <h4 className="font-semibold">{isEn ? 'Change Master Password' : 'Đổi mật khẩu chính'}</h4>
+            <form
+              onSubmit={(e) => void handleChangeMasterPw(e)}
+              className="space-y-2 rounded-lg border border-border p-3.5 text-xs"
+            >
+              <h4 className="font-semibold">
+                {isEn ? 'Change Master Password' : 'Đổi mật khẩu chính'}
+              </h4>
               <Input
                 type="password"
                 value={oldMasterPw}
@@ -1705,7 +1753,11 @@ export function AccountsPage(): React.JSX.Element {
                 type="password"
                 value={newMasterPw}
                 onChange={(e) => setNewMasterPw(e.target.value)}
-                placeholder={isEn ? 'New master password (min 6 chars)' : 'Mật khẩu chính mới (tối thiểu 6 ký tự)'}
+                placeholder={
+                  isEn
+                    ? 'New master password (min 6 chars)'
+                    : 'Mật khẩu chính mới (tối thiểu 6 ký tự)'
+                }
                 required
               />
               <Button size="sm" type="submit">
@@ -1716,13 +1768,17 @@ export function AccountsPage(): React.JSX.Element {
             {/* Import legacy Python vault.db */}
             <div className="space-y-2 rounded-lg border border-border p-3.5 text-xs">
               <h4 className="font-semibold">
-                {isEn ? 'Import Legacy Python Vault (vault.db)' : 'Nhập từ kho Python cũ (vault.db)'}
+                {isEn
+                  ? 'Import Legacy Python Vault (vault.db)'
+                  : 'Nhập từ kho Python cũ (vault.db)'}
               </h4>
               <Input
                 type="password"
                 value={legacyPw}
                 onChange={(e) => setLegacyPw(e.target.value)}
-                placeholder={isEn ? 'Legacy vault master password' : 'Mật khẩu chính của vault.db cũ'}
+                placeholder={
+                  isEn ? 'Legacy vault master password' : 'Mật khẩu chính của vault.db cũ'
+                }
               />
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-1.5">
@@ -1750,7 +1806,9 @@ export function AccountsPage(): React.JSX.Element {
                 className="gap-1.5"
               >
                 <Upload className="h-3.5 w-3.5" />
-                <span>{isEn ? 'Choose Legacy vault.db & Import' : 'Chọn file vault.db cũ & Nhập'}</span>
+                <span>
+                  {isEn ? 'Choose Legacy vault.db & Import' : 'Chọn file vault.db cũ & Nhập'}
+                </span>
               </Button>
             </div>
           </div>

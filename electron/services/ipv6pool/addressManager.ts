@@ -3,11 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {
-  isAddressInPrefix64,
-  normalizeIpv6,
-  parsePrefix64,
-} from './prefix';
+import { isAddressInPrefix64, normalizeIpv6, parsePrefix64 } from './prefix';
 
 export const DEFAULT_MAX_ADDRESSES = 256;
 export const HARD_MAX_ADDRESSES = 1024;
@@ -150,16 +146,22 @@ export class WindowsNetshCommandRunner implements CommandRunner {
   execNetsh(args: readonly string[]): Promise<CommandResult> {
     validateNetshArgList(args);
     return new Promise((resolve) => {
-      execFile('netsh.exe', [...args], { windowsHide: true, timeout: 15_000 }, (err, stdout, stderr) => {
-        if (err) {
-          const code = typeof (err as { code?: unknown }).code === 'number'
-            ? ((err as { code: number }).code)
-            : 1;
-          resolve({ stdout: stdout ?? '', stderr: stderr || err.message, exitCode: code });
-          return;
-        }
-        resolve({ stdout: stdout ?? '', stderr: stderr ?? '', exitCode: 0 });
-      });
+      execFile(
+        'netsh.exe',
+        [...args],
+        { windowsHide: true, timeout: 15_000 },
+        (err, stdout, stderr) => {
+          if (err) {
+            const code =
+              typeof (err as { code?: unknown }).code === 'number'
+                ? (err as { code: number }).code
+                : 1;
+            resolve({ stdout: stdout ?? '', stderr: stderr || err.message, exitCode: code });
+            return;
+          }
+          resolve({ stdout: stdout ?? '', stderr: stderr ?? '', exitCode: 0 });
+        },
+      );
     });
   }
 
@@ -169,7 +171,8 @@ export class WindowsNetshCommandRunner implements CommandRunner {
     if (process.platform !== 'win32') {
       return {
         exitCode: 1,
-        error: 'Tính năng Kho IPv6 cục bộ hiện chỉ hỗ trợ Windows (Linux/macOS xem docs/BACKLOG.md)',
+        error:
+          'Tính năng Kho IPv6 cục bộ hiện chỉ hỗ trợ Windows (Linux/macOS xem docs/BACKLOG.md)',
       };
     }
     if (argLists.length === 0) return { exitCode: 0 };

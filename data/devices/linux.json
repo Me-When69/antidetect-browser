@@ -9,11 +9,29 @@
     "screen": { "width": 1920, "height": 1080, "dpr": 1 },
     "viewport": { "width": 1600, "height": 900 },
     "hardware": { "cores": 8, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (Intel)", "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics 770 (ADL-S GT1), OpenGL 4.6)" },
+    "gpu": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics 770 (ADL-S GT1), OpenGL 4.6)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["Ubuntu", "DejaVu Sans", "DejaVu Serif", "DejaVu Sans Mono", "Liberation Sans", "Liberation Mono", "Noto Sans"],
+    "fonts": [
+      "Ubuntu",
+      "DejaVu Sans",
+      "DejaVu Serif",
+      "DejaVu Sans Mono",
+      "Liberation Sans",
+      "Liberation Mono",
+      "Noto Sans"
+    ],
     "uaTemplate": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "Linux", "platformVersion": "6.8.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "Linux",
+      "platformVersion": "6.8.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "Ubuntu 24.04 LTS standard Mesa Intel desktop."
   },
   {
@@ -26,11 +44,28 @@
     "screen": { "width": 2560, "height": 1440, "dpr": 1 },
     "viewport": { "width": 1920, "height": 1000 },
     "hardware": { "cores": 12, "memory": 32 },
-    "gpu": { "vendor": "Google Inc. (NVIDIA Corporation)", "renderer": "ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 3060/PCIe/SSE2, OpenGL 4.6.0)" },
+    "gpu": {
+      "vendor": "Google Inc. (NVIDIA Corporation)",
+      "renderer": "ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 3060/PCIe/SSE2, OpenGL 4.6.0)"
+    },
     "touch": { "maxTouchPoints": 0 },
-    "fonts": ["Ubuntu", "DejaVu Sans", "DejaVu Serif", "Liberation Sans", "Liberation Mono", "Noto Sans"],
+    "fonts": [
+      "Ubuntu",
+      "DejaVu Sans",
+      "DejaVu Serif",
+      "Liberation Sans",
+      "Liberation Mono",
+      "Noto Sans"
+    ],
     "uaTemplate": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "Linux", "platformVersion": "6.8.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "Linux",
+      "platformVersion": "6.8.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "Ubuntu 24.04 workstation with proprietary NVIDIA driver."
   },
   {
@@ -43,11 +78,21 @@
     "screen": { "width": 1920, "height": 1080, "dpr": 1 },
     "viewport": { "width": 1600, "height": 900 },
     "hardware": { "cores": 8, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (AMD)", "renderer": "ANGLE (AMD, AMD Radeon RX 6600 (radeonsi, navi23, LLVM 15.0.7), OpenGL 4.6)" },
+    "gpu": {
+      "vendor": "Google Inc. (AMD)",
+      "renderer": "ANGLE (AMD, AMD Radeon RX 6600 (radeonsi, navi23, LLVM 15.0.7), OpenGL 4.6)"
+    },
     "touch": { "maxTouchPoints": 0 },
     "fonts": ["Ubuntu", "DejaVu Sans", "DejaVu Sans Mono", "Liberation Sans", "Noto Sans"],
     "uaTemplate": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "Linux", "platformVersion": "6.5.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "Linux",
+      "platformVersion": "6.5.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "Ubuntu 22.04 LTS Mesa radeonsi."
   },
   {
@@ -60,11 +105,21 @@
     "screen": { "width": 1920, "height": 1080, "dpr": 1 },
     "viewport": { "width": 1600, "height": 900 },
     "hardware": { "cores": 8, "memory": 16 },
-    "gpu": { "vendor": "Google Inc. (Intel)", "renderer": "ANGLE (Intel, Mesa Intel(R) Xe Graphics (TGL GT2), OpenGL 4.6)" },
+    "gpu": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Mesa Intel(R) Xe Graphics (TGL GT2), OpenGL 4.6)"
+    },
     "touch": { "maxTouchPoints": 0 },
     "fonts": ["Cantarell", "DejaVu Sans", "DejaVu Sans Mono", "Liberation Sans", "Noto Sans"],
     "uaTemplate": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "Linux", "platformVersion": "6.9.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "Linux",
+      "platformVersion": "6.9.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "Fedora Workstation 40 laptop."
   },
   {
@@ -77,11 +132,21 @@
     "screen": { "width": 1920, "height": 1080, "dpr": 1 },
     "viewport": { "width": 1600, "height": 900 },
     "hardware": { "cores": 4, "memory": 8 },
-    "gpu": { "vendor": "Google Inc. (Intel)", "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics 630 (CFL GT2), OpenGL 4.6)" },
+    "gpu": {
+      "vendor": "Google Inc. (Intel)",
+      "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics 630 (CFL GT2), OpenGL 4.6)"
+    },
     "touch": { "maxTouchPoints": 0 },
     "fonts": ["DejaVu Sans", "DejaVu Serif", "DejaVu Sans Mono", "Liberation Sans", "Noto Sans"],
     "uaTemplate": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "Linux", "platformVersion": "6.1.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "Linux",
+      "platformVersion": "6.1.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "Debian Bookworm desktop."
   },
   {
@@ -94,11 +159,21 @@
     "screen": { "width": 2560, "height": 1440, "dpr": 1 },
     "viewport": { "width": 1920, "height": 1000 },
     "hardware": { "cores": 16, "memory": 32 },
-    "gpu": { "vendor": "Google Inc. (NVIDIA Corporation)", "renderer": "ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4070/PCIe/SSE2, OpenGL 4.6.0)" },
+    "gpu": {
+      "vendor": "Google Inc. (NVIDIA Corporation)",
+      "renderer": "ANGLE (NVIDIA Corporation, NVIDIA GeForce RTX 4070/PCIe/SSE2, OpenGL 4.6.0)"
+    },
     "touch": { "maxTouchPoints": 0 },
     "fonts": ["DejaVu Sans", "Liberation Sans", "Noto Sans", "Noto Sans Mono"],
     "uaTemplate": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{CHROME_VERSION} Safari/537.36",
-    "clientHints": { "platform": "Linux", "platformVersion": "6.10.0", "architecture": "x86", "bitness": "64", "model": "", "mobile": false },
+    "clientHints": {
+      "platform": "Linux",
+      "platformVersion": "6.10.0",
+      "architecture": "x86",
+      "bitness": "64",
+      "model": "",
+      "mobile": false
+    },
     "notes": "Arch Linux developer desktop."
   }
 ]

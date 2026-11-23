@@ -180,13 +180,7 @@ const electronApi: ElectronApi = {
     ipcRenderer.invoke(IPC_CHANNELS.GMAIL_SEARCH_MESSAGES, emails, query, maxPerAccount),
   cancelGmailSearch: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_CANCEL_SEARCH),
   batchModifyGmailMessages: (email, ids, addLabelIds, removeLabelIds) =>
-    ipcRenderer.invoke(
-      IPC_CHANNELS.GMAIL_BATCH_MODIFY,
-      email,
-      ids,
-      addLabelIds,
-      removeLabelIds,
-    ),
+    ipcRenderer.invoke(IPC_CHANNELS.GMAIL_BATCH_MODIFY, email, ids, addLabelIds, removeLabelIds),
   selectGmailBackupFolder: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_SELECT_BACKUP_DIR),
   backupGmailEmails: (options) => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_BACKUP_EMAILS, options),
   cancelGmailBackup: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_CANCEL_BACKUP),

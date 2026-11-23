@@ -65,7 +65,10 @@ function createLegacyPythonVault(
     const enc = (val: string) => new fernet.Token({ secret }).encode(val);
 
     db.prepare('INSERT INTO meta (k, v) VALUES (?, ?)').run('salt', salt);
-    db.prepare('INSERT INTO meta (k, v) VALUES (?, ?)').run('check', Buffer.from(enc('ok'), 'utf8'));
+    db.prepare('INSERT INTO meta (k, v) VALUES (?, ?)').run(
+      'check',
+      Buffer.from(enc('ok'), 'utf8'),
+    );
 
     const nowSec = Math.floor(Date.now() / 1000);
     for (const r of rows) {
@@ -168,7 +171,10 @@ describe('Facet Encrypted Vault & Security Unit Tests', () => {
 
     // Column allowlist rejects SQL injection attempt
     expect(() =>
-      vault.getAccountSecret('user1@example.com', 'password; DROP TABLE accounts;--' as VaultSecretField),
+      vault.getAccountSecret(
+        'user1@example.com',
+        'password; DROP TABLE accounts;--' as VaultSecretField,
+      ),
     ).toThrow();
 
     // Change master password preserves data

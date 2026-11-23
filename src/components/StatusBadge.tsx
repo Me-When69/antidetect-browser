@@ -27,11 +27,7 @@ export interface StatusBadgeProps {
   className?: string;
 }
 
-export function StatusBadge({
-  variant,
-  children,
-  className,
-}: StatusBadgeProps): React.JSX.Element {
+export function StatusBadge({ variant, children, className }: StatusBadgeProps): React.JSX.Element {
   return (
     <span
       data-status-variant={variant}

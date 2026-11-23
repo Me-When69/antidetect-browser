@@ -72,7 +72,10 @@ function SignalToggleGroup<T extends string>({
 }): React.JSX.Element {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-secondary/20 px-3 py-2">
-      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground" title={tooltip}>
+      <div
+        className="flex items-center gap-1.5 text-xs font-medium text-foreground"
+        title={tooltip}
+      >
         <span>{label}</span>
         <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
       </div>
@@ -531,12 +534,12 @@ export function AdvancedProfileSections({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs text-muted-foreground">Thông báo (Notifications)</label>
+            <label className="mb-1 block text-xs text-muted-foreground">
+              Thông báo (Notifications)
+            </label>
             <Select
               value={behavior.notifications}
-              onChange={(e) =>
-                updateBehavior({ notifications: e.target.value as 'ask' | 'block' })
-              }
+              onChange={(e) => updateBehavior({ notifications: e.target.value as 'ask' | 'block' })}
             >
               <option value="block">Chặn mặc định</option>
               <option value="ask">Hỏi người dùng</option>
@@ -610,7 +613,12 @@ export function AdvancedProfileSections({
             className="h-7 text-xs"
             onClick={() => {
               setStartupUrlsText('');
-              form.setValue('startup', { urls: [], restoreTabs: false, bookmarks: [], extensions: [] });
+              form.setValue('startup', {
+                urls: [],
+                restoreTabs: false,
+                bookmarks: [],
+                extensions: [],
+              });
             }}
           >
             <RotateCcw className="h-3 w-3" />

@@ -227,7 +227,9 @@ export function ProfileFormPage(): React.JSX.Element {
         const major = version.split('.')[0] ?? '136';
         form.setValue(
           'userAgent',
-          ua.replace(/rv:\d+\.\d+/i, `rv:${major}.0`).replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`),
+          ua
+            .replace(/rv:\d+\.\d+/i, `rv:${major}.0`)
+            .replace(/Firefox\/\d+\.\d+/i, `Firefox/${major}.0`),
         );
       } else {
         form.setValue('userAgent', ua.replace(/Chrome\/\d+(?:\.\d+)*/i, `Chrome/${version}`));
@@ -314,9 +316,17 @@ export function ProfileFormPage(): React.JSX.Element {
       } else {
         const name =
           RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)] ?? 'Essie Crooks';
-        const base: CreateProfileInput = { ...DEFAULT_VALUES, name, browserVersion: defaultChromeVer };
+        const base: CreateProfileInput = {
+          ...DEFAULT_VALUES,
+          name,
+          browserVersion: defaultChromeVer,
+        };
         const picked = await window.electronAPI.pickRandomDevice('windows');
-        const applied = await window.electronAPI.applyEmulatedDevice(base, picked.id, defaultChromeVer);
+        const applied = await window.electronAPI.applyEmulatedDevice(
+          base,
+          picked.id,
+          defaultChromeVer,
+        );
         if (active) {
           form.reset(applied);
           setTagsText('');
@@ -376,7 +386,8 @@ export function ProfileFormPage(): React.JSX.Element {
   const identityReport = useMemo(() => {
     const current = form.getValues();
     const matchedInstalled = managedBrowsers.find(
-      (b) => b.installed && b.browserKind === current.browser && b.version === current.browserVersion,
+      (b) =>
+        b.installed && b.browserKind === current.browser && b.version === current.browserVersion,
     );
     const fallbackInstalled = managedBrowsers.find(
       (b) => b.installed && b.browserKind === current.browser,
@@ -484,10 +495,18 @@ export function ProfileFormPage(): React.JSX.Element {
     if (currentRaw.window) {
       if (!Number.isFinite(currentRaw.window.width)) form.setValue('window.width', 1280);
       if (!Number.isFinite(currentRaw.window.height)) form.setValue('window.height', 800);
-      if (currentRaw.window.x !== null && currentRaw.window.x !== undefined && !Number.isFinite(currentRaw.window.x)) {
+      if (
+        currentRaw.window.x !== null &&
+        currentRaw.window.x !== undefined &&
+        !Number.isFinite(currentRaw.window.x)
+      ) {
         form.setValue('window.x', null);
       }
-      if (currentRaw.window.y !== null && currentRaw.window.y !== undefined && !Number.isFinite(currentRaw.window.y)) {
+      if (
+        currentRaw.window.y !== null &&
+        currentRaw.window.y !== undefined &&
+        !Number.isFinite(currentRaw.window.y)
+      ) {
         form.setValue('window.y', null);
       }
     }
@@ -905,7 +924,8 @@ export function ProfileFormPage(): React.JSX.Element {
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                 <div>
                   <p className="font-medium">
-                    Hệ điều hành giả lập ({currentPlatform.toUpperCase()}) khác với hệ điều hành máy chủ.
+                    Hệ điều hành giả lập ({currentPlatform.toUpperCase()}) khác với hệ điều hành máy
+                    chủ.
                   </p>
                   <p className="mt-0.5 text-[11px] text-amber-200/80">{confidence.reason}</p>
                 </div>
@@ -952,7 +972,8 @@ export function ProfileFormPage(): React.JSX.Element {
             <div className="space-y-2 rounded-lg border border-border bg-secondary/20 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs font-medium text-foreground">
-                  Thiết bị giả lập ({devices.filter((d) => d.platform === currentPlatform).length} mẫu)
+                  Thiết bị giả lập ({devices.filter((d) => d.platform === currentPlatform).length}{' '}
+                  mẫu)
                 </label>
                 <Button
                   type="button"
@@ -999,7 +1020,8 @@ export function ProfileFormPage(): React.JSX.Element {
               </div>
               {watched.deviceLabel && (
                 <p className="text-[11px] text-muted-foreground">
-                  Đang áp dụng: <span className="font-medium text-foreground">{watched.deviceLabel}</span>
+                  Đang áp dụng:{' '}
+                  <span className="font-medium text-foreground">{watched.deviceLabel}</span>
                 </p>
               )}
             </div>
@@ -1069,7 +1091,8 @@ export function ProfileFormPage(): React.JSX.Element {
                     .filter((b) => b.installed && b.browserKind === currentBrowser)
                     .map((b) => (
                       <option key={b.id} value={b.version}>
-                        {b.browserKind === 'chrome' ? 'Chrome' : 'Firefox'} {b.version} ({b.channel})
+                        {b.browserKind === 'chrome' ? 'Chrome' : 'Firefox'} {b.version} ({b.channel}
+                        )
                       </option>
                     ))}
                   {watched.browserVersion &&

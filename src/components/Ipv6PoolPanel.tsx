@@ -145,7 +145,9 @@ export function Ipv6PoolPanel(): React.JSX.Element {
       const st = await window.electronAPI.getIpv6PoolStatus();
       setStatus(st);
       showToast(
-        isEn ? `Assigned ${allocateCount} IPv6 address(es)` : `Đã gán ${allocateCount} địa chỉ IPv6`,
+        isEn
+          ? `Assigned ${allocateCount} IPv6 address(es)`
+          : `Đã gán ${allocateCount} địa chỉ IPv6`,
         'success',
       );
     } catch (err) {
@@ -162,7 +164,10 @@ export function Ipv6PoolPanel(): React.JSX.Element {
       await window.electronAPI.checkIpv6PoolHealthAll();
       const st = await window.electronAPI.getIpv6PoolStatus();
       setStatus(st);
-      showToast(isEn ? 'Health check completed' : 'Đã kiểm tra sống/chết tất cả địa chỉ', 'success');
+      showToast(
+        isEn ? 'Health check completed' : 'Đã kiểm tra sống/chết tất cả địa chỉ',
+        'success',
+      );
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Lỗi kiểm tra sống/chết', 'error');
     } finally {
@@ -205,7 +210,9 @@ export function Ipv6PoolPanel(): React.JSX.Element {
       const st = await window.electronAPI.getIpv6PoolStatus();
       setStatus(st);
       showToast(
-        isEn ? `Removed ${res.removed} app-assigned address(es)` : `Đã gỡ ${res.removed} địa chỉ của app`,
+        isEn
+          ? `Removed ${res.removed} app-assigned address(es)`
+          : `Đã gỡ ${res.removed} địa chỉ của app`,
         'success',
       );
     } catch (err) {
@@ -308,7 +315,12 @@ export function Ipv6PoolPanel(): React.JSX.Element {
                 : `Phát hiện ${orphans.length} địa chỉ IPv6 mồ côi do Facet gán từ lần chạy trước.`}
             </span>
           </div>
-          <Button size="sm" variant="destructive" onClick={() => void handleRemoveAll()} disabled={cleaningAll}>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => void handleRemoveAll()}
+            disabled={cleaningAll}
+          >
             {isEn ? 'Remove All App Addresses' : 'Gỡ tất cả địa chỉ của app'}
           </Button>
         </div>
@@ -320,13 +332,19 @@ export function Ipv6PoolPanel(): React.JSX.Element {
           <div className="flex items-center gap-2">
             <Network className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold">
-              {isEn ? 'IPv6 /64 Prefix & Routing Verification' : 'Cấu hình tiền tố /64 & Kiểm tra định tuyến'}
+              {isEn
+                ? 'IPv6 /64 Prefix & Routing Verification'
+                : 'Cấu hình tiền tố /64 & Kiểm tra định tuyến'}
             </h3>
           </div>
           {status?.config.routingVerified ? (
-            <StatusBadge variant="ready">{isEn ? 'Routing Verified' : 'Định tuyến hợp lệ'}</StatusBadge>
+            <StatusBadge variant="ready">
+              {isEn ? 'Routing Verified' : 'Định tuyến hợp lệ'}
+            </StatusBadge>
           ) : (
-            <StatusBadge variant="warning">{isEn ? 'Unverified' : 'Chưa kiểm tra định tuyến'}</StatusBadge>
+            <StatusBadge variant="warning">
+              {isEn ? 'Unverified' : 'Chưa kiểm tra định tuyến'}
+            </StatusBadge>
           )}
         </div>
 
@@ -403,10 +421,16 @@ export function Ipv6PoolPanel(): React.JSX.Element {
               checked={autoRotateEnabled}
               onChange={(e) => setAutoRotateEnabled(e.target.checked)}
             />
-            <span>{isEn ? 'Scheduled auto-rotate (idle profiles only)' : 'Xoay IPv6 theo hẹn giờ (chỉ hồ sơ đang dừng)'}</span>
+            <span>
+              {isEn
+                ? 'Scheduled auto-rotate (idle profiles only)'
+                : 'Xoay IPv6 theo hẹn giờ (chỉ hồ sơ đang dừng)'}
+            </span>
           </label>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">{isEn ? 'Interval (min 10m):' : 'Chu kỳ (tối thiểu 10 phút):'}</span>
+            <span className="text-muted-foreground">
+              {isEn ? 'Interval (min 10m):' : 'Chu kỳ (tối thiểu 10 phút):'}
+            </span>
             <Input
               type="number"
               min={10}
@@ -429,7 +453,11 @@ export function Ipv6PoolPanel(): React.JSX.Element {
             disabled={verifying || !ownershipConfirmed || !ifaceName || !prefix64}
             className="gap-1.5"
           >
-            {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5" />}
+            {verifying ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Activity className="h-3.5 w-3.5" />
+            )}
             <span>{isEn ? 'Verify Routing' : 'Kiểm tra định tuyến'}</span>
           </Button>
         </div>
@@ -456,7 +484,9 @@ export function Ipv6PoolPanel(): React.JSX.Element {
                   : routingResult.error}
               </span>
             </div>
-            {routingResult.guidance && <p className="mt-1.5 text-foreground/90">{routingResult.guidance}</p>}
+            {routingResult.guidance && (
+              <p className="mt-1.5 text-foreground/90">{routingResult.guidance}</p>
+            )}
           </div>
         )}
       </Card>
@@ -470,7 +500,9 @@ export function Ipv6PoolPanel(): React.JSX.Element {
               min={1}
               max={64}
               value={allocateCount}
-              onChange={(e) => setAllocateCount(Math.max(1, Math.min(64, Number(e.target.value) || 1)))}
+              onChange={(e) =>
+                setAllocateCount(Math.max(1, Math.min(64, Number(e.target.value) || 1)))
+              }
               className="h-8 w-20 text-xs"
               aria-label={isEn ? 'Addresses to assign' : 'Số địa chỉ cần gán'}
             />
@@ -480,7 +512,11 @@ export function Ipv6PoolPanel(): React.JSX.Element {
               disabled={allocating || !status?.config.routingVerified}
               className="gap-1.5"
             >
-              {allocating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              {allocating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
               <span>{isEn ? 'Assign Addresses' : 'Tạo & gán địa chỉ'}</span>
             </Button>
             <Button
@@ -519,12 +555,18 @@ export function Ipv6PoolPanel(): React.JSX.Element {
           <table className="w-full text-left text-xs">
             <thead className="border-b border-border bg-secondary/40 text-muted-foreground">
               <tr>
-                <th className="px-3 py-2.5 font-medium">{isEn ? 'IPv6 Address' : 'Địa chỉ IPv6'}</th>
+                <th className="px-3 py-2.5 font-medium">
+                  {isEn ? 'IPv6 Address' : 'Địa chỉ IPv6'}
+                </th>
                 <th className="px-3 py-2.5 font-medium">{isEn ? 'Profile' : 'Hồ sơ đang dùng'}</th>
-                <th className="px-3 py-2.5 font-medium">{isEn ? 'Local Listener' : 'Cổng cục bộ'}</th>
+                <th className="px-3 py-2.5 font-medium">
+                  {isEn ? 'Local Listener' : 'Cổng cục bộ'}
+                </th>
                 <th className="px-3 py-2.5 font-medium">{isEn ? 'Connections' : 'Kết nối'}</th>
                 <th className="px-3 py-2.5 font-medium">{isEn ? 'Health' : 'Trạng thái'}</th>
-                <th className="px-3 py-2.5 text-right font-medium">{isEn ? 'Actions' : 'Thao tác'}</th>
+                <th className="px-3 py-2.5 text-right font-medium">
+                  {isEn ? 'Actions' : 'Thao tác'}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -555,7 +597,9 @@ export function Ipv6PoolPanel(): React.JSX.Element {
                       ) : entry.health === 'dead' ? (
                         <StatusBadge variant="warning">{isEn ? 'Dead' : 'Chết'}</StatusBadge>
                       ) : (
-                        <StatusBadge variant="stopped">{isEn ? 'Unknown' : 'Chưa kiểm tra'}</StatusBadge>
+                        <StatusBadge variant="stopped">
+                          {isEn ? 'Unknown' : 'Chưa kiểm tra'}
+                        </StatusBadge>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right">
@@ -566,7 +610,9 @@ export function Ipv6PoolPanel(): React.JSX.Element {
                             variant="outline"
                             className="h-7 px-2 text-[11px]"
                             disabled={busyAddr === entry.address}
-                            onClick={() => void handleRotateProfile(entry.profileId!, entry.address)}
+                            onClick={() =>
+                              void handleRotateProfile(entry.profileId!, entry.address)
+                            }
                           >
                             {isEn ? 'Rotate' : 'Đổi'}
                           </Button>

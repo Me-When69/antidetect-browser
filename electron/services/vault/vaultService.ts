@@ -162,8 +162,7 @@ export class VaultService {
 
   private getMeta(key: string): string | null {
     const row = this.db.prepare('SELECT v FROM meta WHERE k = ?').get(key) as
-      | { v: string }
-      | undefined;
+      { v: string } | undefined;
     return row ? row.v : null;
   }
 
@@ -243,9 +242,12 @@ export class VaultService {
     if (!this.dek) return;
     const mins = this.getAutoLockMinutes();
     if (mins <= 0) return;
-    this.autoLockTimer = setTimeout(() => {
-      this.lock();
-    }, mins * 60 * 1000);
+    this.autoLockTimer = setTimeout(
+      () => {
+        this.lock();
+      },
+      mins * 60 * 1000,
+    );
     if (typeof this.autoLockTimer.unref === 'function') {
       this.autoLockTimer.unref();
     }
@@ -497,9 +499,8 @@ export class VaultService {
   updateAccount(input: VaultAccountUpdateInput): VaultAccountSummary {
     const dek = this.requireDek();
     const email = input.email.trim().toLowerCase();
-    const existing = this.db
-      .prepare('SELECT * FROM accounts WHERE email = ?')
-      .get(email) as AccountRow | undefined;
+    const existing = this.db.prepare('SELECT * FROM accounts WHERE email = ?').get(email) as
+      AccountRow | undefined;
     if (!existing) {
       throw new Error(`Không tìm thấy tài khoản: ${email}`);
     }
@@ -663,7 +664,11 @@ export class VaultService {
     if (!parsed.installed?.client_id && !parsed.web?.client_id) {
       throw new Error('File credentials.json không hợp lệ (thiếu client_id OAuth Desktop app)');
     }
-    const enc = encryptField(dek, credentialsJson, makeFieldAad('secrets', 'google_credentials', 'v'))!;
+    const enc = encryptField(
+      dek,
+      credentialsJson,
+      makeFieldAad('secrets', 'google_credentials', 'v'),
+    )!;
     this.db
       .prepare(
         `INSERT INTO secrets (k, v_enc, updated_at) VALUES (?, ?, ?)
