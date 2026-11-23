@@ -1,6 +1,16 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, clipboard, ipcMain, safeStorage, session, shell } from 'electron';
+import { migrateLegacyUserDataIfNeeded } from './services/dataMigration';
+
+// Migrate legacy userData (antidetect-app -> Facet) once with SHA-256 verification before opening DB/browsers
+try {
+  const legacyUserData = path.join(app.getPath('appData'), 'antidetect-app');
+  const currentUserData = app.getPath('userData');
+  migrateLegacyUserDataIfNeeded(legacyUserData, currentUserData);
+} catch {
+  // Never block startup if legacy migration encounters a transient filesystem error
+}
 
 // Set PLAYWRIGHT_BROWSERS_PATH once at startup (outside app.asar) before Playwright initializes
 if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
