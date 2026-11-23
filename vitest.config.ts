@@ -19,6 +19,10 @@ export default defineConfig({
       reporter: ['text', 'html', 'json-summary'],
       include: ['electron/services/**/*.ts'],
       exclude: ['electron/services/drivers/**'],
+      // Coverage floor to prevent regressions (baseline 46.12%; PHA 2 ramps to 50 -> 60 -> 70)
+      thresholds: {
+        statements: 46.12,
+      },
     },
   },
 });

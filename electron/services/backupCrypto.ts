@@ -59,6 +59,8 @@ export function stripProxyCredentialsFromBackup(payload: BackupPayload): BackupP
       ...p,
       username: '',
       password: '',
+      ...('privateKey' in p ? { privateKey: '' } : {}),
+      ...('passphrase' in p ? { passphrase: '' } : {}),
     })),
     profiles: payload.profiles.map((prof) => ({
       ...prof,
