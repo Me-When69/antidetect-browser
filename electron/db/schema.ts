@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const foldersTable = sqliteTable('folders', {
   id: text('id').primaryKey(),
@@ -56,3 +56,13 @@ export const settingsTable = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
+
+export const profileAccountsTable = sqliteTable(
+  'profile_accounts',
+  {
+    profileId: text('profile_id').notNull(),
+    accountEmail: text('account_email').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.profileId, table.accountEmail] })],
+);

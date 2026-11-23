@@ -486,4 +486,25 @@ export class ProfileLauncher {
       }
     }
   }
+
+  /**
+   * Launch (or reuse) a profile with full proxy/fingerprint/kill-switch isolation
+   * and open Gmail (or a custom URL for tests). NEVER auto-fills credentials.
+   */
+  async openGmailInProfile(
+    profileId: string,
+    options?: LaunchOptions & { url?: string },
+  ): Promise<LaunchResult> {
+    const targetUrl = options?.url ?? 'https://mail.google.com';
+    const launchRes = await this.start(profileId, options);
+    if (!launchRes.running) {
+      return launchRes;
+    }
+    const driver = this.runningDrivers.get(profileId);
+    const inst = driver?.getInstance(profileId);
+    if (inst?.openUrl) {
+      await inst.openUrl(targetUrl);
+    }
+    return launchRes;
+  }
 }

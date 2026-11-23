@@ -504,6 +504,15 @@ export class ChromeDriver implements BrowserDriver {
         }));
       },
       runWarmup: (config) => runContextWarmup(profile.id, context, config),
+      openUrl: async (url: string) => {
+        const existingPages = context.pages();
+        const blankPage = existingPages.find(
+          (p) => !p.isClosed() && (p.url() === 'about:blank' || p.url() === 'chrome://newtab/'),
+        );
+        const page = blankPage ?? (await context.newPage());
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 }).catch(() => {});
+        await page.bringToFront().catch(() => {});
+      },
     };
 
     context.on('close', () => {

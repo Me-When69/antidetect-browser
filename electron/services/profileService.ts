@@ -3,7 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { and, asc, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '../db';
-import { foldersTable, profilesTable, proxiesTable, tagsTable } from '../db/schema';
+import {
+  foldersTable,
+  profileAccountsTable,
+  profilesTable,
+  proxiesTable,
+  tagsTable,
+} from '../db/schema';
 import type {
   BackupPayload,
   BrowserType,
@@ -424,6 +430,8 @@ export class ProfileService {
   }
 
   permanentDelete(id: string): void {
+    // Only remove profile-account links; NEVER delete accounts inside vault.db.
+    this.db.delete(profileAccountsTable).where(eq(profileAccountsTable.profileId, id)).run();
     this.db.delete(profilesTable).where(eq(profilesTable.id, id)).run();
     const dir = this.getProfileDir(id);
     if (fs.existsSync(dir)) {
@@ -694,7 +702,91 @@ export class ProfileService {
     this.db.delete(tagsTable).where(eq(tagsTable.id, id)).run();
   }
 
-  // Backup / Restore
+  // ---- Profile <-> Vault Account Links (never stores secrets) ----
+
+  linkAccount(profileId: string, email: string): void {
+    const clean = email.trim().toLowerCase();
+    if (!clean) throw new Error('Email không hợp lệ');
+    const profile = this.getById(profileId);
+    if (!profile) throw new Error(`Không tìm thấy hồ sơ: ${profileId}`);
+    this.db
+      .insert(profileAccountsTable)
+      .values({
+        profileId,
+        accountEmail: clean,
+        createdAt: new Date().toISOString(),
+      })
+      .onConflictDoNothing()
+      .run();
+  }
+
+  unlinkAccount(profileId: string, email: string): void {
+    const clean = email.trim().toLowerCase();
+    this.db
+      .delete(profileAccountsTable)
+      .where(
+        and(
+          eq(profileAccountsTable.profileId, profileId),
+          eq(profileAccountsTable.accountEmail, clean),
+        ),
+      )
+      .run();
+  }
+
+  unlinkAccountEverywhere(email: string): void {
+    const clean = email.trim().toLowerCase();
+    this.db
+      .delete(profileAccountsTable)
+      .where(eq(profileAccountsTable.accountEmail, clean))
+      .run();
+  }
+
+  listLinkedAccounts(profileId: string): string[] {
+    const rows = this.db
+      .select({ email: profileAccountsTable.accountEmail })
+      .from(profileAccountsTable)
+      .where(eq(profileAccountsTable.profileId, profileId))
+      .orderBy(asc(profileAccountsTable.accountEmail))
+      .all();
+    return rows.map((r) => r.email);
+  }
+
+  listAllProfileAccountLinks(): Record<string, string[]> {
+    const rows = this.db
+      .select({
+        profileId: profileAccountsTable.profileId,
+        email: profileAccountsTable.accountEmail,
+      })
+      .from(profileAccountsTable)
+      .orderBy(asc(profileAccountsTable.accountEmail))
+      .all();
+    const map: Record<string, string[]> = {};
+    for (const r of rows) {
+      const list = map[r.profileId] ?? [];
+      list.push(r.email);
+      map[r.profileId] = list;
+    }
+    return map;
+  }
+
+  listProfilesForAccount(email: string): { id: string; name: string }[] {
+    const clean = email.trim().toLowerCase();
+    const links = this.db
+      .select({ profileId: profileAccountsTable.profileId })
+      .from(profileAccountsTable)
+      .where(eq(profileAccountsTable.accountEmail, clean))
+      .all();
+    if (links.length === 0) return [];
+    const ids = links.map((l) => l.profileId);
+    const profiles = this.db
+      .select({ id: profilesTable.id, name: profilesTable.name })
+      .from(profilesTable)
+      .where(and(inArray(profilesTable.id, ids), isNull(profilesTable.deletedAt)))
+      .all();
+    return profiles;
+  }
+
+  // Backup / Restore (vault.db secrets are NEVER included in profile backup by default)
   exportBackup(): BackupPayload {
     const rawProxies = this.db.select().from(proxiesTable).all();
     const proxies: SavedProxy[] = rawProxies.map((p) => ({

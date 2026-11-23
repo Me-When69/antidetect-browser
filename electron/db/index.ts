@@ -83,6 +83,13 @@ export function createDatabase(dbPath: string): DbContext {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS profile_accounts (
+      profile_id TEXT NOT NULL,
+      account_email TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (profile_id, account_email)
+    );
   `);
 
   // Safe migration for existing databases created before Trash support
@@ -116,6 +123,8 @@ export function createDatabase(dbPath: string): DbContext {
     CREATE INDEX IF NOT EXISTS idx_profiles_active_status ON profiles (deleted_at, status);
     CREATE INDEX IF NOT EXISTS idx_profiles_active_name ON profiles (deleted_at, name);
     CREATE INDEX IF NOT EXISTS idx_profiles_active_lastrun ON profiles (deleted_at, last_run_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_profile_accounts_profile ON profile_accounts (profile_id);
+    CREATE INDEX IF NOT EXISTS idx_profile_accounts_email ON profile_accounts (account_email);
   `);
 
   const db = drizzle(sqlite, { schema });

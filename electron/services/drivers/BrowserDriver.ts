@@ -27,6 +27,7 @@ export interface DriverInstance {
   importCookies: (cookies: CookieItem[]) => Promise<number>;
   exportCookies: () => Promise<CookieItem[]>;
   runWarmup: (config: WarmupConfig) => Promise<WarmupResult>;
+  openUrl?: (url: string) => Promise<void>;
 }
 
 export interface BrowserDriver {
