@@ -6,6 +6,7 @@ import {
   MIGRATION_MARKER_FILE,
   migrateLegacyUserDataIfNeeded,
 } from '../../electron/services/dataMigration';
+import { SecretService, type SafeStorageLike } from '../../electron/services/secretService';
 import { VaultService } from '../../electron/services/vault/vaultService';
 
 describe('PHA 0b: Safe Legacy UserData Migration (antidetect-app -> Facet)', () => {
@@ -85,5 +86,36 @@ describe('PHA 0b: Safe Legacy UserData Migration (antidetect-app -> Facet)', () 
     );
     expect(fs.readFileSync(path.join(targetDir, 'bridge-pids.json'), 'utf8')).toBe('[1234]');
     expect(fs.existsSync(path.join(targetDir, MIGRATION_MARKER_FILE))).toBe(true);
+  });
+
+  it('SecretService falls back to legacy safeStorage key and re-encrypts with current key', () => {
+    const legacyStorage: SafeStorageLike = {
+      isEncryptionAvailable: () => true,
+      encryptString: (plain) => Buffer.from(`legacy:${plain}`, 'utf8'),
+      decryptString: (buf) => {
+        const s = buf.toString('utf8');
+        if (!s.startsWith('legacy:')) throw new Error('wrong key');
+        return s.slice('legacy:'.length);
+      },
+    };
+    const newStorage: SafeStorageLike = {
+      isEncryptionAvailable: () => true,
+      encryptString: (plain) => Buffer.from(`facet:${plain}`, 'utf8'),
+      decryptString: (buf) => {
+        const s = buf.toString('utf8');
+        if (!s.startsWith('facet:')) throw new Error('wrong key');
+        return s.slice('facet:'.length);
+      },
+    };
+
+    const oldService = new SecretService(legacyStorage);
+    const oldCipher = oldService.encrypt('ProxyPass!999');
+
+    const migratedService = new SecretService(newStorage, legacyStorage);
+    expect(migratedService.decrypt(oldCipher)).toBe('ProxyPass!999');
+
+    const reencrypted = migratedService.reencryptIfLegacy(oldCipher);
+    expect(reencrypted).not.toBe(oldCipher);
+    expect(new SecretService(newStorage).decrypt(reencrypted)).toBe('ProxyPass!999');
   });
 });
