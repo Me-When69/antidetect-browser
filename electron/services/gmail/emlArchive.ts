@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import zlib from 'node:zlib';
 
 export const FACET_EML_MAGIC = 'FACET_EML' as const;
@@ -149,4 +151,51 @@ export function extractEncryptedEmlArchive(
   } finally {
     key.fill(0);
   }
+}
+
+export interface ExtractEmlArchiveResult {
+  extractedCount: number;
+  outputDir: string;
+  files: string[];
+}
+
+/**
+ * Decrypt and extract a `.facet-eml` archive into `outputDir`, sanitizing every entry
+ * filename with `path.basename` and verifying path containment to prevent traversal.
+ */
+export function extractEncryptedEmlArchiveToDir(
+  archivePath: string,
+  outputDir: string,
+  password: string,
+): ExtractEmlArchiveResult {
+  if (!fs.existsSync(archivePath)) {
+    throw new Error('Không tìm thấy tệp sao lưu .facet-eml đã chọn');
+  }
+  const raw = fs.readFileSync(archivePath);
+  const entries = extractEncryptedEmlArchive(raw, password);
+
+  const resolvedOut = path.resolve(outputDir);
+  if (!fs.existsSync(resolvedOut)) {
+    fs.mkdirSync(resolvedOut, { recursive: true });
+  }
+
+  const files: string[] = [];
+  for (let i = 0; i < entries.length; i += 1) {
+    const entry = entries[i]!;
+    const safeName = path.basename(entry.name.replace(/\\/g, '/')).replace(/[<>:"|?*]/g, '_');
+    const finalName =
+      safeName && safeName !== '.' && safeName !== '..' ? safeName : `msg_${i + 1}.eml`;
+    const targetPath = path.resolve(resolvedOut, finalName);
+    if (!targetPath.startsWith(resolvedOut + path.sep)) {
+      throw new Error(`Tên tệp không hợp lệ trong bản sao lưu: ${entry.name}`);
+    }
+    fs.writeFileSync(targetPath, entry.content);
+    files.push(finalName);
+  }
+
+  return {
+    extractedCount: files.length,
+    outputDir: resolvedOut,
+    files,
+  };
 }

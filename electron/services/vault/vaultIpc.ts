@@ -11,6 +11,7 @@ import { auditVaultAccounts } from './securityAudit';
 import { importFromLegacyPythonVault } from './legacyImport';
 import type { GmailOAuthService } from '../gmail/oauthService';
 import type { GmailService } from '../gmail/gmailService';
+import { extractEncryptedEmlArchiveToDir } from '../gmail/emlArchive';
 import type { ProfileService } from '../profileService';
 import type { ProfileLauncher } from '../launcher';
 import type { AppLogger } from '../logger';
@@ -397,6 +398,33 @@ export function registerVaultAndGmailIpc(deps: VaultIpcDeps): void {
     activeBackupAbort?.abort();
     activeBackupAbort = null;
   });
+
+  handle(IPC_CHANNELS.GMAIL_SELECT_ARCHIVE_FILE, async () => {
+    const win = getMainWindow();
+    const dialogOpts: Electron.OpenDialogOptions = {
+      title: 'Chọn tệp sao lưu thư (.facet-eml)',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Facet Encrypted Email Archive', extensions: ['facet-eml', 'zip'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    };
+    const res = win
+      ? await dialog.showOpenDialog(win, dialogOpts)
+      : await dialog.showOpenDialog(dialogOpts);
+    if (res.canceled || res.filePaths.length === 0) return null;
+    return res.filePaths[0]!;
+  });
+
+  handle(
+    IPC_CHANNELS.GMAIL_EXTRACT_ARCHIVE,
+    (_e, rawArchivePath: unknown, rawOutputDir: unknown, rawPassword: unknown) => {
+      const archivePath = nonEmptyString.parse(rawArchivePath);
+      const outputDir = nonEmptyString.parse(rawOutputDir);
+      const password = z.string().min(1).max(256).parse(rawPassword);
+      return extractEncryptedEmlArchiveToDir(archivePath, outputDir, password);
+    },
+  );
 
   // ---- Profile <-> Account Links & Open Gmail in Profile ----
   handle(IPC_CHANNELS.PROFILE_ACCOUNTS_LINK, (_e, rawProfileId: unknown, rawEmail: unknown) => {

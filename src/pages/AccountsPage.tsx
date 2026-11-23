@@ -122,6 +122,10 @@ export function AccountsPage(): React.JSX.Element {
   const [backupZipPw, setBackupZipPw] = useState('');
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupProgress, setBackupProgress] = useState<GmailBackupProgress | null>(null);
+  const [extractFile, setExtractFile] = useState('');
+  const [extractDir, setExtractDir] = useState('');
+  const [extractPw, setExtractPw] = useState('');
+  const [extractBusy, setExtractBusy] = useState(false);
 
   const revealTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -630,6 +634,36 @@ export function AccountsPage(): React.JSX.Element {
       showToast(err instanceof Error ? err.message : 'Lỗi sao lưu thư', 'error');
     } finally {
       setBackupBusy(false);
+    }
+  };
+
+  const handleExtractArchive = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    if (!extractFile || !extractDir || !extractPw) {
+      showToast(
+        isEn
+          ? 'Choose .facet-eml file, destination folder, and password'
+          : 'Vui lòng chọn tệp .facet-eml, thư mục đích và nhập mật khẩu',
+        'error',
+      );
+      return;
+    }
+    setExtractBusy(true);
+    try {
+      const res = await window.electronAPI?.extractGmailArchive(extractFile, extractDir, extractPw);
+      if (res) {
+        setExtractPw('');
+        showToast(
+          isEn
+            ? `Extracted ${res.extractedCount} .eml files to ${res.outputDir}`
+            : `Đã giải nén ${res.extractedCount} thư .eml vào ${res.outputDir}`,
+          'success',
+        );
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Lỗi giải nén tệp sao lưu', 'error');
+    } finally {
+      setExtractBusy(false);
     }
   };
 
@@ -1388,15 +1422,15 @@ export function AccountsPage(): React.JSX.Element {
               />
               <span>
                 {isEn
-                  ? 'Pack into AES-256 encrypted .zip (Recommended)'
-                  : 'Nén thành file .zip mã hóa AES-256 (Khuyến nghị)'}
+                  ? 'Pack into AES-256-GCM encrypted .facet-eml archive (Recommended)'
+                  : 'Nén thành tệp .facet-eml mã hóa AES-256-GCM (Khuyến nghị)'}
               </span>
             </label>
 
             {backupEncryptZip ? (
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  {isEn ? 'ZIP encryption password' : 'Mật khẩu bảo vệ file ZIP'}
+                  {isEn ? 'Archive encryption password' : 'Mật khẩu bảo vệ tệp .facet-eml'}
                 </label>
                 <Input
                   type="password"
@@ -1449,6 +1483,86 @@ export function AccountsPage(): React.JSX.Element {
               </Button>
             )}
           </div>
+        </form>
+      )}
+
+      {activeTab === 'backup' && (
+        <form
+          onSubmit={(e) => void handleExtractArchive(e)}
+          className="mt-4 max-w-2xl space-y-4 rounded-xl border border-border bg-card p-5"
+        >
+          <div>
+            <h3 className="text-sm font-semibold">
+              {isEn ? 'Extract Email Backup (.facet-eml)' : 'Giải nén sao lưu thư (.facet-eml)'}
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {isEn
+                ? 'Decrypt a .facet-eml archive into standard .eml files. Legacy v0.2.0 encrypted .zip archives can be extracted with 7-Zip or WinRAR.'
+                : 'Giải mã tệp .facet-eml ra thư mục chứa các tệp .eml chuẩn. File .zip mã hóa cũ từ v0.2.0 có thể giải nén bằng 7-Zip hoặc WinRAR.'}
+            </p>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                {isEn ? 'Encrypted archive (.facet-eml)' : 'Tệp sao lưu mã hóa (.facet-eml)'}
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={extractFile}
+                  readOnly
+                  placeholder={isEn ? 'Choose .facet-eml file...' : 'Chọn tệp .facet-eml...'}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    const p = await window.electronAPI?.selectGmailArchiveFile();
+                    if (p) setExtractFile(p);
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                {isEn ? 'Output folder for .eml files' : 'Thư mục đích chứa thư .eml'}
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={extractDir}
+                  readOnly
+                  placeholder={isEn ? 'Choose destination folder...' : 'Chọn thư mục giải nén...'}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    const d = await window.electronAPI?.selectGmailBackupFolder();
+                    if (d) setExtractDir(d);
+                  }}
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                {isEn ? 'Decryption password' : 'Mật khẩu giải mã'}
+              </label>
+              <Input
+                type="password"
+                value={extractPw}
+                onChange={(e) => setExtractPw(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          </div>
+          <Button type="submit" variant="outline" disabled={extractBusy} className="gap-1.5">
+            <FolderOpen className="h-4 w-4" />
+            <span>{isEn ? 'Extract .eml files' : 'Giải nén sao lưu thư'}</span>
+          </Button>
         </form>
       )}
 

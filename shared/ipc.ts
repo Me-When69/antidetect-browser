@@ -171,6 +171,8 @@ export const IPC_CHANNELS = {
   GMAIL_BACKUP_EMAILS: 'gmail:backupEmails',
   GMAIL_CANCEL_BACKUP: 'gmail:cancelBackup',
   GMAIL_BACKUP_PROGRESS: 'gmail:backupProgress',
+  GMAIL_SELECT_ARCHIVE_FILE: 'gmail:selectArchiveFile',
+  GMAIL_EXTRACT_ARCHIVE: 'gmail:extractArchive',
 
   PROFILE_ACCOUNTS_LINK: 'profileAccounts:link',
   PROFILE_ACCOUNTS_UNLINK: 'profileAccounts:unlink',
@@ -381,6 +383,12 @@ export interface ElectronApi {
   backupGmailEmails: (options: GmailBackupOptions) => Promise<GmailBackupProgress>;
   cancelGmailBackup: () => Promise<void>;
   onGmailBackupProgress: (listener: (progress: GmailBackupProgress) => void) => () => void;
+  selectGmailArchiveFile: () => Promise<string | null>;
+  extractGmailArchive: (
+    archivePath: string,
+    outputDir: string,
+    password: string,
+  ) => Promise<{ extractedCount: number; outputDir: string; files: string[] }>;
 
   // Profile <-> Account Links
   linkAccountToProfile: (profileId: string, email: string) => Promise<void>;

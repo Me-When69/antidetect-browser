@@ -195,6 +195,9 @@ const electronApi: ElectronApi = {
       ipcRenderer.removeListener(IPC_CHANNELS.GMAIL_BACKUP_PROGRESS, handler);
     };
   },
+  selectGmailArchiveFile: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_SELECT_ARCHIVE_FILE),
+  extractGmailArchive: (archivePath, outputDir, password) =>
+    ipcRenderer.invoke(IPC_CHANNELS.GMAIL_EXTRACT_ARCHIVE, archivePath, outputDir, password),
 
   linkAccountToProfile: (profileId, email) =>
     ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_LINK, profileId, email),
