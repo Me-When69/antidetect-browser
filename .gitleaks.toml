@@ -1,0 +1,32 @@
+title = "Facet Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "facet-google-oauth-secret"
+description = "Google OAuth Client Secret"
+regex = '''GOCSPX-[0-9A-Za-z_-]{20,}'''
+
+[[rules]]
+id = "facet-google-access-token"
+description = "Google OAuth Access Token"
+regex = '''ya29\.[0-9A-Za-z_-]{20,}'''
+
+[[rules]]
+id = "facet-totp-uri"
+description = "TOTP otpauth URI with secret"
+regex = '''otpauth://totp/[^\s"'`]*secret=[A-Z2-7]{16,}'''
+
+[allowlist]
+description = "Allow synthetic test fixtures and RFC 3849 documentation examples"
+paths = [
+  '''^tests/''',
+  '''^docs/''',
+  '''^package-lock\.json$''',
+]
+regexes = [
+  '''GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ''',
+  '''JBSWY3DPEHPK3PXP''',
+  '''2001:db8:''',
+]

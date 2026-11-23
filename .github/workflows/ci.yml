@@ -24,8 +24,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check personal paths & secrets
+        run: npm run check:paths && npm run check:secrets
+
       - name: Validate device catalog
         run: npm run validate:devices
+
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Typecheck
         run: npm run typecheck
