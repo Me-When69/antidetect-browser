@@ -274,9 +274,14 @@ export interface ElectronApi {
   getLocalApiStatus: () => Promise<LocalApiStatus>;
 
   // Backup & Logs
-  exportBackup: () => Promise<BackupPayload>;
+  exportBackup: (options?: {
+    encrypt?: boolean;
+    password?: string;
+    excludeProxyPasswords?: boolean;
+  }) => Promise<BackupPayload | Record<string, unknown>>;
   importBackup: (
-    payload: BackupPayload,
+    payload: BackupPayload | Record<string, unknown>,
+    password?: string,
   ) => Promise<{ profiles: number; folders: number; proxies: number }>;
   exportLogs: () => Promise<string>;
 

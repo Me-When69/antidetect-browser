@@ -405,9 +405,13 @@ function registerIpcHandlers(): void {
   safeHandle(IPC_CHANNELS.API_STATUS, () => apiServer.getStatus());
 
   // Backup & Logs
-  safeHandle(IPC_CHANNELS.BACKUP_EXPORT, () => profileService.exportBackup());
-  safeHandle(IPC_CHANNELS.BACKUP_IMPORT, (_e, payload: BackupPayload) =>
-    profileService.importBackup(payload),
+  safeHandle(
+    IPC_CHANNELS.BACKUP_EXPORT,
+    (_e, options?: { encrypt?: boolean; password?: string; excludeProxyPasswords?: boolean }) =>
+      profileService.exportBackup(options),
+  );
+  safeHandle(IPC_CHANNELS.BACKUP_IMPORT, (_e, payload: BackupPayload, password?: string) =>
+    profileService.importBackup(payload, password),
   );
   safeHandle(IPC_CHANNELS.LOGS_EXPORT, () => logger.exportLogs());
 

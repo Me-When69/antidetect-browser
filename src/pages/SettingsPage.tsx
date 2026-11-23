@@ -226,22 +226,51 @@ export function SettingsPage(): React.JSX.Element {
     setTimeout(() => setCopiedKey(false), 1800);
   };
 
+  const [backupEncrypt, setBackupEncrypt] = useState(true);
+  const [backupPassword, setBackupPassword] = useState('');
+  const [backupExcludeProxyPw, setBackupExcludeProxyPw] = useState(false);
+  const [importPassword, setImportPassword] = useState('');
+
   const handleExportBackup = async (): Promise<void> => {
     if (!window.electronAPI) return;
-    const payload = await window.electronAPI.exportBackup();
-    downloadTextFile(
-      `antidetect-backup-${new Date().toISOString().slice(0, 10)}.json`,
-      JSON.stringify(payload, null, 2),
-    );
-    showToast('Đã xuất file sao lưu JSON', 'success');
+    if (backupEncrypt && backupPassword.length < 6) {
+      showToast('Vui lòng nhập mật khẩu mã hóa sao lưu (tối thiểu 6 ký tự)', 'error');
+      return;
+    }
+    try {
+      const payload = await window.electronAPI.exportBackup({
+        encrypt: backupEncrypt,
+        password: backupEncrypt ? backupPassword : undefined,
+        excludeProxyPasswords: backupExcludeProxyPw,
+      });
+      downloadTextFile(
+        `facet-backup-${new Date().toISOString().slice(0, 10)}${backupEncrypt ? '.enc.json' : '.json'}`,
+        JSON.stringify(payload, null, 2),
+      );
+      setBackupPassword('');
+      showToast(
+        backupEncrypt
+          ? 'Đã xuất file sao lưu mã hóa AES-256-GCM'
+          : 'Đã xuất file sao lưu JSON (không mã hóa)',
+        'success',
+      );
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Lỗi xuất sao lưu', 'error');
+    }
   };
 
   const handleImportBackup = async (file: File | undefined): Promise<void> => {
     if (!file || !window.electronAPI) return;
     try {
       const text = await file.text();
-      const payload = JSON.parse(text) as BackupPayload;
-      const res = await window.electronAPI.importBackup(payload);
+      const payload = JSON.parse(text) as BackupPayload & { magic?: string };
+      let pw = importPassword;
+      if (payload.magic === 'FACET_BKP' && !pw) {
+        pw = window.prompt('File sao lưu đã được mã hóa. Nhập mật khẩu giải mã:') ?? '';
+        if (!pw) return;
+      }
+      const res = await window.electronAPI.importBackup(payload, pw || undefined);
+      setImportPassword('');
       await Promise.all([refreshProfiles(), refreshFolders(), refreshProxies()]);
       showToast(
         `Đã khôi phục ${res.profiles} hồ sơ, ${res.folders} thư mục, ${res.proxies} proxy`,
@@ -660,6 +689,38 @@ curl -X POST -H "x-api-key: ${settings.localApiKey}" ${baseUrl}/profiles/<ID>/st
       {/* Backup & Support */}
       <Card className="space-y-4 p-5">
         <h3 className="text-sm font-semibold">{dict.settings.backupTitle}</h3>
+        <div className="space-y-2.5 rounded-lg border border-border/70 bg-secondary/20 p-3 text-xs">
+          <label className="flex items-center gap-2 font-medium text-foreground">
+            <input
+              type="checkbox"
+              checked={backupEncrypt}
+              onChange={(e) => setBackupEncrypt(e.target.checked)}
+            />
+            <span>Mã hóa file sao lưu bằng AES-256-GCM (Mặc định & Khuyến nghị)</span>
+          </label>
+          {backupEncrypt ? (
+            <Input
+              type="password"
+              value={backupPassword}
+              onChange={(e) => setBackupPassword(e.target.value)}
+              placeholder="Nhập mật khẩu mã hóa file sao lưu (tối thiểu 6 ký tự)"
+              className="max-w-md"
+            />
+          ) : (
+            <p className="text-amber-400">
+              Cảnh báo: File sao lưu JSON không mã hóa sẽ lưu thông tin cấu hình ở dạng chữ rõ.
+            </p>
+          )}
+          <label className="flex items-center gap-2 text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={backupExcludeProxyPw}
+              onChange={(e) => setBackupExcludeProxyPw(e.target.checked)}
+            />
+            <span>Xuất không kèm mật khẩu proxy (che tài khoản & mật khẩu proxy)</span>
+          </label>
+        </div>
+
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="outline" onClick={() => void handleExportBackup()}>
             <Download className="h-4 w-4" />

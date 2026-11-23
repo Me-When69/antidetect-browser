@@ -75,8 +75,9 @@ const electronApi: ElectronApi = {
   regenerateApiKey: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_REGEN_API_KEY),
   getLocalApiStatus: () => ipcRenderer.invoke(IPC_CHANNELS.API_STATUS),
 
-  exportBackup: () => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT),
-  importBackup: (payload) => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_IMPORT, payload),
+  exportBackup: (options) => ipcRenderer.invoke(IPC_CHANNELS.BACKUP_EXPORT, options),
+  importBackup: (payload, password) =>
+    ipcRenderer.invoke(IPC_CHANNELS.BACKUP_IMPORT, payload, password),
   exportLogs: () => ipcRenderer.invoke(IPC_CHANNELS.LOGS_EXPORT),
 
   checkBrowserExecutable: () => ipcRenderer.invoke(IPC_CHANNELS.BROWSER_CHECK),

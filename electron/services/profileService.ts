@@ -45,6 +45,14 @@ import { generateConsistentIdentity } from './fingerprint/generator';
 import { applyDevice, getDeviceById, normalizeBrowserVersion } from './deviceCatalog';
 import { PresetService } from './presetService';
 import type { SecretService } from './secretService';
+import {
+  decryptBackupEnvelope,
+  encryptBackupPayload,
+  isEncryptedBackupEnvelope,
+  stripProxyCredentialsFromBackup,
+  type EncryptedBackupEnvelope,
+  type ExportBackupOptions,
+} from './backupCrypto';
 
 type ProfileRow = typeof profilesTable.$inferSelect;
 
@@ -819,7 +827,10 @@ export class ProfileService {
   }
 
   // Backup / Restore (vault.db secrets are NEVER included in profile backup by default)
-  exportBackup(): BackupPayload {
+  exportBackup(options?: Omit<ExportBackupOptions, 'encrypt'> & { encrypt?: false }): BackupPayload;
+  exportBackup(options: ExportBackupOptions & { encrypt: true }): EncryptedBackupEnvelope;
+  exportBackup(options?: ExportBackupOptions): BackupPayload | EncryptedBackupEnvelope;
+  exportBackup(options?: ExportBackupOptions): BackupPayload | EncryptedBackupEnvelope {
     const rawProxies = this.db.select().from(proxiesTable).all();
     const proxies: SavedProxy[] = rawProxies.map((p) => ({
       id: p.id,
@@ -833,7 +844,7 @@ export class ProfileService {
       createdAt: p.createdAt,
     }));
 
-    return {
+    let payload: BackupPayload = {
       version: 1,
       exportedAt: new Date().toISOString(),
       folders: this.listFolders(),
@@ -841,9 +852,26 @@ export class ProfileService {
       proxies,
       profiles: this.list(),
     };
+
+    if (options?.excludeProxyPasswords) {
+      payload = stripProxyCredentialsFromBackup(payload);
+    }
+
+    if (options?.encrypt) {
+      return encryptBackupPayload(payload, options.password ?? '');
+    }
+
+    return payload;
   }
 
-  importBackup(payload: BackupPayload): { profiles: number; folders: number; proxies: number } {
+  importBackup(
+    rawPayload: BackupPayload | EncryptedBackupEnvelope,
+    password?: string,
+  ): { profiles: number; folders: number; proxies: number } {
+    const payload: BackupPayload = isEncryptedBackupEnvelope(rawPayload)
+      ? decryptBackupEnvelope(rawPayload, password ?? '')
+      : rawPayload;
+
     const backupSchema = z.object({
       version: z.number().int().positive(),
       exportedAt: z.string().min(1),
