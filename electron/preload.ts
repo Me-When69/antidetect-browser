@@ -6,6 +6,7 @@ import type {
   ProfileRunStatusEvent,
   ProxyCoreDownloadProgress,
 } from '@shared/types';
+import type { GmailBackupProgress } from '@shared/vaultTypes';
 
 const electronApi: ElectronApi = {
   getAppInfo: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_INFO),
@@ -134,6 +135,81 @@ const electronApi: ElectronApi = {
   listPresets: () => ipcRenderer.invoke(IPC_CHANNELS.PRESETS_LIST),
   saveCustomPreset: (input) => ipcRenderer.invoke(IPC_CHANNELS.PRESETS_SAVE, input),
   deleteCustomPreset: (id) => ipcRenderer.invoke(IPC_CHANNELS.PRESETS_DELETE, id),
+
+  // Vault & Gmail Accounts
+  getVaultStatus: () => ipcRenderer.invoke(IPC_CHANNELS.VAULT_STATUS),
+  unlockVault: (masterPassword) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_UNLOCK, masterPassword),
+  lockVault: () => ipcRenderer.invoke(IPC_CHANNELS.VAULT_LOCK),
+  onVaultLocked: (listener) => {
+    const handler = (): void => {
+      listener();
+    };
+    ipcRenderer.on(IPC_CHANNELS.VAULT_LOCKED_EVENT, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.VAULT_LOCKED_EVENT, handler);
+    };
+  },
+  changeVaultMasterPassword: (oldPassword, newPassword) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_CHANGE_MASTER_PASSWORD, oldPassword, newPassword),
+  setVaultSettings: (settings) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_SET_SETTINGS, settings),
+  listVaultAccounts: () => ipcRenderer.invoke(IPC_CHANNELS.VAULT_LIST_ACCOUNTS),
+  addVaultAccount: (input) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_ADD_ACCOUNT, input),
+  updateVaultAccount: (input) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_UPDATE_ACCOUNT, input),
+  deleteVaultAccount: (email) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_DELETE_ACCOUNT, email),
+  markAccountPasswordChanged: (email) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_MARK_PASSWORD_CHANGED, email),
+  generateStrongPassword: (length) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_GENERATE_PASSWORD, length),
+  copyAccountPassword: (email) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_COPY_PASSWORD, email),
+  revealAccountPasswordTemp: (email, masterPassword) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_REVEAL_PASSWORD_TEMP, email, masterPassword),
+  getAccountNonCredDetails: (email) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_GET_ACCOUNT_NON_CRED_DETAILS, email),
+  getAccountTotpCode: (email) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_GET_TOTP_CODE, email),
+  copyAccountTotp: (email) => ipcRenderer.invoke(IPC_CHANNELS.VAULT_COPY_TOTP, email),
+  auditVaultSecurity: () => ipcRenderer.invoke(IPC_CHANNELS.VAULT_AUDIT_SECURITY),
+  importGoogleCredentialsFile: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_IMPORT_GOOGLE_CREDENTIALS),
+  importLegacyVaultDb: (legacyPassword, duplicateMode) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VAULT_IMPORT_LEGACY_DB, legacyPassword, duplicateMode),
+
+  authorizeGmailAccount: (email, allowModify) =>
+    ipcRenderer.invoke(IPC_CHANNELS.GMAIL_AUTHORIZE, email, allowModify),
+  searchGmailMessages: (emails, query, maxPerAccount) =>
+    ipcRenderer.invoke(IPC_CHANNELS.GMAIL_SEARCH_MESSAGES, emails, query, maxPerAccount),
+  cancelGmailSearch: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_CANCEL_SEARCH),
+  batchModifyGmailMessages: (email, ids, addLabelIds, removeLabelIds) =>
+    ipcRenderer.invoke(
+      IPC_CHANNELS.GMAIL_BATCH_MODIFY,
+      email,
+      ids,
+      addLabelIds,
+      removeLabelIds,
+    ),
+  selectGmailBackupFolder: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_SELECT_BACKUP_DIR),
+  backupGmailEmails: (options) => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_BACKUP_EMAILS, options),
+  cancelGmailBackup: () => ipcRenderer.invoke(IPC_CHANNELS.GMAIL_CANCEL_BACKUP),
+  onGmailBackupProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, payload: GmailBackupProgress): void => {
+      listener(payload);
+    };
+    ipcRenderer.on(IPC_CHANNELS.GMAIL_BACKUP_PROGRESS, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.GMAIL_BACKUP_PROGRESS, handler);
+    };
+  },
+
+  linkAccountToProfile: (profileId, email) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_LINK, profileId, email),
+  unlinkAccountFromProfile: (profileId, email) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_UNLINK, profileId, email),
+  listLinkedAccountsForProfile: (profileId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_LIST_FOR_PROFILE, profileId),
+  listAllProfileAccountLinks: () => ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_LIST_ALL),
+  listProfilesForAccount: (email) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PROFILE_ACCOUNTS_LIST_PROFILES_FOR_EMAIL, email),
+  openGmailInProfile: (profileId, options) =>
+    ipcRenderer.invoke(IPC_CHANNELS.LAUNCHER_OPEN_GMAIL_IN_PROFILE, profileId, options),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronApi);

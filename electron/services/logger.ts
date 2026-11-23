@@ -6,11 +6,19 @@ export type LogLevel = 'INFO' | 'WARN' | 'ERROR';
 const MAX_LOG_FILE_BYTES = 2 * 1024 * 1024; // 2 MB per file
 const MAX_ROTATED_FILES = 3;
 
-function redactSensitive(input: string): string {
+export function redactSensitive(input: string): string {
   return input
-    .replace(/(bearer\s+)[a-z0-9._-]+/gi, '$1[REDACTED]')
-    .replace(/((?:password|passwd|pwd|token|api[_-]?key|secret)\s*[:=]\s*)[^\s,;]+/gi, '$1[REDACTED]')
-    .replace(/(https?|socks4a?|socks5h?|ssh):\/\/([^:/\s]+):([^@/\s]+)@/gi, '$1://$2:[REDACTED]@');
+    .replace(/(bearer\s+)[a-z0-9._~+/-]+=*/gi, '$1[REDACTED]')
+    .replace(/otpauth:\/\/[^\s"'`]+/gi, 'otpauth://[REDACTED]')
+    .replace(
+      /((?:password|passwd|pwd|refresh_token|access_token|id_token|client_secret|code_verifier|totp(?:_secret)?|token|api[_-]?key|secret)\s*["']?\s*[:=]\s*["']?)[^\s,;}"']+/gi,
+      '$1[REDACTED]',
+    )
+    .replace(/(https?|socks4a?|socks5h?|ssh):\/\/([^:/\s]+):([^@/\s]+)@/gi, '$1://$2:[REDACTED]@')
+    .replace(
+      /\b([a-zA-Z0-9._%+-])([a-zA-Z0-9._%+-]*)(@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/g,
+      '$1***$3',
+    );
 }
 
 export class AppLogger {

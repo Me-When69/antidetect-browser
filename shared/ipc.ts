@@ -37,6 +37,18 @@ import type {
   WarmupConfig,
   WarmupResult,
 } from './types';
+import type {
+  AccountSecurityIssue,
+  GmailBackupOptions,
+  GmailBackupProgress,
+  GmailMessageSummary,
+  LegacyImportResult,
+  TotpCodeResult,
+  VaultAccountCreateInput,
+  VaultAccountSummary,
+  VaultAccountUpdateInput,
+  VaultStatus,
+} from './vaultTypes';
 
 export const IPC_CHANNELS = {
   APP_GET_INFO: 'app:getInfo',
@@ -119,6 +131,44 @@ export const IPC_CHANNELS = {
   PRESETS_LIST: 'presets:list',
   PRESETS_SAVE: 'presets:save',
   PRESETS_DELETE: 'presets:delete',
+
+  // Vault & Gmail Accounts
+  VAULT_STATUS: 'vault:status',
+  VAULT_UNLOCK: 'vault:unlock',
+  VAULT_LOCK: 'vault:lock',
+  VAULT_LOCKED_EVENT: 'vault:lockedEvent',
+  VAULT_CHANGE_MASTER_PASSWORD: 'vault:changeMasterPassword',
+  VAULT_SET_SETTINGS: 'vault:setSettings',
+  VAULT_LIST_ACCOUNTS: 'vault:listAccounts',
+  VAULT_ADD_ACCOUNT: 'vault:addAccount',
+  VAULT_UPDATE_ACCOUNT: 'vault:updateAccount',
+  VAULT_DELETE_ACCOUNT: 'vault:deleteAccount',
+  VAULT_MARK_PASSWORD_CHANGED: 'vault:markPasswordChanged',
+  VAULT_GENERATE_PASSWORD: 'vault:generatePassword',
+  VAULT_COPY_PASSWORD: 'vault:copyPassword',
+  VAULT_REVEAL_PASSWORD_TEMP: 'vault:revealPasswordTemp',
+  VAULT_GET_ACCOUNT_NON_CRED_DETAILS: 'vault:getAccountNonCredDetails',
+  VAULT_GET_TOTP_CODE: 'vault:getTotpCode',
+  VAULT_COPY_TOTP: 'vault:copyTotp',
+  VAULT_AUDIT_SECURITY: 'vault:auditSecurity',
+  VAULT_IMPORT_GOOGLE_CREDENTIALS: 'vault:importGoogleCredentials',
+  VAULT_IMPORT_LEGACY_DB: 'vault:importLegacyDb',
+
+  GMAIL_AUTHORIZE: 'gmail:authorize',
+  GMAIL_SEARCH_MESSAGES: 'gmail:searchMessages',
+  GMAIL_CANCEL_SEARCH: 'gmail:cancelSearch',
+  GMAIL_BATCH_MODIFY: 'gmail:batchModify',
+  GMAIL_SELECT_BACKUP_DIR: 'gmail:selectBackupDir',
+  GMAIL_BACKUP_EMAILS: 'gmail:backupEmails',
+  GMAIL_CANCEL_BACKUP: 'gmail:cancelBackup',
+  GMAIL_BACKUP_PROGRESS: 'gmail:backupProgress',
+
+  PROFILE_ACCOUNTS_LINK: 'profileAccounts:link',
+  PROFILE_ACCOUNTS_UNLINK: 'profileAccounts:unlink',
+  PROFILE_ACCOUNTS_LIST_FOR_PROFILE: 'profileAccounts:listForProfile',
+  PROFILE_ACCOUNTS_LIST_ALL: 'profileAccounts:listAll',
+  PROFILE_ACCOUNTS_LIST_PROFILES_FOR_EMAIL: 'profileAccounts:listProfilesForEmail',
+  LAUNCHER_OPEN_GMAIL_IN_PROFILE: 'launcher:openGmailInProfile',
 } as const;
 
 export interface AppInfo {
@@ -250,6 +300,67 @@ export interface ElectronApi {
   listPresets: () => Promise<ProfilePreset[]>;
   saveCustomPreset: (input: Omit<ProfilePreset, 'id' | 'builtIn'>) => Promise<ProfilePreset>;
   deleteCustomPreset: (id: string) => Promise<boolean>;
+
+  // Vault & Gmail Accounts (Renderer NEVER receives plaintext passwords, TOTP secrets, or OAuth tokens)
+  getVaultStatus: () => Promise<VaultStatus>;
+  unlockVault: (masterPassword: string) => Promise<VaultStatus>;
+  lockVault: () => Promise<VaultStatus>;
+  onVaultLocked: (listener: () => void) => () => void;
+  changeVaultMasterPassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  setVaultSettings: (settings: {
+    autoLockMinutes?: number;
+    lockOnMinimize?: boolean;
+  }) => Promise<VaultStatus>;
+  listVaultAccounts: () => Promise<VaultAccountSummary[]>;
+  addVaultAccount: (input: VaultAccountCreateInput) => Promise<VaultAccountSummary>;
+  updateVaultAccount: (input: VaultAccountUpdateInput) => Promise<VaultAccountSummary>;
+  deleteVaultAccount: (email: string) => Promise<boolean>;
+  markAccountPasswordChanged: (email: string) => Promise<number>;
+  generateStrongPassword: (length?: number) => Promise<string>;
+  copyAccountPassword: (email: string) => Promise<{ clearAfterSec: number }>;
+  revealAccountPasswordTemp: (
+    email: string,
+    masterPassword: string,
+  ) => Promise<{ password: string; ttlSeconds: number }>;
+  getAccountNonCredDetails: (email: string) => Promise<{ recovery: string; notes: string }>;
+  getAccountTotpCode: (email: string) => Promise<TotpCodeResult>;
+  copyAccountTotp: (email: string) => Promise<TotpCodeResult & { clearAfterSec: number }>;
+  auditVaultSecurity: () => Promise<AccountSecurityIssue[]>;
+  importGoogleCredentialsFile: () => Promise<{ ok: boolean; cancelled?: boolean }>;
+  importLegacyVaultDb: (
+    legacyPassword: string,
+    duplicateMode: 'skip' | 'overwrite',
+  ) => Promise<LegacyImportResult & { cancelled?: boolean }>;
+
+  // Gmail API
+  authorizeGmailAccount: (email: string, allowModify: boolean) => Promise<{ scope: string }>;
+  searchGmailMessages: (
+    emails: string[],
+    query: string,
+    maxPerAccount?: number,
+  ) => Promise<GmailMessageSummary[]>;
+  cancelGmailSearch: () => Promise<void>;
+  batchModifyGmailMessages: (
+    email: string,
+    ids: string[],
+    addLabelIds: string[],
+    removeLabelIds: string[],
+  ) => Promise<{ modifiedCount: number }>;
+  selectGmailBackupFolder: () => Promise<string | null>;
+  backupGmailEmails: (options: GmailBackupOptions) => Promise<GmailBackupProgress>;
+  cancelGmailBackup: () => Promise<void>;
+  onGmailBackupProgress: (listener: (progress: GmailBackupProgress) => void) => () => void;
+
+  // Profile <-> Account Links
+  linkAccountToProfile: (profileId: string, email: string) => Promise<void>;
+  unlinkAccountFromProfile: (profileId: string, email: string) => Promise<void>;
+  listLinkedAccountsForProfile: (profileId: string) => Promise<string[]>;
+  listAllProfileAccountLinks: () => Promise<Record<string, string[]>>;
+  listProfilesForAccount: (email: string) => Promise<{ id: string; name: string }[]>;
+  openGmailInProfile: (
+    profileId: string,
+    options?: LaunchOptions & { url?: string },
+  ) => Promise<LaunchResult>;
 }
 
 export type { CookieItem };

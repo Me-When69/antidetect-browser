@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, ipcMain, safeStorage } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, safeStorage, shell } from 'electron';
 
 // Set PLAYWRIGHT_BROWSERS_PATH once at startup (outside app.asar) before Playwright initializes
 if (!process.env['PLAYWRIGHT_BROWSERS_PATH']) {
@@ -53,6 +53,11 @@ import {
 import { ProxyCoreManager } from './services/proxyCoreManager';
 import { ProxyBridgeManager } from './services/proxyBridge';
 import { generateConsistentIdentity, listDevicePresets } from './services/fingerprint/generator';
+import { VaultService } from './services/vault/vaultService';
+import { ClipboardGuard } from './services/vault/clipboardGuard';
+import { GmailOAuthService } from './services/gmail/oauthService';
+import { GmailService } from './services/gmail/gmailService';
+import { registerVaultAndGmailIpc } from './services/vault/vaultIpc';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, '..');
@@ -64,6 +69,9 @@ let mainWindow: BrowserWindow | null = null;
 let dbCtx: DbContext | null = null;
 let launcher: ProfileLauncher | null = null;
 let localApi: LocalApiServer | null = null;
+let vaultServiceRef: VaultService | null = null;
+let clipboardGuardRef: ClipboardGuard | null = null;
+let oauthServiceRef: GmailOAuthService | null = null;
 
 function resolveDataDir(): string {
   if (process.env['ANTIDETECT_DATA_DIR']) {
@@ -442,6 +450,39 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC_CHANNELS.PRESETS_DELETE, (_e, id: string) =>
     presetService.deleteCustomPreset(id),
   );
+
+  // Encrypted Vault & Gmail Accounts
+  const vaultDbPath = path.join(app.getPath('userData'), 'vault.db');
+  const vaultService = new VaultService(vaultDbPath);
+  const clipboardGuard = new ClipboardGuard({
+    readText: () => clipboard.readText(),
+    writeText: (text: string) => clipboard.writeText(text),
+  });
+  const oauthService = new GmailOAuthService(vaultService, {
+    openExternal: (url) => shell.openExternal(url),
+  });
+  const gmailService = new GmailService(vaultService, oauthService);
+
+  vaultServiceRef = vaultService;
+  clipboardGuardRef = clipboardGuard;
+  oauthServiceRef = oauthService;
+
+  vaultService.onLock(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_CHANNELS.VAULT_LOCKED_EVENT);
+    }
+  });
+
+  registerVaultAndGmailIpc({
+    getMainWindow: () => mainWindow,
+    vaultService,
+    clipboardGuard,
+    oauthService,
+    gmailService,
+    profileService,
+    profileLauncher,
+    logger,
+  });
 }
 
 function createWindow(): void {
@@ -475,6 +516,12 @@ function createWindow(): void {
     void mainWindow.loadFile(path.join(RENDERER_DIST, 'index.html'));
   }
 
+  mainWindow.on('minimize', () => {
+    if (vaultServiceRef?.getLockOnMinimize() && vaultServiceRef.isUnlocked()) {
+      vaultServiceRef.lock();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -488,6 +535,15 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  if (clipboardGuardRef) {
+    clipboardGuardRef.dispose();
+  }
+  if (oauthServiceRef) {
+    oauthServiceRef.dispose();
+  }
+  if (vaultServiceRef) {
+    vaultServiceRef.close();
+  }
   if (launcher) {
     void launcher.stopAll();
   }

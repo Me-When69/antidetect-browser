@@ -21,6 +21,10 @@ Facet is licensed under the **Apache License 2.0**. Below are the licenses of di
 | `https-proxy-agent`, `socks-proxy-agent`, `socks`, `proxy-chain` | MIT / Apache-2.0 | Local proxy bridge & checks |
 | `ssh2` | MIT | SSH SOCKS5 tunnel |
 | `tz-lookup` | MIT | Offline coordinate-to-timezone lookup |
+| `otplib` | MIT | RFC 6238 TOTP 2FA code generation |
+| `googleapis`, `google-auth-library` | Apache-2.0 | Official Gmail API & OAuth2 PKCE client |
+| `fernet` | MIT | Read-only importer for legacy Python Fernet vaults |
+| `archiver`, `archiver-zip-encrypted` | MIT | AES-256 encrypted `.zip` email backup |
 
 ## Optional External Binaries (NOT Bundled — Downloaded On-Demand by User)
 
