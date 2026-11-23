@@ -35,7 +35,7 @@
     "@hookform/resolvers": "^7.0.8",
     "@puppeteer/browsers": "^3.2.7",
     "@tanstack/react-virtual": "^3.14.28",
-    "archiver": "^8.0.0",
+    "archiver": "^7.0.1",
     "archiver-zip-encrypted": "^2.0.0",
     "better-sqlite3": "^13.2.0",
     "class-variance-authority": "^0.7.1",

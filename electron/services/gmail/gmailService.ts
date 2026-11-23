@@ -22,10 +22,25 @@ type ArchiverCallable = ((
 
 let zipEncryptedRegistered = false;
 function getArchiver(): ArchiverCallable {
-  const archiverMod = require('archiver') as ArchiverCallable;
+  const rawMod = require('archiver') as ArchiverCallable | { default?: ArchiverCallable };
+  const archiverMod =
+    typeof rawMod === 'function'
+      ? rawMod
+      : typeof rawMod.default === 'function'
+        ? rawMod.default
+        : null;
+  if (!archiverMod) {
+    throw new Error('Không thể nạp thư viện archiver để nén ZIP mã hóa');
+  }
   if (!zipEncryptedRegistered) {
     try {
-      const zipEncryptedMod = require('archiver-zip-encrypted') as unknown;
+      const rawZipEnc = require('archiver-zip-encrypted') as
+        | { default?: unknown }
+        | unknown;
+      const zipEncryptedMod =
+        typeof rawZipEnc === 'object' && rawZipEnc !== null && 'default' in rawZipEnc
+          ? (rawZipEnc as { default?: unknown }).default ?? rawZipEnc
+          : rawZipEnc;
       archiverMod.registerFormat('zip-encrypted', zipEncryptedMod);
     } catch {
       // Already registered
